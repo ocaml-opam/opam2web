@@ -1,6 +1,8 @@
 open Cow
 open Cow.Html
 
+open O2w_common
+
 exception Unknown_repository of string
 
 (* Flag to check if at least one operation is triggered by arguments *)
@@ -23,11 +25,12 @@ let make_website (repository: Path.R.t): unit =
   (* TODO: create out_dir if it doesn't exist, warn and exit if it's a file *)
   let packages = Repository.to_links repository in
   Template.generate ~out_dir:user_options.out_dir ([
-    { text="A package manager for OCaml"; href="index.html" },
-      Home.static_html;
+    { text="Home"; href="index.html" }, Internal Home.static_html;
     { text="Packages"; href="packages.html" },
-      Repository.to_html repository;
-  ] @ packages)
+        Internal (Repository.to_html repository);
+    { text="Documentation"; href="https://github.com/OCamlPro/opam/wiki" },
+        External;
+  ], packages)
 
 (* Generate a website from the current working directory, assuming that it's an 
    OPAM repository *)
