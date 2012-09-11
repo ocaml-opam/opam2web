@@ -1,6 +1,6 @@
 .PHONY: all run clean
 
-WWWDIR="www/"
+WWWDIR="www"
 
 NATIVE=opam2web
 
@@ -13,7 +13,7 @@ $(NATIVE).native:
 run: $(NATIVE).native
 	rm -rf $(WWWDIR)
 	mkdir -p $(WWWDIR)/packages
-	_build/$<
+	_build/$< -o $(WWWDIR) -l default
 
 clean:
 	ocamlbuild -clean

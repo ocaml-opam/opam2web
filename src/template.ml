@@ -121,7 +121,7 @@ let process ~out_dir pages =
   let aux (link, contents) =
     Printf.printf "> %s... %!" link.href;
     let header = make_nav link pages in
-    let chan = open_out (out_dir ^ link.href) in
+    let chan = open_out (Printf.sprintf "%s/%s" out_dir link.href) in
     let page = create ~title:link.text ~header ~body:contents ~footer in
     output_string chan (Html.to_string page);
     close_out chan;

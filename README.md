@@ -12,44 +12,51 @@ included as well.
 - opam [github.com/OCamlPro/opam](https://github.com/OCamlPro/opam)
 - cow [github.com/mirage/ocaml-cow](https://github.com/mirage/ocaml-cow)
 
+If you have opam installed:
+```bash
+opam install opam cow
+```
+
 ### Build
 
-To build the opam-web utility and then generate the static website, enter:
-
+To build the `opam2web` utility, enter:
 ```bash
 make
 ```
+The binary will be located in src/_build/opam2web.native after compilation.
 
-Other available operations are:
+To generate the static website corresponding to the `default` repository in the 
+local OPAM installation, enter:
 ```bash
-make build
 make run
-make clean
 ```
 
 ### Usage
 
-opam2web (which for now is located in src/_build/opam2web.native after 
-compilation) can be used this way:
 ```bash
 opam2web [options]* [repositories]*
 ```
 
-If no repository is given, 'default' will be used.
+If no repository is given, the current working directory is used.
 
 Available options are:
-- --output / -o [directory]
+- `--directory / -d [directory]`
+    Generate a website with the repository located in a directory.
+- `--local / -l [repository_name]`
+    Generate a website with a repository in the local OPAM installation.
+- `--output / -o [directory]`
     The directory where to write the generated HTML files
-- --help / -help
+- `--help / -help`
     Display the list of options
 
 #### Example
 
 ```bash
-opam2web -o website default local
+opam2web -o website ~/myrepo -l default
 ```
-will generate the HTML files corresponding to the 'default' and 'local' 
-repositories in the 'website' directory.
+will generate the HTML files corresponding to the repository located in 
+`~/myrepo` and the repository named `default` in the local OPAM installation.  
+Resulting files will be located in the `website` directory.
 
 
 ### TODO
@@ -57,7 +64,6 @@ repositories in the 'website' directory.
 - Drop package files in different directories for each repository
 - Create the output dir if it doesn't exist, fails if it's a file
 - Links between packages
-
 - Add news
 - Add updates
 - Include documentation

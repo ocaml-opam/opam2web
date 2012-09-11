@@ -1,8 +1,8 @@
 .PHONY: all build run clean
 
-WWWDIR="www/"
+WWWDIR="www"
 
-all: run
+all: build
 
 build:
 	cd src && $(MAKE)
@@ -11,7 +11,7 @@ run: build
 	cd src && $(MAKE) run
 	rm -rf $(WWWDIR)
 	mkdir -p $(WWWDIR)
-	mv src/$(WWWDIR)* $(WWWDIR) && cp -r files/* $(WWWDIR)
+	mv src/$(WWWDIR)/* $(WWWDIR)/ && cp -r files/* $(WWWDIR)/
 
 clean:
 	cd src && $(MAKE) clean

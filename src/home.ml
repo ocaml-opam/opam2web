@@ -12,7 +12,7 @@ opam switch 4.00.0   # Switch to OCaml 4.00.0 environment
 opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 ...
 </pre>
-        <p><a class="btn btn-primary btn-large">Try OPAM »</a></p>
+        <p><a class="btn btn-primary btn-large">Try OPAM (early version) »</a></p>
       </div>
 
       <!-- Example row of columns -->
@@ -23,7 +23,6 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
             <li><strong>31/08/2012</strong> Dummy news 2</li>
             <li><strong>30/08/2012</strong> Dummy news 1</li>
           </ul>
-          <p><a class="btn" href="#">View more »</a></p>
         </div>
         <div class="span4">
           <h2>Changes</h2>
@@ -37,13 +36,15 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
               </tr>
             </tbody>
           </table>
-          <p><a class="btn" href="#">View more »</a></p>
        </div>
         <div class="span4">
           <h2>Contribute</h2>
-          <p>You can help us in packaging ocaml programs and libs, reporting bugs, submitting patches...</p>
-          <p>Github repository: <a href="https://github.com/OCamlPro/opam">OCamlPro/opam</a></p>
-          <p><a class="btn" href="#">Learn more »</a></p>
+          <ul>
+            <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs</a></li>
+            <li>Create packages</li>
+            <li><a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Submit patches</a></li>
+          </ul>
+          <p>Github repository: <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">OCamlPro/opam</a></p>
         </div>
       </div>
   >>
