@@ -49,10 +49,11 @@ let create ~title ~header ~body ~footer =
           <a class="brand" href="index.html">OPAM</a>
           <div class="nav-collapse collapse">
             $header$
+<!--
             <form class="navbar-form pull-right">
               <input class="span2" type="text" placeholder="Search packages" />
-              <!-- <button type="submit" class="btn">Search</button> -->
             </form>
+-->
           </div><!--/.nav-collapse -->
         </div>
       </div>
