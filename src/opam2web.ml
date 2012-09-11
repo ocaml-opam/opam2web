@@ -3,8 +3,6 @@ open Cow.Html
 
 exception Unknown_repository of string
 
-type repository_source = Cwd | Path of string | Opam of string
-
 (* Flag to check if at least one operation is triggered by arguments *)
 let no_operation = ref true
 
@@ -31,42 +29,35 @@ let make_website (repository: Path.R.t): unit =
       Repository.to_html repository;
   ] @ packages)
 
-(* Load a source repository from a path or from Opam local installation *)
-let load_source (src: repository_source): Path.R.t =
-  match src with
-  | Cwd ->
-      Printf.printf "=== Repository: current working directory ===\n%!";
-      Path.R.cwd ()
-  | Path name ->
-      Printf.printf "=== Repository: %s ===\n%!" name;
-      Repository.of_path name
-  | Opam name ->
-      Printf.printf "=== Repository: %s [opam] ===\n%!" name;
-      try
-        Repository.of_opam name
-      with
-        Not_found -> raise (Unknown_repository name)
-
 (* Generate a website from the current working directory, assuming that it's an 
    OPAM repository *)
 let website_of_cwd () =
   no_operation := false;
-  make_website (load_source Cwd)
+  Printf.printf "=== Repository: current working directory ===\n%!";
+  make_website (Path.R.cwd ())
 
 (* Generate a website from the given directory, assuming that it's an OPAM 
    repository *)
 let website_of_path dirname =
   no_operation := false;
-  make_website (load_source (Path dirname))
+  Printf.printf "=== Repository: %s ===\n%!" dirname;
+  make_website (Repository.of_path dirname)
 
 (* Generate a website from the given repository name, trying to find it in local 
    OPAM installation *)
 let website_of_opam repo_name =
   no_operation := false;
+  Printf.printf "=== Repository: %s [opam] ===\n%!" repo_name;
+  let load_repo r =
+    try
+      Repository.of_opam r
+    with
+      Not_found -> raise (Unknown_repository r)
+  in
   try
-    make_website (load_source (Opam repo_name))
+    make_website (load_repo repo_name)
   with
-  | Unknown_repository repo_name ->
+    Unknown_repository repo_name ->
       Globals.error "Opam repository '%s' not found!" repo_name
 
 (* Command-line arguments *)
