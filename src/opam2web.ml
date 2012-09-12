@@ -20,10 +20,21 @@ let user_options: options = {
 let set_out_dir (dir: string) =
   user_options.out_dir <- dir
 
+(* Check if output directory exists, create it if it doesn't *)
+let check_directory (path: string): unit =
+  let dir = Types.Dirname.of_string path in
+  if not (Types.Dirname.exists dir) then
+    begin
+      Types.Dirname.mkdir dir;
+      Printf.printf "Directory '%s' created\n%!" path
+    end
+  else
+    Printf.printf "Directory '%s' already exists\n%!" path
+
 (* Generate a whole static website using the given repository *)
 let make_website (repository: Path.R.t): unit =
-  (* TODO: create out_dir if it doesn't exist, warn and exit if it's a file *)
   let packages = Repository.to_links repository in
+  check_directory user_options.out_dir;
   Template.generate ~out_dir:user_options.out_dir ([
     { text="Home"; href="index.html" }, Internal Home.static_html;
     { text="Packages"; href="packages.html" },
