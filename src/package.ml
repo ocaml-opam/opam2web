@@ -11,8 +11,11 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
     (pkg: Types.NV.t): Cow.Html.t =
   let pkg_name = Types.N.to_string (Types.NV.name pkg) in
   let pkg_version = Types.V.to_string (Types.NV.version pkg) in
-  let pkg_descr =
+  let pkg_descr_markdown =
     File.Descr.full (File.Descr.read (Path.R.descr repository pkg))
+  in
+  let pkg_descr =
+    Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
   in
   let pkg_url =
     try
@@ -84,5 +87,5 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
       </tbody>
     </table>
 
-    <p class="well">$str: pkg_descr$</p>
+    <div class="well">$pkg_descr$</div>
   >>
