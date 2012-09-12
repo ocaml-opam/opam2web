@@ -45,6 +45,7 @@ let include_files (path: string) files_path : unit =
   (* Include static content *)
   (* FIXME: broken, 'copy' function fails *)
   (* if String.length files_path > 0 then *)
+  (*   let dir = Types.Dirname.of_string path in *)
   (*   let files_dir = Types.Dirname.of_string files_path in *)
   (*   Types.Dirname.copy files_dir dir *)
 
