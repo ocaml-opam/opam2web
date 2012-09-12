@@ -9,8 +9,8 @@ build:
 
 run: build
 	cd src && $(MAKE) run
-	mkdir -p $(WWWDIR)
-	mv src/$(WWWDIR)/* $(WWWDIR)/ && cp -r files/* $(WWWDIR)/
+	rm -rf $(WWWDIR)
+	mv src/$(WWWDIR) . && cp -r ext/ $(WWWDIR)/
 
 clean:
 	cd src && $(MAKE) clean

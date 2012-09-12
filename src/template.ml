@@ -8,7 +8,35 @@ let string_of_time () =
   Printf.sprintf "%d/%d/%d" t.Unix.tm_mday (t.Unix.tm_mon + 1)
       (t.Unix.tm_year + 1900)
 
-let create ~title ~header ~body ~footer =
+let prepend_root (depth: int) (src: string): string =
+  let path_of_depth =
+    let rec aux acc = function
+      | 0 -> acc
+      | n -> aux ("../" ^ acc) (n-1)
+    in
+    aux "" depth
+  in
+  path_of_depth ^ src
+
+let create ~title ~header ~body ~footer ~depth =
+  let css_files = [
+    "ext/css/bootstrap.css";
+    "ext/css/bootstrap-responsive.css";
+    "ext/js/google-code-prettify/prettify.css";
+  ] in
+  let js_files = [
+    "ext/js/jquery.js";
+    "ext/js/google-code-prettify/prettify.js";
+    "ext/js/bootstrap.min.js";
+    "ext/js/site.js";
+  ] in
+  let prepend_root = prepend_root depth in
+  let css_html = List.map (fun f ->
+      <:xml< <link href="$str: prepend_root f$" rel="stylesheet" /> >>) css_files
+  in
+  let js_html = List.map (fun f ->
+      <:xml< <script src="$str: prepend_root f$"> </script> >>) js_files
+  in
   <:xml<
 <html lang="en">
   <head>
@@ -20,15 +48,13 @@ let create ~title ~header ~body ~footer =
     <meta name="author" content="OCamlPro" />
 
     <!-- Le styles -->
-    <link href="css/bootstrap.css" rel="stylesheet" />
     <style type="text/css">
       body {
         padding-top: 60px;
         padding-bottom: 40px;
       }
     </style>
-    <link href="css/bootstrap-responsive.css" rel="stylesheet" />
-    <link href="js/google-code-prettify/prettify.css" rel="stylesheet" />
+    $list: css_html$
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
@@ -74,19 +100,20 @@ let create ~title ~header ~body ~footer =
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="js/jquery.js"> </script>
-    <script src="js/google-code-prettify/prettify.js"> </script>
-    <script src="js/bootstrap.min.js"> </script>
-    <script src="js/site.js"> </script>
+    $list: js_html$
 
   </body>
 </html>
   >>
 
-let make_nav active pages: Cow.Html.t =
-  let make_item menu (l, _) =
+let make_nav (active, depth) pages: Cow.Html.t =
+  let make_item menu (lnk, c) =
+    let l = match c with
+      | External _ -> lnk
+      | Internal _ -> { lnk with href = prepend_root depth lnk.href }
+    in
     let item =
-      if l = active then
+      if lnk = active then
         <:xml< <li class="active">$html_of_link l$</li> >>
       else
         <:xml< <li>$html_of_link l$</li> >>
@@ -107,12 +134,13 @@ let generate ~out_dir (menu_links, pages) =
             title="OCaml on the Web">COW</a>.<br />
         © <a href="http://www.ocamlpro.com/">OCamlPro</a> 2012
       </p>
-    >> in
-  let aux (link, contents) =
+    >>
+  in
+  let aux (link, depth, contents) =
     Printf.printf "> %s... %!" link.href;
-    let header = make_nav link menu_links in
+    let header = make_nav (link, depth) menu_links in
     let chan = open_out (Printf.sprintf "%s/%s" out_dir link.href) in
-    let page = create ~title:link.text ~header ~body:contents ~footer in
+    let page = create ~title:link.text ~header ~body:contents ~footer ~depth in
     output_string chan (Html.to_string page);
     close_out chan;
     Printf.printf "[Done]\n"
@@ -121,7 +149,7 @@ let generate ~out_dir (menu_links, pages) =
   let menu_pages = List.rev (List.fold_left (fun acc (l, m) ->
       match m with
       | External -> acc
-      | Internal c -> (l, c) :: acc)
+      | Internal (d, c) -> (l, d, c) :: acc)
     [] menu_links)
   in
   List.iter aux menu_pages;
