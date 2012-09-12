@@ -23,7 +23,7 @@ let to_links (repository: Path.R.t): (Cow.Html.link * Cow.Html.t) list =
       let pkg_version = Types.V.to_string (Types.NV.version pkg) in
       let pkg_href = Printf.sprintf "%s.%s.html" pkg_name pkg_version in
       let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
-      { text=pkg_title; href=pkg_href }, (Package.to_html pkg))
+      { text=pkg_title; href=pkg_href }, (Package.to_html repository pkg))
     packages
 
 (* Returns a HTML list of the packages in the given repository *)
@@ -31,15 +31,19 @@ let to_html (repository: Path.R.t): Cow.Html.t =
   let package_set = Path.R.available_packages repository in
   let packages = Types.NV.Set.elements package_set in
   let packages_html = List.map
-    (fun pkg ->
+    (fun (pkg: Types.NV.t) ->
       (* TODO: factorize the following operations with other functions *)
       let pkg_name = Types.N.to_string (Types.NV.name pkg) in
       let pkg_version = Types.V.to_string (Types.NV.version pkg) in
       let pkg_href = Printf.sprintf "%s.%s.html" pkg_name pkg_version in
+      let pkg_synopsis =
+        File.Descr.synopsis (File.Descr.read (Path.R.descr repository pkg))
+      in
       <:xml<
         <tr>
           <td><a href="$str: pkg_href$">$str: pkg_name$</a></td>
           <td>$str: pkg_version$</td>
+          <td>$str: pkg_synopsis$</td>
         </tr>
       >>)
     packages
@@ -50,6 +54,7 @@ let to_html (repository: Path.R.t): Cow.Html.t =
         <tr>
           <th>Name</th>
           <th>Version</th>
+          <th>Description</th>
         </tr>
       </thead>
       <tbody>
