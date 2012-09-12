@@ -11,10 +11,8 @@ $(NATIVE).native:
 	ocamlbuild -classic-display $@
 
 run: $(NATIVE).native
-	rm -rf $(WWWDIR)
-	mkdir -p $(WWWDIR)/packages
 	_build/$< -o $(WWWDIR) -l default
 
 clean:
 	ocamlbuild -clean
-	rm -rf _config/ www/
+	rm -rf _config/ $(WWWDIR)
