@@ -34,10 +34,16 @@ let to_html (repository: Path.R.t) (pkg: Types.NV.t): Cow.Html.t =
   let opam_file = File.OPAM.read (Path.R.opam repository pkg) in
   let pkg_maintainer = File.OPAM.maintainer opam_file in
   <:xml<
-    <h2>$str: pkg_name$ $str: pkg_version$</h2>
+    <h2>$str: pkg_name$</h2>
 
     <table class="table">
       <tbody>
+        <tr>
+          <th>Version</th>
+          <td>
+            <strong>$str: pkg_version$</strong>
+          </td>
+        </tr>
         <tr>
           <th>Maintainer</th>
           <td>
