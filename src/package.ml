@@ -62,5 +62,5 @@ let to_html (repository: Path.R.t) (pkg: Types.NV.t): Cow.Html.t =
       </tbody>
     </table>
 
-    <p>$str: pkg_descr$</p>
+    <p class="well">$str: pkg_descr$</p>
   >>
