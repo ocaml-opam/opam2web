@@ -11,17 +11,22 @@ let no_operation = ref true
 (* Options *)
 type options = {
   mutable out_dir: string;
+  mutable files_dir: string;
 }
 
 let user_options: options = {
   out_dir = "www";
+  files_dir = "";
 }
 
 let set_out_dir (dir: string) =
   user_options.out_dir <- dir
 
-(* Check if output directory exists, create it if it doesn't *)
-let check_directory (path: string): unit =
+let set_files_dir (dir: string) =
+  user_options.files_dir <- dir
+
+let include_files (path: string) files_path : unit =
+  (* Check if output directory exists, create it if it doesn't *)
   let dir = Types.Dirname.of_string path in
   if not (Types.Dirname.exists dir) then
     begin
@@ -29,17 +34,24 @@ let check_directory (path: string): unit =
       Printf.printf "Directory '%s' created\n%!" path
     end
   else
-    Printf.printf "Directory '%s' already exists\n%!" path
+    (Printf.printf "Directory '%s' already exists\n%!" path)
+  (* ; *)
+  (* Include static content *)
+  (* FIXME: broken, 'copy' function fails *)
+  (* if String.length files_path > 0 then *)
+  (*   let files_dir = Types.Dirname.of_string files_path in *)
+  (*   Types.Dirname.copy files_dir dir *)
 
 (* Generate a whole static website using the given repository *)
 let make_website (repository: Path.R.t): unit =
   let packages = Repository.to_links repository in
-  check_directory user_options.out_dir;
-  Template.generate ~out_dir:user_options.out_dir ([
+  include_files user_options.out_dir user_options.files_dir;
+  Template.generate ~out_dir: user_options.out_dir ([
     { text="Home"; href="index.html" }, Internal Home.static_html;
     { text="Packages"; href="packages.html" },
         Internal (Repository.to_html repository);
-    { text="Documentation"; href="https://github.com/OCamlPro/opam/wiki" },
+    { text="Documentation";
+        href="https://github.com/OCamlPro/opam/wiki/Tutorial" },
         External;
   ], packages)
 
@@ -76,17 +88,21 @@ let website_of_opam repo_name =
 
 (* Command-line arguments *)
 let specs = [
-  ("-o", Arg.String set_out_dir, "");
-  ("--output", Arg.String set_out_dir,
-    "The directory where to write the generated HTML files");
-
   ("-d", Arg.String website_of_path, "");
   ("--directory", Arg.String website_of_path,
     "Generate a website from the opam repository in 'directory'");
 
   ("-l", Arg.String website_of_opam, "");
   ("--local", Arg.String website_of_opam,
-    "Generate a website from an opam repository in the local opam installation.");
+    "Generate a website from an opam repository in the local opam installation");
+
+  ("-o", Arg.String set_out_dir, "");
+  ("--output", Arg.String set_out_dir,
+    "The directory where to write the generated HTML files");
+
+  (* ("-i", Arg.String set_files_dir, ""); *)
+  (* ("--include", Arg.String set_files_dir, *)
+  (*   "Copy this directory content to the output directory"); *)
 ]
 
 (* Main *)
