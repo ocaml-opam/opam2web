@@ -23,7 +23,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
       <!-- Example row of columns -->
       <div class="row">
         <div class="span4">
-          <h2>News</h2>
+          <h2></h2>
 <!--
           <ul>
             <li><strong>31/08/2012</strong> Dummy news 2</li>
@@ -32,7 +32,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 -->
         </div>
         <div class="span4">
-          <h2>Changes</h2>
+          <h2></h2>
 <!--
           <table class="table tooltip-packages">
             <tbody>
