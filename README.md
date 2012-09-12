@@ -62,7 +62,6 @@ Resulting files will be located in the `website` directory.
 ### TODO
 
 - Drop package files in different directories for each repository
-- Create the output dir if it doesn't exist, fails if it's a file
 - Links between packages
 - Add news
 - Add updates
