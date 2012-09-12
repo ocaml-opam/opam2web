@@ -139,7 +139,12 @@ let generate ~out_dir (menu_links, pages) =
   let aux (link, depth, contents) =
     Printf.printf "> %s... %!" link.href;
     let header = make_nav (link, depth) menu_links in
-    let chan = open_out (Printf.sprintf "%s/%s" out_dir link.href) in
+    let path = if String.length out_dir > 0 then
+        Printf.sprintf "%s/%s" out_dir link.href
+      else
+        link.href
+    in
+    let chan = open_out path in
     let page = create ~title:link.text ~header ~body:contents ~footer ~depth in
     output_string chan (Html.to_string page);
     close_out chan;

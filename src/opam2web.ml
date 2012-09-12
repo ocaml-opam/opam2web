@@ -15,7 +15,7 @@ type options = {
 }
 
 let user_options: options = {
-  out_dir = "www";
+  out_dir = "";
   files_dir = "";
 }
 
@@ -27,8 +27,11 @@ let set_files_dir (dir: string) =
 
 let include_files (path: string) files_path : unit =
   let subpathes = ["pkg"] in
-  let subpathes =
-    List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
+  let pathes =
+    if String.length path > 0 then
+      path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
+    else
+      subpathes
   in
   (* Check if output directory exists, create it if it doesn't *)
   List.iter (fun p ->
@@ -40,7 +43,7 @@ let include_files (path: string) files_path : unit =
         end
       else
         (Printf.printf "Directory '%s' already exists\n%!" p))
-    (path :: subpathes)
+    pathes
   (* ; *)
   (* Include static content *)
   (* FIXME: broken, 'copy' function fails *)
