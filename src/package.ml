@@ -71,6 +71,7 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
           </td>
         </tr>
         $pkg_url$
+<!--
         <tr>
           <th>Dependencies</th>
           <td></td>
@@ -79,6 +80,7 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
           <th>Optional dependencies</th>
           <td></td>
         </tr>
+-->
       </tbody>
     </table>
 
