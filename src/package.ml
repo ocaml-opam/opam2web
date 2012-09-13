@@ -56,36 +56,63 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
     versions
   in
   let pkg_maintainer = File.OPAM.maintainer opam_file in
+  let html_of_dependencies dependencies =
+    let deps = List.map (fun ((name, _), _) ->
+        <:xml< <tr><td>$str: name$</td></tr> >>)
+      (List.flatten dependencies)
+    in
+    match deps with
+    | [] -> <:xml< >>
+    | _ -> <:xml< $list: deps$ >>
+  in
+  let dependencies = html_of_dependencies
+      (File.OPAM.depends opam_file)
+  in
+  let depopts = html_of_dependencies
+      (File.OPAM.depopts opam_file)
+  in
   <:xml<
     <h2>$str: pkg_name$</h2>
 
-    <div>
-      <ul class="nav nav-pills">
-        $list: version_links$
-      </ul>
+    <div class="row">
+      <div class="span9">
+        <div>
+          <ul class="nav nav-pills">
+            $list: version_links$
+          </ul>
+        </div>
+
+        <table class="table">
+          <tbody>
+            $pkg_url$
+            <tr>
+              <th>Maintainer</th>
+              <td>
+                $str: pkg_maintainer$
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="well">$pkg_descr$</div>
+      </div>
+      <div class="span3">
+        <table class="table table-bordered">
+          <thead>
+            <tr class="well">
+              <th>Dependencies</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            $dependencies$
+            <tr class="well">
+              <th>Optional</th>
+            </tr>
+
+            $depopts$
+          </tbody>
+        </table>
+      </div>
     </div>
-
-    <table class="table">
-      <tbody>
-        <tr>
-          <th>Maintainer</th>
-          <td>
-            $str: pkg_maintainer$
-          </td>
-        </tr>
-        $pkg_url$
-<!--
-        <tr>
-          <th>Dependencies</th>
-          <td></td>
-        </tr>
-        <tr>
-          <th>Optional dependencies</th>
-          <td></td>
-        </tr>
--->
-      </tbody>
-    </table>
-
-    <div class="well">$pkg_descr$</div>
   >>
