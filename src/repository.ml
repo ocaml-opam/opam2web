@@ -36,7 +36,7 @@ let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
       let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
       let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
       { text=pkg_title; href=pkg_href }, 1,
-        (Package.to_html repository package_versions pkg))
+        (Package.to_html repository unique_packages package_versions pkg))
     package_versions
   in
   List.flatten (List.map aux unique_packages)

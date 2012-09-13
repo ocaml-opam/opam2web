@@ -6,9 +6,23 @@ let latest: Types.NV.t list -> Types.NV.t = function
   | h :: _ -> h
   | [] -> failwith "Repository.to_html: error building unique_packages"
 
+(* Find the latest version of a package in the two-dimensions list representing
+   package versions *)
+let find_latest_version (unique_packages: Types.NV.t list list)
+    (pkg_name: string) : string =
+  let packages =
+    List.find (fun versions ->
+        if Types.N.to_string (Types.NV.name (latest versions)) = pkg_name then
+          true
+        else
+          false)
+      unique_packages
+  in
+    Types.V.to_string (Types.NV.version (latest packages))
+
 (* Returns a HTML description of the given package *)
-let to_html (repository: Path.R.t) (versions: Types.NV.t list)
-    (pkg: Types.NV.t): Cow.Html.t =
+let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
+    (versions: Types.NV.t list) (pkg: Types.NV.t): Cow.Html.t =
   let pkg_name = Types.N.to_string (Types.NV.name pkg) in
   let pkg_version = Types.V.to_string (Types.NV.version pkg) in
   let pkg_descr_markdown =
@@ -58,11 +72,20 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
   let pkg_maintainer = File.OPAM.maintainer opam_file in
   let html_of_dependencies title dependencies =
     let deps = List.map (fun ((name, _), constr_opt) ->
+        let latest_version = find_latest_version unique_packages name in
+        let href = Printf.sprintf "%s.%s.html" name latest_version in
         let version = match constr_opt with
           | None -> ""
           | Some (r, v) -> Printf.sprintf "( %s %s )" r v
         in
-        <:xml< <tr><td>$str: name$ <small>$str: version$</small></td></tr> >>)
+        <:xml<
+          <tr>
+            <td>
+              <a href="$str: href$">$str: name$</a>
+              <small>$str: version$</small>
+            </td>
+          </tr>
+        >>)
       (List.flatten dependencies)
     in
     match deps with
