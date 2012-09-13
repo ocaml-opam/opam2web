@@ -23,6 +23,7 @@ let create ~title ~header ~body ~footer ~depth =
     "ext/css/bootstrap.css";
     "ext/css/bootstrap-responsive.css";
     "ext/js/google-code-prettify/prettify.css";
+    "ext/css/site.css";
   ] in
   let js_files = [
     "ext/js/jquery.js";
@@ -48,12 +49,6 @@ let create ~title ~header ~body ~footer ~depth =
     <meta name="author" content="OCamlPro" />
 
     <!-- Le styles -->
-    <style type="text/css">
-      body {
-        padding-top: 60px;
-        padding-bottom: 40px;
-      }
-    </style>
     $list: css_html$
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
