@@ -56,21 +56,26 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
     versions
   in
   let pkg_maintainer = File.OPAM.maintainer opam_file in
-  let html_of_dependencies dependencies =
+  let html_of_dependencies title dependencies =
     let deps = List.map (fun ((name, _), _) ->
         <:xml< <tr><td>$str: name$</td></tr> >>)
       (List.flatten dependencies)
     in
     match deps with
-    | [] -> <:xml< >>
-    | _ -> <:xml< $list: deps$ >>
+    | [] -> []
+    | _ -> <:xml<
+        <tr class="well">
+          <th>$str: title$</th>
+        </tr>
+      >> :: deps
   in
-  let dependencies = html_of_dependencies
+  let dependencies = html_of_dependencies "Dependencies"
       (File.OPAM.depends opam_file)
   in
-  let depopts = html_of_dependencies
+  let depopts = html_of_dependencies "Optional"
       (File.OPAM.depopts opam_file)
   in
+  let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
   <:xml<
     <h2>$str: pkg_name$</h2>
 
@@ -96,21 +101,15 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
 
         <div class="well">$pkg_descr$</div>
       </div>
+
       <div class="span3">
         <table class="table table-bordered">
-          <thead>
-            <tr class="well">
-              <th>Dependencies</th>
-            </tr>
-          </thead>
-
           <tbody>
-            $dependencies$
-            <tr class="well">
-              <th>Optional</th>
-            </tr>
-
-            $depopts$
+            $list: dependencies$
+            $list: depopts$
+            $match (dependencies, depopts) with
+              | ([], []) -> nodeps
+              | _ -> Cow.Html.nil$
           </tbody>
         </table>
       </div>
