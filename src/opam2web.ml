@@ -15,7 +15,7 @@ type options = {
 }
 
 let user_options: options = {
-  out_dir = "www";
+  out_dir = "";
   files_dir = "";
 }
 
@@ -26,19 +26,29 @@ let set_files_dir (dir: string) =
   user_options.files_dir <- dir
 
 let include_files (path: string) files_path : unit =
+  let subpathes = ["pkg"] in
+  let pathes =
+    if String.length path > 0 then
+      path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
+    else
+      subpathes
+  in
   (* Check if output directory exists, create it if it doesn't *)
-  let dir = Types.Dirname.of_string path in
-  if not (Types.Dirname.exists dir) then
-    begin
-      Types.Dirname.mkdir dir;
-      Printf.printf "Directory '%s' created\n%!" path
-    end
-  else
-    (Printf.printf "Directory '%s' already exists\n%!" path)
+  List.iter (fun p ->
+      let dir = Types.Dirname.of_string p in
+      if not (Types.Dirname.exists dir) then
+        begin
+          Types.Dirname.mkdir dir;
+          Printf.printf "Directory '%s' created\n%!" p
+        end
+      else
+        (Printf.printf "Directory '%s' already exists\n%!" p))
+    pathes
   (* ; *)
   (* Include static content *)
   (* FIXME: broken, 'copy' function fails *)
   (* if String.length files_path > 0 then *)
+  (*   let dir = Types.Dirname.of_string path in *)
   (*   let files_dir = Types.Dirname.of_string files_path in *)
   (*   Types.Dirname.copy files_dir dir *)
 
@@ -47,9 +57,9 @@ let make_website (repository: Path.R.t): unit =
   let packages = Repository.to_links repository in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
-    { text="Home"; href="index.html" }, Internal Home.static_html;
-    { text="Packages"; href="packages.html" },
-        Internal (Repository.to_html repository);
+    { text="Home"; href="index.html" }, Internal (0, Home.static_html);
+    { text="Packages"; href="pkg/index.html" },
+        Internal (1, (Repository.to_html repository));
     { text="Documentation";
         href="https://github.com/OCamlPro/opam/wiki/Tutorial" },
         External;

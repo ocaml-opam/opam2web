@@ -1,4 +1,4 @@
 type menu_item =
-  | Internal of Cow.Html.t
+  | Internal of int * Cow.Html.t
   | External
 

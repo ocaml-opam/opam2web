@@ -26,17 +26,17 @@ let unify_versions (packages: Types.NV.t list): Types.NV.t list list =
   List.rev unique_packages
 
 (* Create a list of package pages to generate for a repository *)
-let to_links (repository: Path.R.t): (Cow.Html.link * Cow.Html.t) list =
+let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
   let package_set = Path.R.available_packages repository in
   let packages = Types.NV.Set.elements package_set in
   let unique_packages = unify_versions packages in
   let aux package_versions = List.map (fun (pkg: Types.NV.t) ->
       let pkg_name = Types.N.to_string (Types.NV.name pkg) in
       let pkg_version = Types.V.to_string (Types.NV.version pkg) in
-      let pkg_href = Printf.sprintf "%s.%s.html" pkg_name pkg_version in
+      let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
       let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
-      { text=pkg_title; href=pkg_href },
-        (Package.to_html repository package_versions pkg))
+      { text=pkg_title; href=pkg_href }, 1,
+        (Package.to_html repository unique_packages package_versions pkg))
     package_versions
   in
   List.flatten (List.map aux unique_packages)
