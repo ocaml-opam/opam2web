@@ -57,8 +57,12 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
   in
   let pkg_maintainer = File.OPAM.maintainer opam_file in
   let html_of_dependencies title dependencies =
-    let deps = List.map (fun ((name, _), _) ->
-        <:xml< <tr><td>$str: name$</td></tr> >>)
+    let deps = List.map (fun ((name, _), constr_opt) ->
+        let version = match constr_opt with
+          | None -> ""
+          | Some (r, v) -> Printf.sprintf "( %s %s )" r v
+        in
+        <:xml< <tr><td>$str: name$ <small>$str: version$</small></td></tr> >>)
       (List.flatten dependencies)
     in
     match deps with
