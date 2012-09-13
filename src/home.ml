@@ -31,7 +31,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
           </ul>
 -->
         </div>
-        <div class="span4">
+        <div class="span3">
           <h2></h2>
 <!--
           <table class="table tooltip-packages">
@@ -46,7 +46,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
           </table>
 -->
        </div>
-        <div class="span4">
+        <div class="span3">
           <h2>Contribute</h2>
           <ul>
             <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs</a></li>
@@ -54,6 +54,9 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
             <li><a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Submit patches</a></li>
           </ul>
           <p>Github repository: <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">OCamlPro/opam</a></p>
+        </div>
+        <div class="span2">
+          <img src="ext/img/camel_rider.png" alt="Camel Rider" />
         </div>
       </div>
   >>
