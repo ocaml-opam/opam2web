@@ -6,9 +6,23 @@ let latest: Types.NV.t list -> Types.NV.t = function
   | h :: _ -> h
   | [] -> failwith "Repository.to_html: error building unique_packages"
 
+(* Find the latest version of a package in the two-dimensions list representing
+   package versions *)
+let find_latest_version (unique_packages: Types.NV.t list list)
+    (pkg_name: string) : string =
+  let packages =
+    List.find (fun versions ->
+        if Types.N.to_string (Types.NV.name (latest versions)) = pkg_name then
+          true
+        else
+          false)
+      unique_packages
+  in
+    Types.V.to_string (Types.NV.version (latest packages))
+
 (* Returns a HTML description of the given package *)
-let to_html (repository: Path.R.t) (versions: Types.NV.t list)
-    (pkg: Types.NV.t): Cow.Html.t =
+let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
+    (versions: Types.NV.t list) (pkg: Types.NV.t): Cow.Html.t =
   let pkg_name = Types.N.to_string (Types.NV.name pkg) in
   let pkg_version = Types.V.to_string (Types.NV.version pkg) in
   let pkg_descr_markdown =
@@ -56,36 +70,75 @@ let to_html (repository: Path.R.t) (versions: Types.NV.t list)
     versions
   in
   let pkg_maintainer = File.OPAM.maintainer opam_file in
+  let html_of_dependencies title dependencies =
+    let deps = List.map (fun ((name, _), constr_opt) ->
+        let latest_version = find_latest_version unique_packages name in
+        let href = Printf.sprintf "%s.%s.html" name latest_version in
+        let version = match constr_opt with
+          | None -> ""
+          | Some (r, v) -> Printf.sprintf "( %s %s )" r v
+        in
+        <:xml<
+          <tr>
+            <td>
+              <a href="$str: href$">$str: name$</a>
+              <small>$str: version$</small>
+            </td>
+          </tr>
+        >>)
+      (List.flatten dependencies)
+    in
+    match deps with
+    | [] -> []
+    | _ -> <:xml<
+        <tr class="well">
+          <th>$str: title$</th>
+        </tr>
+      >> :: deps
+  in
+  let dependencies = html_of_dependencies "Dependencies"
+      (File.OPAM.depends opam_file)
+  in
+  let depopts = html_of_dependencies "Optional"
+      (File.OPAM.depopts opam_file)
+  in
+  let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
   <:xml<
     <h2>$str: pkg_name$</h2>
 
-    <div>
-      <ul class="nav nav-pills">
-        $list: version_links$
-      </ul>
+    <div class="row">
+      <div class="span9">
+        <div>
+          <ul class="nav nav-pills">
+            $list: version_links$
+          </ul>
+        </div>
+
+        <table class="table">
+          <tbody>
+            $pkg_url$
+            <tr>
+              <th>Maintainer</th>
+              <td>
+                $str: pkg_maintainer$
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="well">$pkg_descr$</div>
+      </div>
+
+      <div class="span3">
+        <table class="table table-bordered">
+          <tbody>
+            $list: dependencies$
+            $list: depopts$
+            $match (dependencies, depopts) with
+              | ([], []) -> nodeps
+              | _ -> Cow.Html.nil$
+          </tbody>
+        </table>
+      </div>
     </div>
-
-    <table class="table">
-      <tbody>
-        <tr>
-          <th>Maintainer</th>
-          <td>
-            $str: pkg_maintainer$
-          </td>
-        </tr>
-        $pkg_url$
-<!--
-        <tr>
-          <th>Dependencies</th>
-          <td></td>
-        </tr>
-        <tr>
-          <th>Optional dependencies</th>
-          <td></td>
-        </tr>
--->
-      </tbody>
-    </table>
-
-    <div class="well">$pkg_descr$</div>
   >>
