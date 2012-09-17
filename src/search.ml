@@ -8,7 +8,7 @@ let get_element_by_id id =
   Js.Opt.get (doc##getElementById (Js.string id)) 
     (fun () -> Firebug.console##log (_s id); assert false)
 
- (* Column position in the HTML table *)
+(* Column position in the HTML table *)
 let by_name = 0  
 let by_descr = 2
 
