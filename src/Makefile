@@ -11,7 +11,7 @@ $(NATIVE).native:
 	ocamlbuild -classic-display $@
 
 run: $(NATIVE).native
-	_build/$< -o $(WWWDIR) -l default
+	_build/$< -c ../content -o $(WWWDIR) -l default
 
 clean:
 	ocamlbuild -clean
