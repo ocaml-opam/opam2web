@@ -25,6 +25,11 @@ let unify_versions (packages: Types.NV.t list): Types.NV.t list list =
   in
   List.rev unique_packages
 
+(* Create an association list (package_name -> reverse_dependencies) *)
+let reverse_dependencies (packages: Types.NV.t list)
+    : (string * Types.NV.t list) list =
+  []
+
 (* Create a list of package pages to generate for a repository *)
 let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
   let package_set = Path.R.available_packages repository in

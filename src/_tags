@@ -1,5 +1,5 @@
 <opam2web.*>: pkg_unix, pkg_cow
-<{o2w_common,home,package,repository,template,search}.*>: pkg_opam, pkg_cow
+<{o2w_common,home,package,documentation,repository,template,search}.*>: pkg_opam, pkg_cow
 <syntax/*>: build_syntax
 not <syntax/*>: use_syntax
 true: camlp4o

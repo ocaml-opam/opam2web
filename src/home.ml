@@ -14,7 +14,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 </pre>
         <p>
           <a class="btn btn-primary btn-inverse btn-large"
-              href="https://github.com/OCamlPro/opam/wiki/Tutorial">
+              href="doc/Tutorial.html">
             Try OPAM (early version) »
           </a>
         </p>
@@ -22,15 +22,6 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 
       <!-- Example row of columns -->
       <div class="row">
-        <div class="span4">
-          <h2></h2>
-<!--
-          <ul>
-            <li><strong>31/08/2012</strong> Dummy news 2</li>
-            <li><strong>30/08/2012</strong> Dummy news 1</li>
-          </ul>
--->
-        </div>
         <div class="span3">
           <h2></h2>
 <!--
@@ -45,7 +36,14 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
             </tbody>
           </table>
 -->
-       </div>
+        </div>
+        <div class="span4">
+          <h2>News</h2>
+          <ul>
+            <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a></li>
+            <li><strong>11/09/2012</strong> Version 0.6 is out</li>
+          </ul>
+        </div>
         <div class="span3">
           <h2>Contribute</h2>
           <ul>

@@ -12,11 +12,13 @@ let no_operation = ref true
 type options = {
   mutable out_dir: string;
   mutable files_dir: string;
+  mutable content_dir: string;
 }
 
 let user_options: options = {
   out_dir = "";
   files_dir = "";
+  content_dir = "content";
 }
 
 let set_out_dir (dir: string) =
@@ -25,8 +27,11 @@ let set_out_dir (dir: string) =
 let set_files_dir (dir: string) =
   user_options.files_dir <- dir
 
+let set_content_dir (dir: string) =
+  user_options.content_dir <- dir
+
 let include_files (path: string) files_path : unit =
-  let subpathes = ["pkg"] in
+  let subpathes = ["doc"; "pkg"] in
   let pathes =
     if String.length path > 0 then
       path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
@@ -55,15 +60,15 @@ let include_files (path: string) files_path : unit =
 (* Generate a whole static website using the given repository *)
 let make_website (repository: Path.R.t): unit =
   let packages = Repository.to_links repository in
+  let documentation = Documentation.to_links user_options.content_dir in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
     { text="Home"; href="index.html" }, Internal (0, Home.static_html);
     { text="Packages"; href="pkg/index.html" },
         Internal (1, (Repository.to_html repository));
-    { text="Documentation";
-        href="https://github.com/OCamlPro/opam/wiki/Tutorial" },
-        External;
-  ], packages)
+    { text="Documentation"; href="doc/index.html" },
+        Internal (1, (Documentation.index user_options.content_dir));
+  ], documentation @ packages)
 
 (* Generate a website from the current working directory, assuming that it's an 
    OPAM repository *)
@@ -109,6 +114,10 @@ let specs = [
   ("-o", Arg.String set_out_dir, "");
   ("--output", Arg.String set_out_dir,
     "The directory where to write the generated HTML files");
+
+  ("-c", Arg.String set_content_dir, "");
+  ("--content", Arg.String set_content_dir,
+    "The directory where to find OPAM documentation to include");
 
   (* ("-i", Arg.String set_files_dir, ""); *)
   (* ("--include", Arg.String set_files_dir, *)

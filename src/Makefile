@@ -18,10 +18,10 @@ search: search.ml
 	$(JS_OF_OCAML) $@.byte
 
 run: $(NATIVE).native
-	_build/$< -o $(WWWDIR) -l default
+	_build/$< -c ../content -o $(WWWDIR) -l default
 
 
 clean:
 	ocamlbuild -clean
-	rm -rf *.cmo *.cmi *.cmt search search.js
+	rm -rf *.cmo *.cmi *.cmt search search.js search.byte
 	rm -rf _config/ $(WWWDIR)
