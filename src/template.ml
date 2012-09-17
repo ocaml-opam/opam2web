@@ -30,7 +30,7 @@ let create ~title ~header ~body ~footer ~depth =
     "ext/js/google-code-prettify/prettify.js";
     "ext/js/bootstrap.min.js";
     "ext/js/site.js";
-    "js/search.js";    
+    "ext/js/search.js";    
   ] in
   let prepend_root = prepend_root depth in
   let css_html = List.map (fun f ->
