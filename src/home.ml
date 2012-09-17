@@ -14,7 +14,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 </pre>
         <p>
           <a class="btn btn-primary btn-inverse btn-large"
-              href="https://github.com/OCamlPro/opam/wiki/Tutorial">
+              href="doc/Tutorial.html">
             Try OPAM (early version) »
           </a>
         </p>
