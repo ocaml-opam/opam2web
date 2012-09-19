@@ -39,6 +39,7 @@ let create ~title ~header ~body ~footer ~depth =
   let js_html = List.map (fun f ->
       <:xml< <script src="$str: prepend_root f$"> </script> >>) js_files
   in
+  let home_href = prepend_root "index.html" in
   <:xml<
 <html lang="en">
   <head>    
@@ -70,7 +71,7 @@ let create ~title ~header ~body ~footer ~depth =
             <span class="icon-bar"> </span>
             <span class="icon-bar"> </span>
           </a>
-          <a class="brand" href="index.html">OPAM</a>
+          <a class="brand" href="$str: home_href$">OPAM</a>
           <div class="nav-collapse collapse">
             $header$
 <!--

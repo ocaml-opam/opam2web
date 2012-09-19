@@ -15,3 +15,25 @@ a:hover {
 .nav-pills > .active > a:hover {
   background-color: #b40404;
 }
+
+/*
+.input-append button.add-on {
+  height: inherit !important;
+}
+*/
+
+form.form-search {
+  text-align: center;
+}
+
+input#search {
+  height: 35px;
+  border-radius: 20px 0 0 20px;
+  font-size: 16px;
+}
+
+button#search-button {
+  height: 35px;
+  border-radius: 0 20px 20px 0;
+}
+

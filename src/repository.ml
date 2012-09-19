@@ -71,9 +71,14 @@ let to_html (repository: Path.R.t): Cow.Html.t =
       unique_packages
   in
   <:xml<
-     <form class="navbar-form pull-left">
-      <input id="search" class="span2" type="text" placeholder="Search packages" />
-     </form>
+    <form class="form-search">
+      <div class="input-append">
+        <input id="search" class="search-query" type="text" placeholder="Search packages" />
+        <button id="search-button" class="btn add-on">
+          <i class="icon-search"> </i>
+        </button>
+      </div>
+    </form>
     <table class="table"  id="packages">
       <thead>
         <tr>
