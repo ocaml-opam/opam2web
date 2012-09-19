@@ -8,6 +8,7 @@ type doc_kind =
 (* Page list *)
 let pages = [
   "Tutorial", "A user tutorial for first time users of OPAM", Markdown;
+  "Packaging", "A tutorial introducing the creation of OPAM packages", Markdown;
 ]
 
 let extension_of_kind: doc_kind -> string = function
