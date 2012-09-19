@@ -40,7 +40,7 @@ let to_links (content_dir: string): (Cow.Html.link * int * Cow.Html.t) list =
     let content = Types.Raw.to_string (Types.Filename.read filename) in
     match kind with
     | Html -> Cow.Html.of_string content
-    | Markdown -> Cow.Markdown.to_html (Cow.Markdown.of_string content)
+    | Markdown -> Markdown_github.to_html (Markdown_github.of_string content)
   in
 
   (* Single link creation *)
