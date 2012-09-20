@@ -60,15 +60,15 @@ let include_files (path: string) files_path : unit =
 (* Generate a whole static website using the given repository *)
 let make_website (repository: Path.R.t): unit =
   let packages = Repository.to_links repository in
-  let documentation = Documentation.to_links user_options.content_dir in
+  let links_of_doc = Documentation.to_links user_options.content_dir in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
     { text="Home"; href="index.html" }, Internal (0, Home.static_html);
     { text="Packages"; href="pkg/index.html" },
         Internal (1, (Repository.to_html repository));
-    { text="Documentation"; href="doc/index.html" },
-        Internal (1, (Documentation.index user_options.content_dir));
-  ], documentation @ packages)
+    { text="Documentation"; href="" },
+        Submenu (links_of_doc ["Tutorial.md"; "Packaging.md"]);
+  ], packages)
 
 (* Generate a website from the current working directory, assuming that it's an 
    OPAM repository *)
