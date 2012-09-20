@@ -106,21 +106,33 @@ let create ~title ~header ~body ~footer ~depth =
   >>
 
 let make_nav (active, depth) pages: Cow.Html.t =
-  let make_item menu (lnk, c) =
-    let l = match c with
-      | External _ -> lnk
-      | Internal _ -> { lnk with href = prepend_root depth lnk.href }
-    in
-    let item =
-      if lnk = active then
-        <:xml< <li class="active">$html_of_link l$</li> >>
-      else
-        <:xml< <li>$html_of_link l$</li> >>
-    in item :: menu
+  let rec make_item (lnk, c) =
+    let class_attr = if lnk.href = active.href then "active" else "" in
+    match c with
+    | External _ ->
+      <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
+    | Internal _ ->
+      let lnk = { lnk with href = prepend_root depth lnk.href } in
+      <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
+    | Nav_header ->
+      <:xml< <li class="nav-header">lnk.text</li> >>
+    | Divider ->
+      <:xml< <li class="divider"></li> >>
+    | Submenu sub_items ->
+      <:xml<
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+            $str: lnk.text$ <b class="caret"> </b>
+          </a>
+          <ul class="dropdown-menu">
+            $list: List.map make_item sub_items$
+          </ul>
+        </li>
+      >>
   in
   <:xml<
     <ul class="nav">
-      $list: List.fold_left make_item [] (List.rev pages)$
+      $list: List.map make_item pages$
     </ul>
   >>
 
@@ -151,11 +163,15 @@ let generate ~out_dir (menu_links, pages) =
     Printf.printf "[Done]\n"
   in
   (* Filter out external links from the menu pages to generate *)
-  let menu_pages = List.rev (List.fold_left (fun acc (l, m) ->
-      match m with
-      | External -> acc
-      | Internal (d, c) -> (l, d, c) :: acc)
-    [] menu_links)
+  let menu_pages =
+    let rec aux acc pages =
+      match pages with
+      | [] -> acc
+      | (l, m) :: t -> match m with
+        | External | Divider | Nav_header -> aux acc t
+        | Submenu sub -> aux acc (sub @ t)
+        | Internal (d, c) -> aux ((l, d, c) :: acc) t
+    in aux [] menu_links
   in
   List.iter aux menu_pages;
   List.iter aux pages
