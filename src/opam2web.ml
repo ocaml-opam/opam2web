@@ -66,7 +66,7 @@ let make_website (repository: Path.R.t): unit =
     { text="Home"; href="index.html" }, Internal (0, Home.static_html);
     { text="Packages"; href="pkg/index.html" },
         Internal (1, (Repository.to_html repository));
-    { text="Documentation"; href="" },
+    { text="Documentation"; href="doc/index.html" },
         Submenu (links_of_doc ["Tutorial.md"; "Packaging.md"]);
   ], packages)
 

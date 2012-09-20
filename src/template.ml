@@ -106,8 +106,20 @@ let create ~title ~header ~body ~footer ~depth =
   >>
 
 let make_nav (active, depth) pages: Cow.Html.t =
-  let rec make_item (lnk, c) =
-    let class_attr = if lnk.href = active.href then "active" else "" in
+  let category_of_href href =
+    try
+      String.sub href 0 (String.index href '/')
+    with
+      Not_found -> ""
+  in
+  let active_category = category_of_href active.href in
+  let rec make_item ?(subnav=false) (lnk, c) =
+    let item_category = category_of_href lnk.href in
+    let class_attr =
+      if subnav && active.href = lnk.href then "active"
+      else if (not subnav) && active_category = item_category then "active"
+      else ""
+    in
     match c with
     | External _ ->
       <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
@@ -125,7 +137,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
             $str: lnk.text$ <b class="caret"> </b>
           </a>
           <ul class="dropdown-menu">
-            $list: List.map make_item sub_items$
+            $list: List.map (make_item ~subnav:true) sub_items$
           </ul>
         </li>
       >>
