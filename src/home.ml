@@ -22,8 +22,22 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 
       <!-- Example row of columns -->
       <div class="row">
+        <div class="offset1 span3">
+          <h2>News</h2>
+          <ul>
+            <li><strong>21/09/2012</strong> Version 0.7 is out</li>
+            <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a></li>
+            <li><strong>11/09/2012</strong> Version 0.6 is out</li>
+          </ul>
+        </div>
         <div class="span3">
-          <h2></h2>
+          <h2>Contribute</h2>
+          <p><button class="btn btn-large btn-block" type="button">
+             <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">OCamlPro/opam</a>
+          </button></p>
+          <p><button class="btn btn-large btn-block" type="button">
+             <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">OCamlPro/opam-repository</a>
+          </button></p>
 <!--
           <table class="table tooltip-packages">
             <tbody>
@@ -37,24 +51,13 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
           </table>
 -->
         </div>
-        <div class="span4">
-          <h2>News</h2>
-          <ul>
-            <li><strong>21/09/2012</strong> Version 0.7 is out</li>
-            <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a></li>
-            <li><strong>11/09/2012</strong> Version 0.6 is out</li>
-          </ul>
-        </div>
         <div class="span3">
-          <h2>Contribute</h2>
+          <h2>Tutorials</h2>
           <ul>
             <li><a href="doc/Tutorial.html" title="Getting started with OPAM">Getting started</a></li>
             <li><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></li>
             <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs</a></li>
-            <li><a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Contribute</a></li>
           </ul>
-          <p>OPAM is in github: <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">OCamlPro/opam</a></p>
-          <p>Package descriptions as well: <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">OCamlPro/opam-repository</a></p>
         </div>
         <div class="span2">
           <img src="ext/img/camel_rider.png" alt="Camel Rider" />
