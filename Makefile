@@ -10,8 +10,7 @@ build:
 run: build
 	cd src && $(MAKE) run
 	rm -rf $(WWWDIR)
-	mv src/$(WWWDIR) . && cp -r ext/ $(WWWDIR)/
-	mkdir -p $(JSDIR)
+	mv src/$(WWWDIR) . && cd $(WWWDIR) && ln -s ../ext
 
 clean:
 	cd src && $(MAKE) clean
