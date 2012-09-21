@@ -22,6 +22,7 @@ let create ~title ~header ~body ~footer ~depth =
   let css_files = [
     "ext/css/bootstrap.css";
     "ext/css/bootstrap-responsive.css";
+    "ext/css/docs.css";
     "ext/js/google-code-prettify/prettify.css";
     "ext/css/site.css";
   ] in
@@ -127,7 +128,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
       let lnk = { lnk with href = prepend_root depth lnk.href } in
       <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
     | Nav_header ->
-      <:xml< <li class="nav-header">lnk.text</li> >>
+      <:xml< <li class="nav-header">$str: lnk.text$</li> >>
     | Divider ->
       <:xml< <li class="divider"></li> >>
     | Submenu sub_items ->
