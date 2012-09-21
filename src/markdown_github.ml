@@ -397,6 +397,26 @@ let parse_enum e =
 let parse_lines ls = parse_enum (Enum.of_list ls)
 let parse_text s = parse_lines ((Re_str.split_delim (Re_str.regexp_string "\n") s))
 
+(* Create a suitable ID given a Header element *)
+let id_of_heading (h: paragraph): string =
+  let rec str_of_pt pt =
+    let replace s =
+      let tmp = Str.global_replace (Str.regexp "[ ]+") "" s
+      in Printf.printf "%s -> %s" s tmp; tmp
+    in
+    String.concat "-" (List.map (fun t -> replace (str_of_text t)) pt)
+  and str_of_text = function
+    | Text s | Emph s | Bold s | Code s | Anchor s -> s
+    | Struck pt -> str_of_pt pt
+    | Link href -> href.href_desc
+    | Image ref -> ref.img_alt
+  in
+  match h with
+  | Heading (n,pt) ->
+    let pt_str = str_of_pt pt in
+    Printf.sprintf "h%d-%s" n pt_str
+  | _ -> failwith "id_of_heading: input element is not a heading!"
+
 let rec text = function
     Text t    -> <:xml<$str:t$&>>
   | Emph t    -> <:xml<<i>$str:t$</i>&>>
@@ -412,10 +432,14 @@ and para = function
   | Html html        -> <:xml<<p>$html$</p>&>>
   (* XXX: we assume that this is ocaml code *)
   | Pre (t,kind)     -> <:xml<$ Code.ocaml t$>>
-  | Heading (1,pt)   -> <:xml<<h1>$par_text pt$</h1>&>>
-  | Heading (2,pt)   -> <:xml<<h2>$par_text pt$</h2>&>>
-  | Heading (3,pt)   -> <:xml<<h3>$par_text pt$</h3>&>>
-  | Heading (_,pt)   -> <:xml<<h4>$par_text pt$</h4>&>>
+  | Heading (1,pt) as h ->
+      <:xml<<h1 id="$str: id_of_heading h$">$par_text pt$</h1>&>>
+  | Heading (2,pt) as h ->
+      <:xml<<h2 id="$str: id_of_heading h$">$par_text pt$</h2>&>>
+  | Heading (3,pt) as h ->
+      <:xml<<h3 id="$str: id_of_heading h$">$par_text pt$</h3>&>>
+  | Heading (_,pt) as h ->
+      <:xml<<h4 id="$str: id_of_heading h$">$par_text pt$</h4>&>>
   | Quote pl         -> <:xml<<blockquote>$paras pl$</blockquote>&>>
   | Ulist (pl,pll)   -> let l = pl :: pll in <:xml<<ul>$li l$</ul>&>>
   | Olist (pl,pll)   -> let l = pl :: pll in <:xml<<ol>$li l$</ol>&>>
@@ -433,3 +457,31 @@ and paras ps =
 let to_html ps = paras ps
 
 let of_string = parse_text
+
+(* Extract a HTML table of contents from markdown elements. Depth can be 
+   modified with the corresponding optional argument. *)
+let to_html_toc ?(depth=2) ps =
+  let wrap_ul ?(classes="") l = <:xml<<ul class="$str: classes$">$l$</ul>&>> in
+  let wrap_li c = <:xml<<li>$c$</li>&>> in
+  let wrap_a ~href c = <:xml<<a href="$str: href$">$c$</a>&>> in
+  let rec aux level ps = match ps with
+    | [] -> [], []
+    | h :: t -> match h with
+      | Heading (n,pt) ->
+        begin
+          match n with
+          | n when n = level ->
+              let acc, r = aux level t in
+              let href = "#" ^ id_of_heading h in
+              wrap_li (wrap_a ~href:href (par_text pt)) :: acc, r
+          | n when n > level && n <= depth ->
+              let acc, r = aux (level+1) ps in
+              let racc, rr = aux level r in
+              wrap_li (wrap_ul <:xml< $list: acc$ >>) :: racc, rr
+          | n when n < level -> [], ps
+          | _ -> aux level t
+        end
+      | _ -> aux level t
+  in wrap_ul ~classes:"nav nav-list bs-docs-sidenav affix"
+      <:xml< $list: fst (aux 1 ps)$ >>
+

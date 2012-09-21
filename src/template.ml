@@ -22,6 +22,7 @@ let create ~title ~header ~body ~footer ~depth =
   let css_files = [
     "ext/css/bootstrap.css";
     "ext/css/bootstrap-responsive.css";
+    "ext/css/docs.css";
     "ext/js/google-code-prettify/prettify.css";
     "ext/css/site.css";
   ] in
@@ -106,8 +107,20 @@ let create ~title ~header ~body ~footer ~depth =
   >>
 
 let make_nav (active, depth) pages: Cow.Html.t =
-  let rec make_item (lnk, c) =
-    let class_attr = if lnk.href = active.href then "active" else "" in
+  let category_of_href href =
+    try
+      String.sub href 0 (String.index href '/')
+    with
+      Not_found -> ""
+  in
+  let active_category = category_of_href active.href in
+  let rec make_item ?(subnav=false) (lnk, c) =
+    let item_category = category_of_href lnk.href in
+    let class_attr =
+      if subnav && active.href = lnk.href then "active"
+      else if (not subnav) && active_category = item_category then "active"
+      else ""
+    in
     match c with
     | External _ ->
       <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
@@ -115,7 +128,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
       let lnk = { lnk with href = prepend_root depth lnk.href } in
       <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
     | Nav_header ->
-      <:xml< <li class="nav-header">lnk.text</li> >>
+      <:xml< <li class="nav-header">$str: lnk.text$</li> >>
     | Divider ->
       <:xml< <li class="divider"></li> >>
     | Submenu sub_items ->
@@ -125,7 +138,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
             $str: lnk.text$ <b class="caret"> </b>
           </a>
           <ul class="dropdown-menu">
-            $list: List.map make_item sub_items$
+            $list: List.map (make_item ~subnav:true) sub_items$
           </ul>
         </li>
       >>

@@ -48,7 +48,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
           <h2>Contribute</h2>
           <ul>
             <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs</a></li>
-            <li>Create packages</li>
+            <li><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></li>
             <li><a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Submit patches</a></li>
           </ul>
           <p>Github repository: <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">OCamlPro/opam</a></p>
