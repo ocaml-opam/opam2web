@@ -31,7 +31,7 @@ let create ~title ~header ~body ~footer ~depth =
     "ext/js/google-code-prettify/prettify.js";
     "ext/js/bootstrap.min.js";
     "ext/js/site.js";
-    "ext/js/search.js";    
+    "ext/js/search.js";
   ] in
   let prepend_root = prepend_root depth in
   let css_html = List.map (fun f ->
@@ -43,14 +43,14 @@ let create ~title ~header ~body ~footer ~depth =
   let home_href = prepend_root "index.html" in
   <:xml<
 <html lang="en">
-  <head>    
+  <head>
     <meta charset="utf-8" />
     <title>OPAM - $str: title$</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
         content="The homepage of OPAM, a package manager for OCaml" />
     <meta name="author" content="OCamlPro" />
-      
+
     <!-- Le styles -->
     $list: css_html$
 
@@ -101,7 +101,14 @@ let create ~title ~header ~body ~footer ~depth =
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     $list: js_html$
-
+    <script type="text/javascript">
+      var _gaq = _gaq || []; _gaq.push(['_setAccount', 'UA-22552764-5']); _gaq.push(['_trackPageview']);
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+    </script>
   </body>
 </html>
   >>
