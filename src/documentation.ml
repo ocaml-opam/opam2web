@@ -33,6 +33,23 @@ let split_filename (file: string): (string * string) =
 let to_links (content_dir: string) (pages: string list)
     : (Cow.Html.link * menu_item) list =
 
+  let wrap_li ~depth c = <:xml<<li>$c$</li>&>> in
+
+  let wrap_a ~depth ~heading c =
+    let href = "#" ^ Markdown_github.id_of_heading heading in
+    let html_a =
+      if depth > 1 then <:xml<<a href="$str: href$"><small>$c$</small></a>&>>
+      else <:xml<<a href="$str: href$"><strong>$c$</strong></a>&>>
+    in wrap_li ~depth html_a
+  in
+
+  let wrap_ul ~depth l =
+    if depth = 0 then
+      <:xml<<ul class="nav nav-list bs-docs-sidenav affix">$l$</ul>&>>
+    else
+      <:xml<$l$&>>
+  in
+
   (* Convert a content page to html *)
   let of_kind kind filename: Cow.Html.t =
     let content = Types.Raw.to_string (Types.Filename.read filename) in
@@ -40,11 +57,15 @@ let to_links (content_dir: string) (pages: string list)
     | "html" -> Cow.Html.of_string content
     | "md" ->
         let md_content = Markdown_github.of_string content in
+        let html_toc =
+          Markdown_github.to_html_toc
+              ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
+        in
         <:xml<
           <div class="row">
             <div class="span3 bs-docs-sidebar">
             <span> </span>
-            $Markdown_github.to_html_toc md_content$
+            $html_toc$
             </div>
             <div class="span9">
             $Markdown_github.to_html md_content$
