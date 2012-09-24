@@ -458,12 +458,25 @@ let to_html ps = paras ps
 
 let of_string = parse_text
 
+
+(* Default html creation functions for table of contents *)
+let wrap_li ~depth c = <:xml<<li>$c$</li>&>>
+
+let wrap_a ~depth ~heading c =
+  let href = "#" ^ id_of_heading heading in
+  wrap_li ~depth <:xml<<a href="$str: href$">$c$</a>&>>
+
+let wrap_ul ~depth l =
+  if depth = 0 then
+    <:xml<<ul class="nav nav-list bs-docs-sidenav affix">$l$</ul>&>>
+  else
+    wrap_li ~depth
+        <:xml<<ul>$l$</ul>&>>
+
+
 (* Extract a HTML table of contents from markdown elements. Depth can be 
    modified with the corresponding optional argument. *)
-let to_html_toc ?(depth=2) ps =
-  let wrap_ul ?(classes="") l = <:xml<<ul class="$str: classes$">$l$</ul>&>> in
-  let wrap_li c = <:xml<<li>$c$</li>&>> in
-  let wrap_a ~href c = <:xml<<a href="$str: href$">$c$</a>&>> in
+let to_html_toc ?(wrap_list=wrap_ul) ?(wrap_item=wrap_a) ?(depth=2) ps =
   let rec aux level ps = match ps with
     | [] -> [], []
     | h :: t -> match h with
@@ -472,16 +485,14 @@ let to_html_toc ?(depth=2) ps =
           match n with
           | n when n = level ->
               let acc, r = aux level t in
-              let href = "#" ^ id_of_heading h in
-              wrap_li (wrap_a ~href:href (par_text pt)) :: acc, r
+              wrap_item ~depth:level ~heading:h (par_text pt) :: acc, r
           | n when n > level && n <= depth ->
               let acc, r = aux (level+1) ps in
               let racc, rr = aux level r in
-              wrap_li (wrap_ul <:xml< $list: acc$ >>) :: racc, rr
+              wrap_list ~depth:level <:xml< $list: acc$ >> :: racc, rr
           | n when n < level -> [], ps
           | _ -> aux level t
         end
       | _ -> aux level t
-  in wrap_ul ~classes:"nav nav-list bs-docs-sidenav affix"
-      <:xml< $list: fst (aux 1 ps)$ >>
+  in wrap_ul ~depth:0 <:xml< $list: fst (aux 1 ps)$ >>
 
