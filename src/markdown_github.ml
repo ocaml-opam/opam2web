@@ -222,7 +222,6 @@ and read_list f is_item indent e =
 and read_pre ~delim kind e =
   let kind = match kind with "" -> None | s -> Some s in
   let re_str = Printf.sprintf "^\\\\+%s$" delim in
-  (* let re = Re_str.regexp_string "^\\\\+}}$" in *)
   let re = Re_str.regexp_string re_str in
   let unescape = function
       s when Re_str.string_match re s 0 -> slice ~first:1 s
@@ -400,10 +399,7 @@ let parse_text s = parse_lines ((Re_str.split_delim (Re_str.regexp_string "\n") 
 (* Create a suitable ID given a Header element *)
 let id_of_heading (h: paragraph): string =
   let rec str_of_pt pt =
-    let replace s =
-      let tmp = Str.global_replace (Str.regexp "[ ]+") "" s
-      in Printf.printf "%s -> %s" s tmp; tmp
-    in
+    let replace s = Str.global_replace (Str.regexp "[ ]+") "" s in
     String.concat "-" (List.map (fun t -> replace (str_of_text t)) pt)
   and str_of_text = function
     | Text s | Emph s | Bold s | Code s | Anchor s -> s
@@ -427,19 +423,22 @@ let rec text = function
   | Anchor a  -> <:xml<<a name=$str:a$/>&>>
   | Image img -> <:xml<<img src=$str:img.img_src$ alt=$str:img.img_alt$/>&>>
 
-and para = function
+and para p =
+  let heading_content h pt =
+    <:xml<
+      <a name="$str: id_of_heading h$" class="anchor-toc"> </a>
+      $par_text pt$
+    >>
+  in
+  match p with
     Normal pt        -> <:xml<$par_text pt$>>
   | Html html        -> <:xml<<p>$html$</p>&>>
   (* XXX: we assume that this is ocaml code *)
   | Pre (t,kind)     -> <:xml<$ Code.ocaml t$>>
-  | Heading (1,pt) as h ->
-      <:xml<<h1 id="$str: id_of_heading h$">$par_text pt$</h1>&>>
-  | Heading (2,pt) as h ->
-      <:xml<<h2 id="$str: id_of_heading h$">$par_text pt$</h2>&>>
-  | Heading (3,pt) as h ->
-      <:xml<<h3 id="$str: id_of_heading h$">$par_text pt$</h3>&>>
-  | Heading (_,pt) as h ->
-      <:xml<<h4 id="$str: id_of_heading h$">$par_text pt$</h4>&>>
+  | Heading (1,pt) as h -> <:xml<<h1>$heading_content h pt$</h1>&>>
+  | Heading (2,pt) as h -> <:xml<<h2>$heading_content h pt$</h2>&>>
+  | Heading (3,pt) as h -> <:xml<<h3>$heading_content h pt$</h3>&>>
+  | Heading (_,pt) as h -> <:xml<<h4>$heading_content h pt$</h4>&>>
   | Quote pl         -> <:xml<<blockquote>$paras pl$</blockquote>&>>
   | Ulist (pl,pll)   -> let l = pl :: pll in <:xml<<ul>$li l$</ul>&>>
   | Olist (pl,pll)   -> let l = pl :: pll in <:xml<<ol>$li l$</ol>&>>
