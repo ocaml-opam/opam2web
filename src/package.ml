@@ -4,24 +4,34 @@ open Cow.Html
    package *)
 let latest: Types.NV.t list -> Types.NV.t = function
   | h :: _ -> h
-  | [] -> failwith "Repository.to_html: error building unique_packages"
+  (* | [] -> failwith "Repository.to_html: error building unique_packages" *)
+  | [] -> raise Not_found
 
 (* Find the latest version of a package in the two-dimensions list representing
    package versions *)
 let find_latest_version (unique_packages: Types.NV.t list list)
-    (pkg_name: string) : string =
+    (pkg_name: string) : string option =
   let packages =
-    List.find (fun versions ->
-        if Types.N.to_string (Types.NV.name (latest versions)) = pkg_name then
-          true
-        else
-          false)
-      unique_packages
+    try
+      List.find (fun versions ->
+          if Types.N.to_string (Types.NV.name (latest versions)) = pkg_name then
+            true
+          else
+            false)
+        unique_packages
+    with
+      Not_found ->
+        Printf.eprintf "Warning: missing dependency '%s'\n%!" pkg_name;
+        []
   in
-    Types.V.to_string (Types.NV.version (latest packages))
+    try
+      Some (Types.V.to_string (Types.NV.version (latest packages)))
+    with
+      Not_found -> None
 
 (* Returns a HTML description of the given package *)
 let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
+    (reverse_dependencies: (Types.N.t * Types.NV.t list list) list)
     (versions: Types.NV.t list) (pkg: Types.NV.t): Cow.Html.t =
   let pkg_name = Types.N.to_string (Types.NV.name pkg) in
   let pkg_version = Types.V.to_string (Types.NV.version pkg) in
@@ -73,7 +83,12 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
   let html_of_dependencies title dependencies =
     let deps = List.map (fun ((name, _), constr_opt) ->
         let latest_version = find_latest_version unique_packages name in
-        let href = Printf.sprintf "%s.%s.html" name latest_version in
+        let href = match latest_version with
+          | None -> <:xml< $str: name$ >>
+          | Some v ->
+              let href_str = Printf.sprintf "%s.%s.html" name v in
+              <:xml< <a href="$str: href_str$">$str: name$</a> >>
+        in
         let version = match constr_opt with
           | None -> ""
           | Some (r, v) -> Printf.sprintf "( %s %s )" r v
@@ -81,7 +96,7 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
         <:xml<
           <tr>
             <td>
-              <a href="$str: href$">$str: name$</a>
+              $href$
               <small>$str: version$</small>
             </td>
           </tr>
@@ -101,6 +116,18 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
   in
   let depopts = html_of_dependencies "Optional"
       (File.OPAM.depopts opam_file)
+  in
+  let requiredby =
+    try
+      List.assoc (Types.NV.name pkg) reverse_dependencies
+    with
+      Not_found -> []
+  in
+  let requiredby_deps = List.map (fun req ->
+    [((Types.N.to_string (Types.NV.name (List.hd req)), ""), None)] ) requiredby
+  in
+  let requiredby_html =
+    html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
   <:xml<
@@ -134,8 +161,9 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
           <tbody>
             $list: dependencies$
             $list: depopts$
-            $match (dependencies, depopts) with
-              | ([], []) -> nodeps
+            $list: requiredby_html$
+            $match (dependencies, depopts, requiredby) with
+              | ([], [], []) -> nodeps
               | _ -> Cow.Html.nil$
           </tbody>
         </table>
