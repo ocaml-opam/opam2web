@@ -1,11 +1,5 @@
 open Cow.Html
-
-(* Graph representation of package dependencies *)
-(* type package_node = Types.NV.t * package_edge list *)
-
-(* type package_edge = *)
-(*   | Depends_on of (Types.N.t * ((Types.relop * Types.V.t) option)) *)
-(*   | Required_by of Types.NV.t *)
+open O2w_common
 
 (* Load a repository from the local OPAM installation *)
 let of_opam repo_name: Path.R.t =
@@ -32,11 +26,15 @@ let unify_versions (packages: Types.NV.t list): Types.NV.t list list =
   in
   List.rev (rest :: unique_packages)
 
+(* Retrieve packages of a repository *)
+let get_packages repository =
+  let package_set = Path.R.available_packages repository in
+  Types.NV.Set.elements package_set
+
 (* Create an association list (package_name -> reverse_dependencies) *)
 let reverse_dependencies (repository: Path.R.t)
     (packages: Types.NV.t list) : (Types.N.t * Types.NV.t list list) list =
-  let package_set = Path.R.available_packages repository in
-  let packages = Types.NV.Set.elements package_set in
+  let packages = get_packages repository in
   let revdeps_tbl: (Types.N.t, Types.NV.t) Hashtbl.t =
     Hashtbl.create 300
   in
@@ -70,16 +68,12 @@ let reverse_dependencies (repository: Path.R.t)
 
 (* Create a list of package pages to generate for a repository *)
 let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
-  let package_set = Path.R.available_packages repository in
-  let packages = Types.NV.Set.elements package_set in
+  let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let reverse_dependencies = reverse_dependencies repository packages in
   let aux package_versions = List.map (fun (pkg: Types.NV.t) ->
-      let pkg_name = Types.N.to_string (Types.NV.name pkg) in
-      let pkg_version = Types.V.to_string (Types.NV.version pkg) in
-      let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
-      let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
-      { text=pkg_title; href=pkg_href }, 1,
+      let pkg_info = Package.get_info ~href_prefix:"pkg/" repository pkg in
+      { text=pkg_info.pkg_title; href=pkg_info.pkg_href }, 1,
         (Package.to_html repository unique_packages
             reverse_dependencies package_versions pkg))
     package_versions
@@ -88,24 +82,21 @@ let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
 
 (* Returns a HTML list of the packages in the given repository *)
 let to_html (repository: Path.R.t): Cow.Html.t =
-  let package_set = Path.R.available_packages repository in
-  let packages = Types.NV.Set.elements package_set in
+  let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let packages_html =
     List.map (fun (pkg_vers: Types.NV.t list) ->
         let latest_pkg = Package.latest pkg_vers in
-        let pkg_name = Types.N.to_string (Types.NV.name latest_pkg) in
-        let pkg_version = Types.V.to_string (Types.NV.version latest_pkg) in
-        let pkg_href = Printf.sprintf "%s.%s.html" pkg_name pkg_version in
-        let pkg_synopsis =
-          File.Descr.synopsis
-            (File.Descr.read (Path.R.descr repository latest_pkg))
-        in
+        let pkg_info = Package.get_info repository latest_pkg in
         <:xml<
           <tr>
-            <td><a href="$str: pkg_href$">$str: pkg_name$</a></td>
-            <td>$str: pkg_version$</td>
-            <td>$str: pkg_synopsis$</td>
+            <td>
+              <a href="$str: pkg_info.pkg_href$">
+                $str: pkg_info.pkg_name$
+              </a>
+            </td>
+            <td>$str: pkg_info.pkg_version$</td>
+            <td>$str: pkg_info.pkg_synopsis$</td>
           </tr>
         >>)
       unique_packages
