@@ -5,3 +5,12 @@ type menu_item =
   | Divider
   | External
 
+type package_info = {
+  pkg_name     : string;
+  pkg_version  : string;
+  pkg_descr    : Cow.Html.t;
+  pkg_synopsis : string;
+  pkg_href     : string;
+  pkg_title    : string;
+}
+

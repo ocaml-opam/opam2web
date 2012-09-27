@@ -1,4 +1,34 @@
 open Cow.Html
+open O2w_common
+
+(* Build a record representing information about a package *)
+let get_info ?(href_prefix="") (repository: Path.R.t) (pkg: Types.NV.t)
+    : package_info =
+  let pkg_name = Types.N.to_string (Types.NV.name pkg) in
+  let pkg_version = Types.V.to_string (Types.NV.version pkg) in
+  let pkg_href =
+    Printf.sprintf "%s%s.%s.html" href_prefix pkg_name pkg_version
+  in
+  let pkg_synopsis =
+    File.Descr.synopsis
+      (File.Descr.read (Path.R.descr repository pkg))
+  in
+  let pkg_descr_markdown =
+    File.Descr.full (File.Descr.read (Path.R.descr repository pkg))
+  in
+  let pkg_descr =
+    Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
+  in
+  let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
+  {
+    pkg_name     = pkg_name;
+    pkg_version  = pkg_version;
+    pkg_descr    = pkg_descr;
+    pkg_synopsis = pkg_synopsis;
+    pkg_href     = pkg_href;
+    pkg_title    = pkg_title;
+  }
+
 
 (* Returns the latest version of a list containing multiple versions of the same
    package *)
@@ -33,14 +63,7 @@ let find_latest_version (unique_packages: Types.NV.t list list)
 let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
     (reverse_dependencies: (Types.N.t * Types.NV.t list list) list)
     (versions: Types.NV.t list) (pkg: Types.NV.t): Cow.Html.t =
-  let pkg_name = Types.N.to_string (Types.NV.name pkg) in
-  let pkg_version = Types.V.to_string (Types.NV.version pkg) in
-  let pkg_descr_markdown =
-    File.Descr.full (File.Descr.read (Path.R.descr repository pkg))
-  in
-  let pkg_descr =
-    Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
-  in
+  let pkg_info = get_info repository pkg in
   let pkg_url =
     try
       let url_file = File.URL.read (Path.R.url repository pkg) in
@@ -68,11 +91,11 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
   let opam_file = File.OPAM.read (Path.R.opam repository pkg) in
   let version_links = List.map (fun (pkg: Types.NV.t) ->
       let version = Types.V.to_string (Types.NV.version pkg) in
-      let href = Printf.sprintf "%s.%s.html" pkg_name version in
-      if pkg_version = version then
+      let href = Printf.sprintf "%s.%s.html" pkg_info.pkg_name version in
+      if pkg_info.pkg_version = version then
         <:xml<
           <li class="active">
-            <a href="#">version $str: pkg_version$</a>
+            <a href="#">version $str: version$</a>
           </li>
         >>
       else
@@ -131,7 +154,7 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
   <:xml<
-    <h2>$str: pkg_name$</h2>
+    <h2>$str: pkg_info.pkg_name$</h2>
 
     <div class="row">
       <div class="span9">
@@ -153,7 +176,7 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
           </tbody>
         </table>
 
-        <div class="well">$pkg_descr$</div>
+        <div class="well">$pkg_info.pkg_descr$</div>
       </div>
 
       <div class="span3">
