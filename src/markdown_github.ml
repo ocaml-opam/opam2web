@@ -425,10 +425,7 @@ let rec text = function
 
 and para p =
   let heading_content h pt =
-    <:xml<
-      <a name="$str: id_of_heading h$" class="anchor-toc"> </a>
-      $par_text pt$
-    >>
+    <:xml<$par_text pt$<a name="$str: id_of_heading h$" class="anchor-toc"> </a>&>>
   in
   match p with
     Normal pt        -> <:xml<$par_text pt$>>
