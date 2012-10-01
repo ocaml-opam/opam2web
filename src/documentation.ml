@@ -45,13 +45,13 @@ let to_links (content_dir: string) (pages: string list)
 
   let wrap_ul ~depth l =
     if depth = 0 then
-      <:xml<<ul class="nav nav-list bs-docs-sidenav affix">$l$</ul>&>>
+      <:xml<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
     else
       <:xml<$l$&>>
   in
 
   (* Convert a content page to html *)
-  let of_kind kind filename: Cow.Html.t =
+  let of_kind doc_menu kind filename: Cow.Html.t =
     let content = Types.Raw.to_string (Types.Filename.read filename) in
     match kind with
     | "html" -> Cow.Html.of_string content
@@ -63,9 +63,14 @@ let to_links (content_dir: string) (pages: string list)
         in
         <:xml<
           <div class="row">
-            <div class="span3 bs-docs-sidebar">
+            <div class="span3">
             <span> </span>
-            $html_toc$
+            <div class="bs-docs-menu"
+                data-spy="affix"
+                data-offset-top="0" data-offset-bottom="140">
+              $doc_menu$
+              $html_toc$
+            </div>
             </div>
             <div class="span9">
             $Markdown_github.to_html md_content$
@@ -75,22 +80,61 @@ let to_links (content_dir: string) (pages: string list)
     | _ -> <:xml< >>
   in
 
-  (* Link creation *)
-  let aux page =
+  (* Documentation menu and links creation *)
+  let aux_menu page =
     let title, extension = split_filename page in
     if String.length extension = 0 then
+      let empty_filename = Types.Filename.of_string "" in
       if  String.length title > 0 then
-        ({ text=title; href="" }, Nav_header)
+        (empty_filename, "", { text=title; href="" }, Nav_header)
       else
-        ({ text=""; href="" }, Divider)
+        (empty_filename, "", { text=""; href="" }, Divider)
     else
-      let source_file = Printf.sprintf "%s/doc/%s.%s" content_dir title extension in
+      let source_file =
+        Printf.sprintf "%s/doc/%s.%s" content_dir title extension
+      in
       let source_filename = Types.Filename.of_string source_file in
-      let page = of_kind extension source_filename in
-      let dest_file = Printf.sprintf "doc/%s.html" title in
-
-      ({ text=title; href=dest_file }, Internal (1, page))
+      let dest_file = Printf.sprintf "%s.html" title in
+      (source_filename, extension,
+          { text=title; href=dest_file }, Internal (1, Cow.Html.nil))
   in
 
-  List.map aux pages
+  let menu_pages = List.map aux_menu pages in
+
+  let documentation_menu active_src =
+    let menu_items = List.map (fun (src, _, lnk, kind) -> match kind with
+        | Submenu _ -> Cow.Html.nil
+        | Nav_header ->
+          <:xml<
+            <li class="disabled">
+              <a href="#"><strong>$str: lnk.text$</strong></a>
+            </li>
+          >>
+        | Divider ->
+          <:xml<<li class="disabled divider"><a href="#"> </a></li>&>>
+        | External | Internal _ ->
+          let classes = if active_src = src then "active" else "" in
+          <:xml<<li class="$str: classes$">
+            <a href="$str: lnk.href$"> $str: lnk.text$</a>
+          </li>&>>
+      ) menu_pages
+    in
+    <:xml<
+      <ul class="nav nav-pills nav-stacked">
+        $list: menu_items$
+      </ul>
+    >>
+  in
+
+  (* Pages creation *)
+  let aux_page (source_filename, extension, lnk, page) =
+    match page with
+    | Submenu _ | Nav_header | Divider | External -> (lnk, page)
+    | Internal (level, _) ->
+        let doc_menu = documentation_menu source_filename in
+        let html_page = of_kind doc_menu extension source_filename in
+        ({ lnk with href = "doc/" ^ lnk.href }, Internal(level, html_page))
+  in
+
+  List.map aux_page menu_pages
 
