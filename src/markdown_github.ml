@@ -464,7 +464,7 @@ let wrap_a ~depth ~heading c =
 
 let wrap_ul ~depth l =
   if depth = 0 then
-    <:xml<<ul class="nav nav-list bs-docs-sidenav affix">$l$</ul>&>>
+    <:xml<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
   else
     wrap_li ~depth
         <:xml<<ul>$l$</ul>&>>
@@ -490,5 +490,5 @@ let to_html_toc ?(wrap_list=wrap_ul) ?(wrap_item=wrap_a) ?(depth=2) ps =
           | _ -> aux level t
         end
       | _ -> aux level t
-  in wrap_ul ~depth:0 <:xml< $list: fst (aux 1 ps)$ >>
+  in wrap_list ~depth:0 <:xml< $list: fst (aux 1 ps)$ >>
 

@@ -14,3 +14,18 @@ type package_info = {
   pkg_title    : string;
 }
 
+(* Global values *)
+
+(* The list contains elements with this syntax :
+   <string> without extension -> A menu title
+   <string> with 'md' extension -> A markdown page in content/doc
+   empty <string> -> A menu divider
+ *)
+let documentation_pages = [
+  "For Users";
+  "Tutorial.md";
+  "Developing.md";
+  "";
+  "For Packagers";
+  "Packaging.md"
+]

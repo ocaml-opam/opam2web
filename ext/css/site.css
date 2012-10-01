@@ -76,3 +76,18 @@ code {
   top: -50px;
 }
 
+.bs-docs-menu {
+  width: inherit;
+}
+
+.bs-docs-menu > ul.nav > li.divider {
+  height: 1px;
+  border-top: 1px solid #eee;
+  margin: 10px 0 10px 0;
+}
+
+.bs-docs-menu.affix-bottom {
+  position: absolute;
+  top: auto;
+  bottom: 140px;
+}
