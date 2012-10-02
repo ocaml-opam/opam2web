@@ -4,8 +4,8 @@ open O2w_common
 (* Load a repository from the local OPAM installation *)
 let of_opam repo_name: Path.R.t =
   let global = Path.G.create () in
-  let config = File.Config.read (Path.G.config global) in
-  let all_repositories = File.Config.repositories config in
+  let config = OpamFile.Config.read (Path.G.config global) in
+  let all_repositories = OpamFile.Config.repositories config in
   let repo = List.find
     (fun r -> (Types.Repository.name r) = repo_name) all_repositories
   in
@@ -40,9 +40,9 @@ let reverse_dependencies (repository: Path.R.t)
   in
   (* Fill a hash table with reverse dependecies (required by...) *)
   List.iter (fun pkg ->
-      let opam_file = File.OPAM.read (Path.R.opam repository pkg) in
+      let opam_file = OpamFile.OPAM.read (Path.R.opam repository pkg) in
       let dependencies: Debian.Format822.vpkg list =
-        List.flatten (File.OPAM.depends opam_file)
+        List.flatten (OpamFile.OPAM.depends opam_file)
       in
       let deps =
         List.map (fun ((name, _), _) -> Types.N.of_string name) dependencies

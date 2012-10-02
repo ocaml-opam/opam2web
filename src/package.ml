@@ -10,11 +10,11 @@ let get_info ?(href_prefix="") (repository: Path.R.t) (pkg: Types.NV.t)
     Printf.sprintf "%s%s.%s.html" href_prefix pkg_name pkg_version
   in
   let pkg_synopsis =
-    File.Descr.synopsis
-      (File.Descr.read (Path.R.descr repository pkg))
+    OpamFile.Descr.synopsis
+      (OpamFile.Descr.read (Path.R.descr repository pkg))
   in
   let pkg_descr_markdown =
-    File.Descr.full (File.Descr.read (Path.R.descr repository pkg))
+    OpamFile.Descr.full (OpamFile.Descr.read (Path.R.descr repository pkg))
   in
   let pkg_descr =
     Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
@@ -66,16 +66,16 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
   let pkg_info = get_info repository pkg in
   let pkg_url =
     try
-      let url_file = File.URL.read (Path.R.url repository pkg) in
-      let kind = match File.URL.kind url_file with
+      let url_file = OpamFile.URL.read (Path.R.url repository pkg) in
+      let kind = match OpamFile.URL.kind url_file with
         | Some k -> <:xml< [$str: k$] >>
         | None -> <:xml< >>
       in
-      let checksum = match File.URL.checksum url_file with
+      let checksum = match OpamFile.URL.checksum url_file with
         | Some c -> <:xml< <small>$str: c$</small> >>
         | None -> <:xml< >>
       in
-      let url = File.URL.url url_file in
+      let url = OpamFile.URL.url url_file in
       <:xml<
         <tr>
           <th>Source $kind$</th>
@@ -88,7 +88,7 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
     with
       Globals.Exit 66 -> <:xml< >>
   in
-  let opam_file = File.OPAM.read (Path.R.opam repository pkg) in
+  let opam_file = OpamFile.OPAM.read (Path.R.opam repository pkg) in
   let version_links = List.map (fun (pkg: Types.NV.t) ->
       let version = Types.V.to_string (Types.NV.version pkg) in
       let href = Printf.sprintf "%s.%s.html" pkg_info.pkg_name version in
@@ -102,7 +102,7 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
         <:xml< <li><a href="$str: href$">$str: version$</a></li> >>)
     versions
   in
-  let pkg_maintainer = File.OPAM.maintainer opam_file in
+  let pkg_maintainer = OpamFile.OPAM.maintainer opam_file in
   let html_of_dependencies title dependencies =
     let deps = List.map (fun ((name, _), constr_opt) ->
         let latest_version = find_latest_version unique_packages name in
@@ -135,10 +135,10 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
       >> :: deps
   in
   let dependencies = html_of_dependencies "Dependencies"
-      (File.OPAM.depends opam_file)
+      (OpamFile.OPAM.depends opam_file)
   in
   let depopts = html_of_dependencies "Optional"
-      (File.OPAM.depopts opam_file)
+      (OpamFile.OPAM.depopts opam_file)
   in
   let requiredby =
     try
