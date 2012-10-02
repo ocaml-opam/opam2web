@@ -23,6 +23,7 @@ type package_info = {
  *)
 let documentation_pages = [
   "For Users";
+  "Install.md";
   "Tutorial.md";
   "Developing.md";
   "";
