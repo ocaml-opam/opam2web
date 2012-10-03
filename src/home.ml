@@ -58,7 +58,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
         <div class="span3">
           <h2>Tutorials</h2>
           <ul>
-            <li><a href="doc/Tutorial.html" title="Getting started with OPAM">Getting started</a></li>
+            <li><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></li>
             <li><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></li>
             <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs</a></li>
           </ul>
