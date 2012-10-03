@@ -22,9 +22,14 @@ type package_info = {
    empty <string> -> A menu divider
  *)
 let documentation_pages = [
-  "For Users";
-  "Install.md";
-  "Tutorial.md";
+  "Primer";
+  "About.md";
+  "Quick_Install.md";
+  "Basic_Usage.md";
+  "";
+  "Go Further";
+  "Advanced_Install.md";
+  "Advanced_Usage.md";
   "Developing.md";
   "";
   "For Packagers";
