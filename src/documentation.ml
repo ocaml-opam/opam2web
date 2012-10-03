@@ -83,10 +83,11 @@ let to_links (content_dir: string) (pages: string list)
   (* Documentation menu and links creation *)
   let aux_menu page =
     let title, extension = split_filename page in
+    let human_title = Str.global_replace (Str.regexp "_") " " title in
     if String.length extension = 0 then
       let empty_filename = Types.Filename.of_string "" in
       if  String.length title > 0 then
-        (empty_filename, "", { text=title; href="" }, Nav_header)
+        (empty_filename, "", { text=human_title; href="" }, Nav_header)
       else
         (empty_filename, "", { text=""; href="" }, Divider)
     else
@@ -96,7 +97,7 @@ let to_links (content_dir: string) (pages: string list)
       let source_filename = Types.Filename.of_string source_file in
       let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
-          { text=title; href=dest_file }, Internal (1, Cow.Html.nil))
+          { text=human_title; href=dest_file }, Internal (1, Cow.Html.nil))
   in
 
   let menu_pages = List.map aux_menu pages in
