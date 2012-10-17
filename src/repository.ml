@@ -8,7 +8,7 @@ let of_opam (repo_name: string): OpamPath.Repository.r =
   let config = OpamFile.Config.read (OpamPath.config default_path) in
   let all_repositories = OpamFile.Config.repositories config in
   let repo = List.find
-    (fun r -> r.repo_name = repo_name) all_repositories
+    (fun r -> (OpamRepositoryName.to_string r) = repo_name) all_repositories
   in
   OpamPath.Repository.create default_path repo
 
