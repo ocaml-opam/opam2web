@@ -1,26 +1,27 @@
+open OpamTypes
 open Cow.Html
 open O2w_common
 
 (* Load a repository from the local OPAM installation *)
-let of_opam repo_name: Path.R.t =
-  let global = Path.G.create () in
-  let config = OpamFile.Config.read (Path.G.config global) in
+let of_opam (repo_name: string): OpamPath.Repository.r =
+  let default_path = OpamPath.default () in
+  let config = OpamFile.Config.read (OpamPath.config default_path) in
   let all_repositories = OpamFile.Config.repositories config in
   let repo = List.find
-    (fun r -> (Types.Repository.name r) = repo_name) all_repositories
+    (fun r -> r.repo_name = repo_name) all_repositories
   in
-  Path.R.create repo
+  OpamPath.Repository.create default_path repo
 
 (* Load a repository from a directory *)
-let of_path (name: string): Path.R.t =
-  Path.R.of_dirname (Types.Dirname.of_string name)
+let of_path (name: string): OpamPath.Repository.r =
+  OpamPath.Repository.raw (OpamFilename.Dir.of_string name)
 
 (* Unify multiple versions of the same packages in a list of lists *)
-let unify_versions (packages: Types.NV.t list): Types.NV.t list list =
+let unify_versions (packages: OpamPackage.t list): OpamPackage.t list list =
   let (unique_packages, rest) = List.fold_left (fun (acc, pkgs) pkg ->
       match pkgs with
       | [] -> (acc, [pkg])
-      | h :: r when (Types.NV.name h = Types.NV.name pkg) -> (acc, pkg :: pkgs)
+      | h :: r when (OpamPackage.name h = OpamPackage.name pkg) -> (acc, pkg :: pkgs)
       | l -> (l :: acc, [pkg]))
     ([], []) packages
   in
@@ -28,24 +29,22 @@ let unify_versions (packages: Types.NV.t list): Types.NV.t list list =
 
 (* Retrieve packages of a repository *)
 let get_packages repository =
-  let package_set = Path.R.available_packages repository in
-  Types.NV.Set.elements package_set
+  let package_set = OpamRepository.packages repository in
+  OpamPackage.Set.elements package_set
 
 (* Create an association list (package_name -> reverse_dependencies) *)
-let reverse_dependencies (repository: Path.R.t)
-    (packages: Types.NV.t list) : (Types.N.t * Types.NV.t list list) list =
+let reverse_dependencies (repository: OpamPath.Repository.r)
+    (packages: OpamPackage.t list) : (OpamPackage.Name.t * OpamPackage.t list list) list =
   let packages = get_packages repository in
-  let revdeps_tbl: (Types.N.t, Types.NV.t) Hashtbl.t =
+  let revdeps_tbl: (OpamPackage.Name.t, OpamPackage.t) Hashtbl.t =
     Hashtbl.create 300
   in
   (* Fill a hash table with reverse dependecies (required by...) *)
   List.iter (fun pkg ->
-      let opam_file = OpamFile.OPAM.read (Path.R.opam repository pkg) in
-      let dependencies: Debian.Format822.vpkg list =
-        List.flatten (OpamFile.OPAM.depends opam_file)
-      in
+      let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository pkg) in
+      let dependencies = OpamFormula.atoms (OpamFile.OPAM.depends opam_file) in
       let deps =
-        List.map (fun ((name, _), _) -> Types.N.of_string name) dependencies
+        List.map (fun (name, _) -> name) dependencies
       in
       List.iter (fun dep -> Hashtbl.add revdeps_tbl dep pkg) deps)
     packages;
@@ -67,11 +66,11 @@ let reverse_dependencies (repository: Path.R.t)
 
 
 (* Create a list of package pages to generate for a repository *)
-let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
+let to_links (repository: OpamPath.Repository.r): (Cow.Html.link * int * Cow.Html.t) list =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let reverse_dependencies = reverse_dependencies repository packages in
-  let aux package_versions = List.map (fun (pkg: Types.NV.t) ->
+  let aux package_versions = List.map (fun (pkg: OpamPackage.t) ->
       let pkg_info = Package.get_info ~href_prefix:"pkg/" repository pkg in
       { text=pkg_info.pkg_title; href=pkg_info.pkg_href }, 1,
         (Package.to_html repository unique_packages
@@ -81,11 +80,11 @@ let to_links (repository: Path.R.t): (Cow.Html.link * int * Cow.Html.t) list =
   List.flatten (List.map aux unique_packages)
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html (repository: Path.R.t): Cow.Html.t =
+let to_html (repository: OpamPath.Repository.r): Cow.Html.t =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let packages_html =
-    List.map (fun (pkg_vers: Types.NV.t list) ->
+    List.map (fun (pkg_vers: OpamPackage.t list) ->
         let latest_pkg = Package.latest pkg_vers in
         let pkg_info = Package.get_info repository latest_pkg in
         <:xml<

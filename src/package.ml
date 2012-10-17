@@ -2,19 +2,19 @@ open Cow.Html
 open O2w_common
 
 (* Build a record representing information about a package *)
-let get_info ?(href_prefix="") (repository: Path.R.t) (pkg: Types.NV.t)
-    : package_info =
-  let pkg_name = Types.N.to_string (Types.NV.name pkg) in
-  let pkg_version = Types.V.to_string (Types.NV.version pkg) in
+let get_info ?(href_prefix="") (repository: OpamPath.Repository.r)
+    (pkg: OpamPackage.t) : package_info =
+  let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
+  let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
   let pkg_href =
     Printf.sprintf "%s%s.%s.html" href_prefix pkg_name pkg_version
   in
   let pkg_synopsis =
     OpamFile.Descr.synopsis
-      (OpamFile.Descr.read (Path.R.descr repository pkg))
+      (OpamFile.Descr.read (OpamPath.Repository.descr repository pkg))
   in
   let pkg_descr_markdown =
-    OpamFile.Descr.full (OpamFile.Descr.read (Path.R.descr repository pkg))
+    OpamFile.Descr.full (OpamFile.Descr.read (OpamPath.Repository.descr repository pkg))
   in
   let pkg_descr =
     Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
@@ -32,19 +32,19 @@ let get_info ?(href_prefix="") (repository: Path.R.t) (pkg: Types.NV.t)
 
 (* Returns the latest version of a list containing multiple versions of the same
    package *)
-let latest: Types.NV.t list -> Types.NV.t = function
+let latest: OpamPackage.t list -> OpamPackage.t = function
   | h :: _ -> h
   (* | [] -> failwith "Repository.to_html: error building unique_packages" *)
   | [] -> raise Not_found
 
 (* Find the latest version of a package in the two-dimensions list representing
    package versions *)
-let find_latest_version (unique_packages: Types.NV.t list list)
+let find_latest_version (unique_packages: OpamPackage.t list list)
     (pkg_name: string) : string option =
   let packages =
     try
       List.find (fun versions ->
-          if Types.N.to_string (Types.NV.name (latest versions)) = pkg_name then
+          if OpamPackage.Name.to_string (OpamPackage.name (latest versions)) = pkg_name then
             true
           else
             false)
@@ -55,18 +55,18 @@ let find_latest_version (unique_packages: Types.NV.t list list)
         []
   in
     try
-      Some (Types.V.to_string (Types.NV.version (latest packages)))
+      Some (OpamPackage.Version.to_string (OpamPackage.version (latest packages)))
     with
       Not_found -> None
 
 (* Returns a HTML description of the given package *)
-let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
-    (reverse_dependencies: (Types.N.t * Types.NV.t list list) list)
-    (versions: Types.NV.t list) (pkg: Types.NV.t): Cow.Html.t =
+let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t list list)
+    (reverse_dependencies: (OpamPackage.Name.t * OpamPackage.t list list) list)
+    (versions: OpamPackage.t list) (pkg: OpamPackage.t): Cow.Html.t =
   let pkg_info = get_info repository pkg in
   let pkg_url =
     try
-      let url_file = OpamFile.URL.read (Path.R.url repository pkg) in
+      let url_file = OpamFile.URL.read (OpamPath.Repository.url repository pkg) in
       let kind = match OpamFile.URL.kind url_file with
         | Some k -> <:xml< [$str: k$] >>
         | None -> <:xml< >>
@@ -86,11 +86,11 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
         </tr>
       >>
     with
-      Globals.Exit 66 -> <:xml< >>
+      OpamGlobals.Exit 66 -> <:xml< >>
   in
-  let opam_file = OpamFile.OPAM.read (Path.R.opam repository pkg) in
-  let version_links = List.map (fun (pkg: Types.NV.t) ->
-      let version = Types.V.to_string (Types.NV.version pkg) in
+  let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository pkg) in
+  let version_links = List.map (fun (pkg: OpamPackage.t) ->
+      let version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
       let href = Printf.sprintf "%s.%s.html" pkg_info.pkg_name version in
       if pkg_info.pkg_version = version then
         <:xml<
@@ -104,7 +104,8 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
   in
   let pkg_maintainer = OpamFile.OPAM.maintainer opam_file in
   let html_of_dependencies title dependencies =
-    let deps = List.map (fun ((name, _), constr_opt) ->
+    let deps = List.map (fun (pkg_name, constr_opt) ->
+        let name = OpamPackage.Name.to_string pkg_name in
         let latest_version = find_latest_version unique_packages name in
         let href = match latest_version with
           | None -> <:xml< $str: name$ >>
@@ -114,7 +115,8 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
         in
         let version = match constr_opt with
           | None -> ""
-          | Some (r, v) -> Printf.sprintf "( %s %s )" r v
+          | Some (r, v) ->
+              Printf.sprintf "( %s %s )" r (OpamPackage.Version.to_string v)
         in
         <:xml<
           <tr>
@@ -124,7 +126,7 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
             </td>
           </tr>
         >>)
-      (List.flatten dependencies)
+      dependencies
     in
     match deps with
     | [] -> []
@@ -134,20 +136,21 @@ let to_html (repository: Path.R.t) (unique_packages: Types.NV.t list list)
         </tr>
       >> :: deps
   in
-  let dependencies = html_of_dependencies "Dependencies"
-      (OpamFile.OPAM.depends opam_file)
-  in
-  let depopts = html_of_dependencies "Optional"
-      (OpamFile.OPAM.depopts opam_file)
+  (* Keep only atomic formulas in dependency requirements
+     TODO: handle any type of formula *)
+  let depends_atoms = OpamFormula.atoms (OpamFile.OPAM.depends opam_file) in
+  let dependencies = html_of_dependencies "Dependencies" depends_atoms in
+  let depopts_atoms = OpamFormula.atoms (OpamFile.OPAM.depopts opam_file) in
+  let depopts = html_of_dependencies "Optional" depopts_atoms
   in
   let requiredby =
     try
-      List.assoc (Types.NV.name pkg) reverse_dependencies
+      List.assoc (OpamPackage.name pkg) reverse_dependencies
     with
       Not_found -> []
   in
   let requiredby_deps = List.map (fun req ->
-    [((Types.N.to_string (Types.NV.name (List.hd req)), ""), None)] ) requiredby
+    OpamPackage.name (List.hd req), None) requiredby
   in
   let requiredby_html =
     html_of_dependencies "Required by" requiredby_deps

@@ -52,7 +52,7 @@ let to_links (content_dir: string) (pages: string list)
 
   (* Convert a content page to html *)
   let of_kind doc_menu kind filename: Cow.Html.t =
-    let content = Types.Raw.to_string (Types.Filename.read filename) in
+    let content = OpamFilename.read filename in
     match kind with
     | "html" -> Cow.Html.of_string content
     | "md" ->
@@ -85,7 +85,7 @@ let to_links (content_dir: string) (pages: string list)
     let title, extension = split_filename page in
     let human_title = Str.global_replace (Str.regexp "_") " " title in
     if String.length extension = 0 then
-      let empty_filename = Types.Filename.of_string "" in
+      let empty_filename = OpamFilename.of_string "" in
       if  String.length title > 0 then
         (empty_filename, "", { text=human_title; href="" }, Nav_header)
       else
@@ -94,7 +94,7 @@ let to_links (content_dir: string) (pages: string list)
       let source_file =
         Printf.sprintf "%s/doc/%s.%s" content_dir title extension
       in
-      let source_filename = Types.Filename.of_string source_file in
+      let source_filename = OpamFilename.of_string source_file in
       let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
           { text=human_title; href=dest_file }, Internal (1, Cow.Html.nil))
