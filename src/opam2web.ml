@@ -40,10 +40,10 @@ let include_files (path: string) files_path : unit =
   in
   (* Check if output directory exists, create it if it doesn't *)
   List.iter (fun p ->
-      let dir = Types.Dirname.of_string p in
-      if not (Types.Dirname.exists dir) then
+      let dir = OpamFilename.Dir.of_string p in
+      if not (OpamFilename.exists_dir dir) then
         begin
-          Types.Dirname.mkdir dir;
+          OpamFilename.mkdir dir;
           Printf.printf "Directory '%s' created\n%!" p
         end
       else
@@ -58,7 +58,7 @@ let include_files (path: string) files_path : unit =
   (*   Types.Dirname.copy files_dir dir *)
 
 (* Generate a whole static website using the given repository *)
-let make_website (repository: Path.R.t): unit =
+let make_website (repository: OpamPath.Repository.r): unit =
   let packages = Repository.to_links repository in
   let links_of_doc = Documentation.to_links user_options.content_dir in
   include_files user_options.out_dir user_options.files_dir;
@@ -75,7 +75,7 @@ let make_website (repository: Path.R.t): unit =
 let website_of_cwd () =
   no_operation := false;
   Printf.printf "=== Repository: current working directory ===\n%!";
-  make_website (Path.R.cwd ())
+  make_website (OpamPath.Repository.raw (OpamFilename.cwd ()))
 
 (* Generate a website from the given directory, assuming that it's an OPAM 
    repository *)
@@ -99,7 +99,7 @@ let website_of_opam repo_name =
     make_website (load_repo repo_name)
   with
     Unknown_repository repo_name ->
-      Globals.error "Opam repository '%s' not found!" repo_name
+      OpamGlobals.error "Opam repository '%s' not found!" repo_name
 
 (* Command-line arguments *)
 let specs = [
