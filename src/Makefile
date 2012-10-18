@@ -1,5 +1,6 @@
 .PHONY: all run clean
 
+PREFIX="/usr"
 WWWDIR="www"
 
 NATIVE=opam2web
@@ -20,6 +21,8 @@ search: search.ml
 run: $(NATIVE).native
 	_build/$< -c ../content -o $(WWWDIR) -l default
 
+install: $(NATIVE).native
+	install -D _build/$< $(PREFIX)/bin/$(NATIVE)
 
 clean:
 	ocamlbuild -clean
