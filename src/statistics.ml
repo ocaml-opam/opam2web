@@ -1,13 +1,6 @@
 open Logentry
 
-type statistics = {
-  (** Individual package download count *)
-  pkg_stats: (OpamPackage.t * int64) list;
-  (** Global download count (sum of all packages download count) *)
-  global_stats: int64;
-  (** Update count (number of 'index.tar.gz' downloads *)
-  update_stats: int64;
-}
+open O2w_common
 
 (* Retrieve statistics from a filename if it exists, return none otherwise *)
 let of_logfile (filename: string): statistics option =

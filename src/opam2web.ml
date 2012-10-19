@@ -74,13 +74,13 @@ let include_files (path: string) files_path : unit =
 (* Generate a whole static website using the given repository *)
 let make_website (repository: OpamPath.Repository.r): unit =
   let statistics = Statistics.of_logfile user_options.logfile in
-  let packages = Repository.to_links repository in
+  let packages = Repository.to_links repository statistics in
   let links_of_doc = Documentation.to_links user_options.content_dir in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
     { text="Home"; href="index.html" }, Internal (0, Home.static_html);
     { text="Packages"; href="pkg/index.html" },
-        Internal (1, (Repository.to_html repository));
+        Internal (1, (Repository.to_html repository statistics));
     { text="Documentation"; href="doc/index.html" },
         Submenu (links_of_doc documentation_pages);
   ], packages)

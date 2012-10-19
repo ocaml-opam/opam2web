@@ -14,6 +14,16 @@ type package_info = {
   pkg_title    : string;
 }
 
+type statistics = {
+  (** Individual package download count *)
+  pkg_stats: (OpamPackage.t * int64) list;
+  (** Global download count (sum of all packages download count) *)
+  global_stats: int64;
+  (** Update count (number of 'index.tar.gz' downloads *)
+  update_stats: int64;
+}
+
+
 (* Global values *)
 
 (* The list contains elements with this syntax :
