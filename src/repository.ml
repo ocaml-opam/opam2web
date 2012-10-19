@@ -1,5 +1,6 @@
 open OpamTypes
 open Cow.Html
+
 open O2w_common
 
 (* Load a repository from the local OPAM installation *)
@@ -66,7 +67,8 @@ let reverse_dependencies (repository: OpamPath.Repository.r)
 
 
 (* Create a list of package pages to generate for a repository *)
-let to_links (repository: OpamPath.Repository.r): (Cow.Html.link * int * Cow.Html.t) list =
+let to_links (repository: OpamPath.Repository.r) (statistics: statistics option)
+    : (Cow.Html.link * int * Cow.Html.t) list =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let reverse_dependencies = reverse_dependencies repository packages in
@@ -74,13 +76,14 @@ let to_links (repository: OpamPath.Repository.r): (Cow.Html.link * int * Cow.Htm
       let pkg_info = Package.get_info ~href_prefix:"pkg/" repository pkg in
       { text=pkg_info.pkg_title; href=pkg_info.pkg_href }, 1,
         (Package.to_html repository unique_packages
-            reverse_dependencies package_versions pkg))
+            reverse_dependencies package_versions statistics pkg))
     package_versions
   in
   List.flatten (List.map aux unique_packages)
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html (repository: OpamPath.Repository.r): Cow.Html.t =
+let to_html (repository: OpamPath.Repository.r) (statistics: statistics option)
+    : Cow.Html.t =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let packages_html =
@@ -100,15 +103,28 @@ let to_html (repository: OpamPath.Repository.r): Cow.Html.t =
         >>)
       unique_packages
   in
+  let stats_html = match statistics with
+    | None -> <:xml< >>
+    | Some s -> <:xml<
+        <p class="span3">
+          <em>Repository usage statistics:</em><br />
+          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package downloads<br />
+          <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
+        </p>
+      >>
+  in
   <:xml<
-    <form class="form-search">
-      <div class="input-append">
-        <input id="search" class="search-query" type="text" placeholder="Search packages" />
-        <button id="search-button" class="btn add-on">
-          <i class="icon-search"> </i>
-        </button>
-      </div>
-    </form>
+    <div class="row">
+      <form class="span9 form-search">
+        <div class="input-append">
+          <input id="search" class="search-query" type="text" placeholder="Search packages" />
+          <button id="search-button" class="btn add-on">
+            <i class="icon-search"> </i>
+          </button>
+        </div>
+      </form>
+      $stats_html$
+    </div>
     <table class="table"  id="packages">
       <thead>
         <tr>

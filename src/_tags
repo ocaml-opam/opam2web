@@ -2,6 +2,7 @@
 <{o2w_common,home,package,documentation,repository,template,search}.*>: pkg_opam, pkg_cow
 <markdown_github.*>: str
 <syntax/*>: build_syntax
+"apalog": include
 not <syntax/*>: use_syntax
 true: camlp4o
 true: debug

@@ -62,7 +62,8 @@ let find_latest_version (unique_packages: OpamPackage.t list list)
 (* Returns a HTML description of the given package *)
 let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t list list)
     (reverse_dependencies: (OpamPackage.Name.t * OpamPackage.t list list) list)
-    (versions: OpamPackage.t list) (pkg: OpamPackage.t): Cow.Html.t =
+    (versions: OpamPackage.t list) (statistics: statistics option)
+    (pkg: OpamPackage.t): Cow.Html.t =
   let pkg_info = get_info repository pkg in
   let pkg_url =
     try
@@ -156,6 +157,24 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
+  let stats_html = match statistics with
+    | None -> <:xml< >>
+    | Some s ->
+      let pkg_count =
+        try
+          List.assoc pkg s.pkg_stats
+        with
+          Not_found -> Int64.zero
+      in
+      let pkg_count_html = match pkg_count with
+        | c when c = Int64.zero -> <:xml< Package never downloaded. >>
+        | c when c = Int64.one ->
+            <:xml< Package downloaded <strong>once</strong>. >>
+        | c ->
+            <:xml< Package downloaded <strong>$str: Int64.to_string c$</strong> times. >>
+      in
+      <:xml< <p>$pkg_count_html$</p> >>
+  in
   <:xml<
     <h2>$str: pkg_info.pkg_name$</h2>
 
@@ -180,6 +199,8 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
         </table>
 
         <div class="well">$pkg_info.pkg_descr$</div>
+
+        $stats_html$
       </div>
 
       <div class="span3">
