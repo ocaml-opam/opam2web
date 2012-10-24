@@ -91,3 +91,7 @@ code {
   top: auto;
   bottom: 140px;
 }
+
+.contribute-element {
+  text-align: center;
+}
