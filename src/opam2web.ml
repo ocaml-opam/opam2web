@@ -14,7 +14,7 @@ type options = {
   mutable out_dir: string;
   mutable files_dir: string;
   mutable content_dir: string;
-  mutable logfile: string;
+  mutable logfiles: string list;
   mutable operations: opam2web_operation list;
 }
 
@@ -22,7 +22,7 @@ let user_options: options = {
   out_dir = "";
   files_dir = "";
   content_dir = "content";
-  logfile = "access.log";
+  logfiles = [];
   operations = [];
 }
 
@@ -35,8 +35,8 @@ let set_files_dir (dir: string) =
 let set_content_dir (dir: string) =
   user_options.content_dir <- dir
 
-let set_logfile (filename: string) =
-  user_options.logfile <- filename
+let add_logfile (filename: string) =
+  user_options.logfiles <- filename :: user_options.logfiles
 
 let add_website_path (path: string) =
   user_options.operations <- Website_of_path path :: user_options.operations
@@ -73,7 +73,9 @@ let include_files (path: string) files_path : unit =
 
 (* Generate a whole static website using the given repository *)
 let make_website (repository: OpamPath.Repository.r): unit =
-  let statistics = Statistics.of_logfile user_options.logfile in
+  if List.length user_options.logfiles = 0 then
+    user_options.logfiles <- ["access.log"];
+  let statistics = Statistics.basic_stats_of_logfiles user_options.logfiles in
   let packages = Repository.to_links repository statistics in
   let links_of_doc = Documentation.to_links user_options.content_dir in
   include_files user_options.out_dir user_options.files_dir;
@@ -115,8 +117,8 @@ let website_of_opam repo_name =
 
 (* Command-line arguments *)
 let specs = [
-  ("-s", Arg.String set_logfile, "");
-  ("--statistics", Arg.String set_logfile,
+  ("-s", Arg.String add_logfile, "");
+  ("--statistics", Arg.String add_logfile,
     "An Apache server log file containing download statistics of packages");
 
   ("-o", Arg.String set_out_dir, "");
