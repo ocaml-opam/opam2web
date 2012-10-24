@@ -32,9 +32,10 @@ type log_client_os =
   | Unknown_os of string
 
 type log_client_browser =
-  | Chromium of string
+  | Chrome of string
+  | Firefox of string
   | Internet_explorer of string
-  | Mozilla of string
+  | Safari of string
   | Unknown_browser of string
 
 type log_client = log_client_os * log_client_browser
@@ -56,7 +57,7 @@ type log_referrer =
 
 (** A high-level, OPAM-repository specific type for a apache log entry *)
 type log_entry = {
-  log_timestamp: Unix.tm;
+  log_timestamp: float;
   log_host: string;
   log_request: log_request;
   log_referrer: log_referrer;

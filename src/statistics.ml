@@ -1,6 +1,22 @@
-open Logentry
+open Unix
 
+open Logentry
 open O2w_common
+
+let month_of_string: string -> int = function
+  | "Jan" -> 1
+  | "Feb" -> 2
+  | "Mar" -> 3
+  | "Apr" -> 4
+  | "May" -> 5
+  | "Jun" -> 6
+  | "Jul" -> 7
+  | "Aug" -> 8
+  | "Sep" -> 9
+  | "Oct" -> 10
+  | "Nov" -> 11
+  | "Dec" -> 12
+  | unknown -> failwith ("Unknown month: " ^ unknown)
 
 (* Retrieve log entries of an apache access.log file *)
 let entries_of_logfile (init: log_entry list) (filename: string)
@@ -16,11 +32,19 @@ let entries_of_logfile (init: log_entry list) (filename: string)
     Str.regexp "GET /urls\\.txt HTTP/[.0-9]+"
   in
   let timestamp_regexp =
-    Str.regexp "[0-9]+/[A-Z][a-z]+/[0-9]+:[0-9]+:[0-9]+:[0-9]+ [-+][0-9]+"
+    Str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
   in
+  let internal_regexp =
+    Str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?"
+  in
+  let browser_regexp =
+    Str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
+  in
+  let os_regexp =
+    Str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|Android\\|Linux\\|FreeBSD\\)"
+  in
+
   let mk_entry e =
-    (* TODO: parse timestamp, referrer and client *)
-    (* Their current values are dummy ones *)
     let request =
       if Str.string_match html_regexp e.request 0 then
         Html_req (Str.matched_group 1 e.request)
@@ -31,14 +55,89 @@ let entries_of_logfile (init: log_entry list) (filename: string)
       else
         Unknown_req e.request
     in
+
+    let timestamp =
+      if Str.string_match timestamp_regexp e.date 0 then
+        fst (Unix.mktime
+          {
+            tm_mday = int_of_string (Str.matched_group 1 e.date);
+            tm_mon = month_of_string (Str.matched_group 2 e.date);
+            tm_year = int_of_string (Str.matched_group 3 e.date);
+            tm_hour = int_of_string (Str.matched_group 4 e.date);
+            tm_min = int_of_string (Str.matched_group 5 e.date);
+            tm_sec = int_of_string (Str.matched_group 6 e.date);
+            (* Initial dummy values *)
+            tm_wday = 0;
+            tm_yday = 0;
+            tm_isdst = false;
+          })
+      else 0.
+    in
+
+    let referrer = match e.referrer with
+      | "-" -> No_ref
+      | s when Str.string_match internal_regexp e.referrer 0 ->
+        Internal_ref (Str.matched_group 1 e.referrer)
+      | s -> External_ref s
+    in
+
+    let client =
+      (* TODO: refine client string parsing (versions, more browsers...)  *)
+      let match_browser = try
+          Str.search_forward browser_regexp e.client 0
+        with
+          Not_found -> (-1)
+      in
+      let browser =
+        if match_browser >= 0 then
+          let browser_str =
+            try
+              Str.matched_group 1 e.client
+            with
+              Not_found -> ""
+          in
+          match browser_str with
+            | "Chrome" -> Chrome ""
+            | "Firefox" -> Firefox ""
+            | "MSIE" -> Internet_explorer ""
+            | "Safari" -> Safari ""
+            | s -> Unknown_browser s
+        else
+          Unknown_browser ""
+      in
+      let match_os = try
+          Str.search_forward os_regexp e.client 0
+        with
+          Not_found -> (-1)
+      in
+      let os =
+        if match_os >= 0 then
+          let os_str =
+            try
+              Str.matched_group 1 e.client
+            with
+              Not_found -> ""
+          in
+          match os_str with
+            | "Windows" -> Windows ""
+            | "Macintosh" | "iPad" | "iPhone" -> Mac_osx ""
+            | "Linux" | "FreeBSD" -> Unix ""
+            | s -> Unknown_os s
+        else
+          Unknown_os ""
+      in
+      os, browser
+    in
+
     {
-      log_timestamp = Unix.gmtime (Unix.gettimeofday ());
+      log_timestamp = timestamp;
       log_host = e.host;
       log_request = request;
-      log_referrer = No_ref;
-      log_client = Unknown_os "", Unknown_browser "";
+      log_referrer = referrer;
+      log_client = client;
     }
   in
+
   let parse_log () =
     let log_entries: Logentry.entry_t list =
       Readcombinedlog.readlog filename (fun _ -> true)
