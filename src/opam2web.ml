@@ -75,7 +75,8 @@ let include_files (path: string) files_path : unit =
 let make_website (repository: OpamPath.Repository.r): unit =
   if List.length user_options.logfiles = 0 then
     user_options.logfiles <- ["access.log"];
-  let statistics = Statistics.of_logfiles user_options.logfiles in
+  let _ = Statistics.of_logfiles user_options.logfiles in
+  let statistics = Statistics.basic_stats_of_logfiles user_options.logfiles in
   let packages = Repository.to_links repository statistics in
   let links_of_doc = Documentation.to_links user_options.content_dir in
   include_files user_options.out_dir user_options.files_dir;
