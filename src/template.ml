@@ -134,6 +134,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
     | Internal _ ->
       let lnk = { lnk with href = prepend_root depth lnk.href } in
       <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
+    | No_menu _ -> <:xml< >>
     | Nav_header ->
       <:xml< <li class="nav-header">$str: lnk.text$</li> >>
     | Divider ->
@@ -191,6 +192,7 @@ let generate ~out_dir (menu_links, pages) =
         | External | Divider | Nav_header -> aux acc t
         | Submenu sub -> aux acc (sub @ t)
         | Internal (d, c) -> aux ((l, d, c) :: acc) t
+        | No_menu (d, c) -> aux ((l, d, c) :: acc) t
     in aux [] menu_links
   in
   List.iter aux menu_pages;

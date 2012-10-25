@@ -1,6 +1,24 @@
 open Cow.Html
 open O2w_common
 
+(* Comparison function using string representation of an OpamPackage *)
+let compare_alphanum  (p1: OpamPackage.t) (p2: OpamPackage.t): int =
+  String.compare (OpamPackage.to_string p1) (OpamPackage.to_string p2)
+
+(* Comparison function using number of downloads for each package *)
+let compare_popularity ?(reverse = false) pkgver_stats
+    (p1: OpamPackage.t) (p2: OpamPackage.t): int =
+  let p1, p2 = if reverse then p2, p1 else p1, p2 in
+  let pkg_count pkg =
+    try
+      List.assoc pkg pkgver_stats
+    with
+      Not_found -> Int64.zero
+  in
+  match pkg_count p1, pkg_count p2 with
+  | c1, c2 when c1 <> c2 -> Int64.compare c1 c2
+  | _ -> compare_alphanum p1 p2
+
 (* Build a record representing information about a package *)
 let get_info ?(href_prefix="") (repository: OpamPath.Repository.r)
     (pkg: OpamPackage.t) : package_info =
@@ -157,23 +175,30 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
-  let stats_html = match statistics with
+  let pkgver_stats = match statistics with
     | None -> <:xml< >>
     | Some s ->
       let pkg_count =
         try
-          List.assoc pkg s.pkg_stats
+          List.assoc pkg s.pkgver_stats
         with
           Not_found -> Int64.zero
       in
       let pkg_count_html = match pkg_count with
-        | c when c = Int64.zero -> <:xml< Package never downloaded. >>
+        | c when c = Int64.zero -> <:xml< Never installed. >>
         | c when c = Int64.one ->
-            <:xml< Package downloaded <strong>once</strong>. >>
+            <:xml< Installed <strong>once</strong>. >>
         | c ->
-            <:xml< Package downloaded <strong>$str: Int64.to_string c$</strong> times. >>
+            <:xml< Installed <strong>$str: Int64.to_string c$</strong> times. >>
       in
-      <:xml< <p>$pkg_count_html$</p> >>
+      <:xml<
+        <tr>
+          <th>Statistics</th>
+          <td>
+            $pkg_count_html$
+          </td>
+        </tr>
+      >>
   in
   <:xml<
     <h2>$str: pkg_info.pkg_name$</h2>
@@ -195,12 +220,12 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
                 $str: pkg_maintainer$
               </td>
             </tr>
+            $pkgver_stats$
           </tbody>
         </table>
 
         <div class="well">$pkg_info.pkg_descr$</div>
 
-        $stats_html$
       </div>
 
       <div class="span3">

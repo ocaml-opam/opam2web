@@ -81,11 +81,33 @@ let to_links (repository: OpamPath.Repository.r) (statistics: statistics option)
   in
   List.flatten (List.map aux unique_packages)
 
+let sortby_links links (default: string) (active: string) =
+  let mk_item title =
+    let href_str =
+      if title = default then "index.html"
+      else Printf.sprintf "index-%s.html" (String.lowercase title)
+    in
+    let ahref =
+      <:xml< <a href="$str: href_str$">sort by $str: title$</a> >>
+    in
+    if title = active then <:xml< <li class="active">$ahref$</li> >>
+    else <:xml< <li>$ahref$</li> >>
+  in
+  List.map mk_item links
+
 (* Returns a HTML list of the packages in the given repository *)
-let to_html (repository: OpamPath.Repository.r) (statistics: statistics option)
-    : Cow.Html.t =
+let to_html sortby (repository: OpamPath.Repository.r)
+    (statistics: statistics option) : Cow.Html.t =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
+  let sortby_links, active, compare_pkg = sortby in
+  let sortby_links_html = sortby_links active in
+  let compare_unique_pkg pu1 pu2 =
+    match pu1, pu2 with
+    | h1 :: t1, h2 :: t2 -> compare_pkg h1 h2
+    | _ -> failwith "compare_unique_pkg: inconsistent result of unify_versions"
+  in
+  let sorted_packages = List.sort compare_unique_pkg unique_packages in
   let packages_html =
     List.map (fun (pkg_vers: OpamPackage.t list) ->
         let latest_pkg = Package.latest pkg_vers in
@@ -101,21 +123,25 @@ let to_html (repository: OpamPath.Repository.r) (statistics: statistics option)
             <td>$str: pkg_info.pkg_synopsis$</td>
           </tr>
         >>)
-      unique_packages
+      sorted_packages
   in
   let stats_html = match statistics with
     | None -> <:xml< >>
     | Some s -> <:xml<
         <p class="span3">
-          <em>Repository usage statistics:</em><br />
-          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package downloads<br />
+          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations<br />
           <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
         </p>
       >>
   in
   <:xml<
     <div class="row">
-      <form class="span9 form-search">
+      <div class="span3">
+        <ul class="nav nav-pills">
+          $list: sortby_links_html$
+        </ul>
+      </div>
+      <form class="span6 form-search">
         <div class="input-append">
           <input id="search" class="search-query" type="text" placeholder="Search packages" />
           <button id="search-button" class="btn add-on">
