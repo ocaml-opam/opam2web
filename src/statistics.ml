@@ -3,6 +3,8 @@ open Unix
 open Logentry
 open O2w_common
 
+module StringMap = Map.Make (String)
+
 let month_of_string: string -> int = function
   | "Jan" -> 0
   | "Feb" -> 1
@@ -158,12 +160,38 @@ let entries_of_logfile (init: log_entry list) (filename: string)
 let entries_of_logfiles (logfiles: string list): log_entry list =
   List.fold_left entries_of_logfile [] logfiles
 
+(* Sum the values of a (int64 StringMap), possibly reducing the value to one 
+   unique court per string key if the 'unique' optional argument is true *)
+let sum_strmap ?(unique = false) (map: int64 StringMap.t): int64 =
+  if unique then
+    StringMap.fold (fun _ _ acc -> Int64.succ acc) map Int64.zero
+  else
+    StringMap.fold (fun _ n acc -> Int64.add n acc) map Int64.zero
+
+(* Increment the counter corresponding to a key in a (int64 StringMap) *)
+let incr_strmap (key: string) (map: int64 StringMap.t)
+    : int64 StringMap.t =
+  let n =
+    try
+      StringMap.find key map
+    with
+      Not_found -> Int64.zero
+  in
+  StringMap.add key (Int64.succ n) map
+
+(* Initialize a new (int64 StringMap) with one element *)
+let init_strmap (key: string): int64 StringMap.t =
+  incr_strmap key StringMap.empty
+
 (* Count the number of update requests in a list of entries *)
 let count_updates ?(per_ip = false) (entries: log_entry list): int64 =
-  List.fold_left (fun acc e -> match e.log_request with
-      | Update_req -> Int64.succ acc
-      | _ -> acc)
-    Int64.zero entries
+  let count_map =
+    List.fold_left (fun acc e -> match e.log_request with
+        | Update_req -> incr_strmap e.log_host acc
+        | _ -> acc)
+      StringMap.empty entries
+  in
+  sum_strmap ~unique:per_ip count_map
 
 (* Count the number of downloads for each OPAM archive *)
 let count_archive_downloads ?(per_ip = true) (entries: log_entry list)
@@ -176,18 +204,19 @@ let count_archive_downloads ?(per_ip = true) (entries: log_entry list)
     | _ -> 0
   in
   let sorted_entries = List.sort compare_entries entries in
-  let rec aux stats (prev_pkg, ct) = function
-    | [] -> (prev_pkg, ct) :: stats
+  let rec aux stats (prev_pkg, host_map) = function
+    | [] -> (prev_pkg, sum_strmap ~unique:per_ip host_map) :: stats
     | hd :: tl -> match hd.log_request with
       | Archive_req pkg ->
         if pkg = prev_pkg then
-          aux stats (pkg, (Int64.succ ct)) tl
+          aux stats (pkg, incr_strmap hd.log_host host_map) tl
         else
-          aux ((prev_pkg, ct) :: stats) (pkg, Int64.one) tl
+          aux ((prev_pkg, sum_strmap ~unique:per_ip host_map) :: stats)
+              (pkg, init_strmap hd.log_host) tl
       | _ ->
-        aux stats (prev_pkg, ct) tl
+        aux stats (prev_pkg, host_map) tl
   in
-  aux [] (OpamPackage.of_string "InitStatDummyPackage.0", Int64.zero)
+  aux [] (OpamPackage.of_string "InitStatDummyPackage.0", StringMap.empty)
       sorted_entries
 
 (* Generate basic statistics on log entries *)
