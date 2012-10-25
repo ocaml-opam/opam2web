@@ -241,3 +241,16 @@ let basic_stats_of_logfiles (logfiles: string list): statistics option =
       update_stats = update_stats;
     }
 
+(* Retrieve the 'ntop' number of packages with the higher (or lower) int value 
+   associated *)
+let top ?(ntop = 10) ?(reverse = true) pkg_stats =
+  let compare_pkg (_, n1) (_, n2) =
+    if reverse then Int64.compare n2 n1
+    else Int64.compare n1 n2
+  in
+  let sorted_pkg = List.sort compare_pkg pkg_stats in
+  let rec aux acc ct = function
+    | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
+    | _ -> acc
+  in
+  List.rev (aux [] ntop sorted_pkg)
