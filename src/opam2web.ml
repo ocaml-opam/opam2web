@@ -78,14 +78,31 @@ let make_website (repository: OpamPath.Repository.r): unit =
   let statistics = Statistics.basic_stats_of_logfiles user_options.logfiles in
   let packages = Repository.to_links repository statistics in
   let links_of_doc = Documentation.to_links user_options.content_dir in
+  let criteria = ["name"; "popularity"] in
+  let sortby_links = match statistics with
+    | None -> fun _ -> []
+    | Some _ ->  Repository.sortby_links criteria "name"
+  in
+  let criteria_links = match statistics with
+    | None -> []
+    | Some s ->
+      [
+        { text="Packages"; href="pkg/index-popularity.html" },
+            No_menu (1, (Repository.to_html (sortby_links, "popularity",
+                  Package.compare_popularity ~reverse: true s.pkg_stats)
+                repository statistics));
+      ]
+  in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
-    { text="Home"; href="index.html" }, Internal (0, Home.static_html);
+    { text="Home"; href="index.html" }, Internal (0, Home.static_html statistics);
     { text="Packages"; href="pkg/index.html" },
-        Internal (1, (Repository.to_html repository statistics));
+        Internal (1, (Repository.to_html
+            (sortby_links, "name", Package.compare_alphanum)
+            repository statistics));
     { text="Documentation"; href="doc/index.html" },
         Submenu (links_of_doc documentation_pages);
-  ], packages)
+  ] @ criteria_links, packages)
 
 (* Generate a website from the current working directory, assuming that it's an 
    OPAM repository *)

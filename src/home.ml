@@ -1,6 +1,33 @@
-(* OPAM website homepage *)
+open O2w_common
 
-let static_html =
+(* OPAM website homepage *)
+let static_html (statistics: statistics option) =
+  let top10 = match statistics with
+    | None -> <:xml< >>
+    | Some s ->
+      let mk_top_li (pkg, _) =
+        <:xml< <li>$str: OpamPackage.Name.to_string (OpamPackage.name pkg)$</li> >>
+      in
+      let top10_pkgs = Statistics.top ~ntop: 10 s.pkg_stats in
+      let top10_items = List.map mk_top_li top10_pkgs in
+      <:xml<
+        <div class="span3">
+          <h2>All-time Top 10</h2>
+          $list: top10_items$
+        </div>
+      >>
+  in
+  let global_stats = match statistics with
+    | None -> <:xml< >>
+    | Some s ->
+      <:xml<
+        <div class="offset1 span3">
+          <h2>Statistics</h2>
+          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations<br />
+          <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
+        </div>
+      >>
+  in
   <:xml<
       <!-- Main hero unit for a primary marketing message or call to action -->
       <div class="hero-unit">
@@ -66,5 +93,9 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
         <div class="span2">
           <img src="ext/img/camel_rider.png" alt="Camel Rider" />
         </div>
+      </div>
+      <div class="row">
+        $global_stats$
+        $top10$
       </div>
   >>
