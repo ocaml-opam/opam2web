@@ -1,5 +1,6 @@
 type menu_item =
   | Internal of int * Cow.Html.t
+  | No_menu of int * Cow.Html.t
   | Submenu of ((Cow.Html.link * menu_item) list)
   | Nav_header
   | Divider
@@ -15,6 +16,8 @@ type package_info = {
 }
 
 type statistics = {
+  (** Individual package.version download count *)
+  pkgver_stats: (OpamPackage.t * int64) list;
   (** Individual package download count *)
   pkg_stats: (OpamPackage.t * int64) list;
   (** Global download count (sum of all packages download count) *)

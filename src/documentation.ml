@@ -104,7 +104,7 @@ let to_links (content_dir: string) (pages: string list)
 
   let documentation_menu active_src =
     let menu_items = List.map (fun (src, _, lnk, kind) -> match kind with
-        | Submenu _ -> Cow.Html.nil
+        | Submenu _ | No_menu _ -> Cow.Html.nil
         | Nav_header ->
           <:xml<
             <li class="disabled">
@@ -131,7 +131,7 @@ let to_links (content_dir: string) (pages: string list)
   let aux_page (source_filename, extension, lnk, page) =
     match page with
     | Submenu _ | Nav_header | Divider | External -> (lnk, page)
-    | Internal (level, _) ->
+    | Internal (level, _) | No_menu (level, _) ->
         let doc_menu = documentation_menu source_filename in
         let html_page = of_kind doc_menu extension source_filename in
         ({ lnk with href = "doc/" ^ lnk.href }, Internal(level, html_page))
