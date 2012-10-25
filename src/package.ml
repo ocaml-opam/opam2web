@@ -157,7 +157,7 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
-  let stats_html = match statistics with
+  let pkg_stats = match statistics with
     | None -> <:xml< >>
     | Some s ->
       let pkg_count =
@@ -167,13 +167,20 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
           Not_found -> Int64.zero
       in
       let pkg_count_html = match pkg_count with
-        | c when c = Int64.zero -> <:xml< Package never downloaded. >>
+        | c when c = Int64.zero -> <:xml< Never installed. >>
         | c when c = Int64.one ->
-            <:xml< Package downloaded <strong>once</strong>. >>
+            <:xml< Installed <strong>once</strong>. >>
         | c ->
-            <:xml< Package downloaded <strong>$str: Int64.to_string c$</strong> times. >>
+            <:xml< Installed <strong>$str: Int64.to_string c$</strong> times. >>
       in
-      <:xml< <p>$pkg_count_html$</p> >>
+      <:xml<
+        <tr>
+          <th>Statistics</th>
+          <td>
+            $pkg_count_html$
+          </td>
+        </tr>
+      >>
   in
   <:xml<
     <h2>$str: pkg_info.pkg_name$</h2>
@@ -195,12 +202,12 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
                 $str: pkg_maintainer$
               </td>
             </tr>
+            $pkg_stats$
           </tbody>
         </table>
 
         <div class="well">$pkg_info.pkg_descr$</div>
 
-        $stats_html$
       </div>
 
       <div class="span3">

@@ -108,7 +108,7 @@ let to_html (repository: OpamPath.Repository.r) (statistics: statistics option)
     | Some s -> <:xml<
         <p class="span3">
           <em>Repository usage statistics:</em><br />
-          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package downloads<br />
+          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations<br />
           <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
         </p>
       >>
