@@ -194,7 +194,7 @@ let count_updates ?(per_ip = false) (entries: log_entry list): int64 =
   sum_strmap ~unique:per_ip count_map
 
 (* Count the number of downloads for each OPAM archive *)
-let count_archive_downloads ?(per_ip = true) ?(eq_pkg = (=)) (entries: log_entry list)
+let count_archive_downloads ?(per_ip = false) ?(eq_pkg = (=)) (entries: log_entry list)
     : (OpamPackage.t * int64) list =
   let compare_entries e1 e2 = match e1.log_request, e2.log_request with
     | Archive_req p1, Archive_req p2 ->
@@ -220,12 +220,11 @@ let count_archive_downloads ?(per_ip = true) ?(eq_pkg = (=)) (entries: log_entry
       sorted_entries
 
 (* Generate basic statistics on log entries *)
-let basic_stats_of_logfiles (logfiles: string list): statistics option =
+let basic_stats_of_logfiles ?(per_ip = false) (logfiles: string list): statistics option =
   let entries = entries_of_logfiles logfiles in
-  let pkgver_stats = count_archive_downloads ~per_ip: true entries in
+  let pkgver_stats = count_archive_downloads ~per_ip entries in
   let eq_pkg p1 p2 = OpamPackage.name p1 = OpamPackage.name p2 in
-  let pkg_stats = count_archive_downloads
-      ~per_ip: true ~eq_pkg: eq_pkg entries
+  let pkg_stats = count_archive_downloads ~per_ip ~eq_pkg:eq_pkg entries
   in
   let global_stats =
     List.fold_left (fun acc (_, n) -> Int64.add n acc)
