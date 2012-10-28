@@ -25,49 +25,49 @@ let entries_of_logfile (init: log_entry list) (filename: string)
     : log_entry list =
   let file = OpamFilename.of_string filename in
   let html_regexp =
-    Str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+"
+    Re_str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+"
   in
   let archive_regexp =
-    Str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+"
+    Re_str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+"
   in
   let update_regexp =
-    Str.regexp "GET /urls\\.txt HTTP/[.0-9]+"
+    Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+"
   in
   let timestamp_regexp =
-    Str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
+    Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
   in
   let internal_regexp =
-    Str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?"
+    Re_str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?"
   in
   let browser_regexp =
-    Str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
+    Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
   in
   let os_regexp =
-    Str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|Android\\|Linux\\|FreeBSD\\)"
+    Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|Android\\|Linux\\|FreeBSD\\)"
   in
 
   let mk_entry e =
     let request =
-      if Str.string_match html_regexp e.request 0 then
-        Html_req (Str.matched_group 1 e.request)
-      else if Str.string_match archive_regexp e.request 0 then
-        Archive_req (OpamPackage.of_string (Str.matched_group 1 e.request))
-      else if Str.string_match update_regexp e.request 0 then
+      if Re_str.string_match html_regexp e.request 0 then
+        Html_req (Re_str.matched_group 1 e.request)
+      else if Re_str.string_match archive_regexp e.request 0 then
+        Archive_req (OpamPackage.of_string (Re_str.matched_group 1 e.request))
+      else if Re_str.string_match update_regexp e.request 0 then
         Update_req
       else
         Unknown_req e.request
     in
 
     let timestamp =
-      if Str.string_match timestamp_regexp e.date 0 then
+      if Re_str.string_match timestamp_regexp e.date 0 then
         fst (Unix.mktime
           {
-            tm_mday = int_of_string (Str.matched_group 1 e.date);
-            tm_mon = month_of_string (Str.matched_group 2 e.date);
-            tm_year = int_of_string (Str.matched_group 3 e.date);
-            tm_hour = int_of_string (Str.matched_group 4 e.date);
-            tm_min = int_of_string (Str.matched_group 5 e.date);
-            tm_sec = int_of_string (Str.matched_group 6 e.date);
+            tm_mday = int_of_string (Re_str.matched_group 1 e.date);
+            tm_mon = month_of_string (Re_str.matched_group 2 e.date);
+            tm_year = int_of_string (Re_str.matched_group 3 e.date);
+            tm_hour = int_of_string (Re_str.matched_group 4 e.date);
+            tm_min = int_of_string (Re_str.matched_group 5 e.date);
+            tm_sec = int_of_string (Re_str.matched_group 6 e.date);
             (* Initial dummy values *)
             tm_wday = 0;
             tm_yday = 0;
@@ -78,15 +78,15 @@ let entries_of_logfile (init: log_entry list) (filename: string)
 
     let referrer = match e.referrer with
       | "-" -> No_ref
-      | s when Str.string_match internal_regexp e.referrer 0 ->
-        Internal_ref (Str.matched_group 1 e.referrer)
+      | s when Re_str.string_match internal_regexp e.referrer 0 ->
+        Internal_ref (Re_str.matched_group 1 e.referrer)
       | s -> External_ref s
     in
 
     let client =
       (* TODO: refine client string parsing (versions, more browsers...)  *)
       let match_browser = try
-          Str.search_forward browser_regexp e.client 0
+          Re_str.search_forward browser_regexp e.client 0
         with
           Not_found -> (-1)
       in
@@ -94,7 +94,7 @@ let entries_of_logfile (init: log_entry list) (filename: string)
         if match_browser >= 0 then
           let browser_str =
             try
-              Str.matched_group 1 e.client
+              Re_str.matched_group 1 e.client
             with
               Not_found -> ""
           in
@@ -108,7 +108,7 @@ let entries_of_logfile (init: log_entry list) (filename: string)
           Unknown_browser ""
       in
       let match_os = try
-          Str.search_forward os_regexp e.client 0
+          Re_str.search_forward os_regexp e.client 0
         with
           Not_found -> (-1)
       in
@@ -116,7 +116,7 @@ let entries_of_logfile (init: log_entry list) (filename: string)
         if match_os >= 0 then
           let os_str =
             try
-              Str.matched_group 1 e.client
+              Re_str.matched_group 1 e.client
             with
               Not_found -> ""
           in
@@ -160,7 +160,7 @@ let entries_of_logfile (init: log_entry list) (filename: string)
 let entries_of_logfiles (logfiles: string list): log_entry list =
   List.fold_left entries_of_logfile [] logfiles
 
-(* Sum the values of a (int64 StringMap), possibly reducing the value to one 
+(* Sum the values of a (int64 StringMap), possibly reducing the value to one
    unique count per string key if the 'unique' optional argument is true *)
 let sum_strmap ?(unique = false) (map: int64 StringMap.t): int64 =
   if unique then
@@ -241,7 +241,7 @@ let basic_stats_of_logfiles (logfiles: string list): statistics option =
       update_stats = update_stats;
     }
 
-(* Retrieve the 'ntop' number of packages with the higher (or lower) int value 
+(* Retrieve the 'ntop' number of packages with the higher (or lower) int value
    associated *)
 let top ?(ntop = 10) ?(reverse = true) pkg_stats =
   let compare_pkg (_, n1) (_, n2) =
