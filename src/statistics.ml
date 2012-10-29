@@ -242,7 +242,7 @@ let basic_stats_of_logfiles ?(per_ip = false) (logfiles: string list): statistic
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower) int value
    associated *)
-let top ?(ntop = 10) ?(reverse = true) pkg_stats =
+let top_packages ?(ntop = 10) ?(reverse = true) pkg_stats =
   let compare_pkg (_, n1) (_, n2) =
     if reverse then Int64.compare n2 n1
     else Int64.compare n1 n2
@@ -253,3 +253,39 @@ let top ?(ntop = 10) ?(reverse = true) pkg_stats =
     | _ -> acc
   in
   List.rev (aux [] ntop sorted_pkg)
+
+(* Retrieve the 'ntop' number of maintainers with the higher (or lower) number 
+   of associated packages *)
+let top_maintainers ?(ntop = 10) ?(reverse = true) repository
+    : (string * int) list =
+  let packages = Repository.get_packages repository in
+  let all_maintainers = List.map (fun pkg ->
+      let opam_file =
+        OpamFile.OPAM.read (OpamPath.Repository.opam repository pkg)
+      in
+      OpamFile.OPAM.maintainer opam_file)
+    packages
+  in
+  let gathered_maintainers = List.sort String.compare all_maintainers in
+  let prepend_m acc (m, ct) =
+    if ct = 0 then acc else (m, ct) :: acc
+  in
+  let compare_maintainers (_, n1) (_, n2) =
+    if reverse then compare n2 n1
+    else compare n1 n2
+  in
+  let maintainer_stats =
+    let rec count_aux acc (m, ct) = function
+      | [] -> prepend_m acc (m, ct)
+      | hd :: tl when hd = m -> count_aux acc (hd, ct + 1) tl
+      | hd :: tl -> count_aux (prepend_m acc (m, ct)) (hd, 1) tl
+    in List.rev (count_aux [] ("", 0) gathered_maintainers)
+  in
+  let sorted_maintainers =
+    List.sort compare_maintainers maintainer_stats
+  in
+  let rec aux acc ct = function
+    | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
+    | _ -> acc
+  in
+  List.rev (aux [] ntop sorted_maintainers)

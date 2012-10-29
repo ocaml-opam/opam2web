@@ -95,7 +95,7 @@ let make_website (repository: OpamPath.Repository.r): unit =
   in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
-    { text="Home"; href="index.html" }, Internal (0, Home.static_html statistics);
+    { text="Home"; href="index.html" }, Internal (0, Home.to_html repository statistics);
     { text="Packages"; href="pkg/index.html" },
         Internal (1, (Repository.to_html
             (sortby_links, "name", Package.compare_alphanum)
