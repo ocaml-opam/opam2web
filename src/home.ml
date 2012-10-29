@@ -1,19 +1,80 @@
 open O2w_common
 
 (* OPAM website homepage *)
-let static_html (statistics: statistics option) =
-  let top10 = match statistics with
+let to_html (repository: OpamPath.Repository.r)
+    (statistics: statistics option) =
+  let last_updates =
+    <:xml<
+      <div class="span3">
+        <table class="table">
+          <thead>
+            <tr><th colspan="2">Recent updates</th></tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    >>
+  in
+  let maintainers_top10 =
+    let mk_top_li (name, npkg) =
+      let npkg_str = string_of_int npkg in
+      <:xml<
+        <tr>
+          <td>$str: name$</td>
+          <td>$str: npkg_str$</td>
+        </tr>
+      >>
+    in
+    let top10_maintainers = Statistics.top_maintainers ~ntop: 10 repository in
+    let top10_items = List.map mk_top_li top10_maintainers in
+    <:xml<
+      <div class="span3">
+        <table class="table">
+          <thead>
+            <tr><th colspan="2">Most active maintainers</th></tr>
+          </thead>
+          <tbody>
+            $list: top10_items$
+          </tbody>
+        </table>
+      </div>
+    >>
+  in
+  let packages_top10 = match statistics with
     | None -> <:xml< >>
     | Some s ->
       let mk_top_li (pkg, _) =
-        <:xml< <li>$str: OpamPackage.Name.to_string (OpamPackage.name pkg)$</li> >>
+        let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
+        let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
+        let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
+        let pkg_popularity =
+          try
+            Int64.to_string (List.assoc pkg s.pkg_stats)
+          with
+            Not_found -> ""
+        in
+        <:xml<
+          <tr>
+            <td>
+              <a href="$str: pkg_href$">$str: pkg_name$</a>
+            </td>
+            <td>$str: pkg_popularity$</td>
+          </tr>
+        >>
       in
-      let top10_pkgs = Statistics.top ~ntop: 10 s.pkg_stats in
+      let top10_pkgs = Statistics.top_packages ~ntop: 10 s.pkg_stats in
       let top10_items = List.map mk_top_li top10_pkgs in
       <:xml<
         <div class="span3">
-          <h2>All-time Top 10</h2>
-          $list: top10_items$
+          <table class="table">
+            <thead>
+              <tr><th colspan="2">Most popular packages</th></tr>
+            </thead>
+            <tbody>
+              $list: top10_items$
+            </tbody>
+          </table>
         </div>
       >>
   in
@@ -21,10 +82,24 @@ let static_html (statistics: statistics option) =
     | None -> <:xml< >>
     | Some s ->
       <:xml<
-        <div class="offset1 span3">
-          <h2>Statistics</h2>
-          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations<br />
-          <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
+        <div class="span3">
+          <table class="table">
+            <thead>
+              <tr><th>Statistics</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       >>
   in
@@ -94,8 +169,10 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
           <img src="ext/img/camel_rider.png" alt="Camel Rider" />
         </div>
       </div>
+      <hr />
       <div class="row">
         $global_stats$
-        $top10$
+        $packages_top10$
+        $maintainers_top10$
       </div>
   >>
