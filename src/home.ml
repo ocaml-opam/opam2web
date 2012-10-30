@@ -82,7 +82,7 @@ let to_html (repository: OpamPath.Repository.r)
     | None -> <:xml< >>
     | Some s ->
       <:xml<
-        <div class="span3">
+        <div class="offset1 span3">
           <table class="table">
             <thead>
               <tr><th>Statistics</th></tr>
