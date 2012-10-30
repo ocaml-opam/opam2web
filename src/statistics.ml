@@ -242,21 +242,24 @@ let basic_stats_of_logfiles ?(per_ip = false) (logfiles: string list): statistic
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower) int value
    associated *)
-let top_packages ?(ntop = 10) ?(reverse = true) pkg_stats =
+let top_packages ?ntop ?(reverse = true) pkg_stats =
   let compare_pkg (_, n1) (_, n2) =
     if reverse then Int64.compare n2 n1
     else Int64.compare n1 n2
   in
   let sorted_pkg = List.sort compare_pkg pkg_stats in
-  let rec aux acc ct = function
-    | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
-    | _ -> acc
-  in
-  List.rev (aux [] ntop sorted_pkg)
+  match ntop with
+  | None -> sorted_pkg
+  | Some nmax ->
+    let rec aux acc ct = function
+      | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
+      | _ -> acc
+    in
+    List.rev (aux [] nmax sorted_pkg)
 
 (* Retrieve the 'ntop' number of maintainers with the higher (or lower) number 
    of associated packages *)
-let top_maintainers ?(ntop = 10) ?(reverse = true) repository
+let top_maintainers ?ntop ?(reverse = true) repository
     : (string * int) list =
   let packages = Repository.get_packages repository in
   let all_maintainers = List.map (fun pkg ->
@@ -284,8 +287,11 @@ let top_maintainers ?(ntop = 10) ?(reverse = true) repository
   let sorted_maintainers =
     List.sort compare_maintainers maintainer_stats
   in
-  let rec aux acc ct = function
-    | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
-    | _ -> acc
-  in
-  List.rev (aux [] ntop sorted_maintainers)
+  match ntop with
+  | None -> sorted_maintainers
+  | Some nmax ->
+    let rec aux acc ct = function
+      | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
+      | _ -> acc
+    in
+    List.rev (aux [] nmax sorted_maintainers)
