@@ -256,7 +256,7 @@ let basic_statistics_set (logfiles: string list): statistics_set option =
       let one_day_ago = now -. one_day in
       let one_week_ago = now -. (one_day *. 7.) in
       let alltime_stats = basic_stats_of_entries
-          ~log_filter: { default_log_filter with log_per_ip = true }
+          ~log_filter: { default_log_filter with log_per_ip = false }
           some_entries
       in
       let day_stats = basic_stats_of_entries
