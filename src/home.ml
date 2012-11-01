@@ -156,7 +156,7 @@ let to_html (repository: OpamPath.Repository.r)
     | Some s -> [
         mk_stats "Last 24 hours statistics" s.day_stats;
         mk_stats "Last week statistics" s.week_stats;
-        mk_stats "All-time (unique IPs)" s.alltime_stats;
+        mk_stats "All-time statistics" s.alltime_stats;
       ]
   in
 
