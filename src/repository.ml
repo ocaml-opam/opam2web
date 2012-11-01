@@ -33,6 +33,32 @@ let get_packages repository =
   let package_set = OpamRepository.packages repository in
   OpamPackage.Set.elements package_set
 
+(* Retrieve the last update timestamp of package OPAM files *)
+let date_of_packages (repository: OpamPath.Repository.r)
+    : (OpamPackage.t * float) list =
+  let packages = get_packages repository in
+  let rec assoc_date acc packages = match packages with
+    | [] -> acc
+    | hd :: tl ->
+      let last_update = Package.last_update repository hd in
+      let dated_pkg = hd, last_update in
+      assoc_date (dated_pkg :: acc) tl
+  in
+  List.rev (assoc_date [] packages)
+
+(* Sort packages by date *)
+let last_packages ?nlast ?(reverse = true)
+    (packages: (OpamPackage.t * float) list)
+    : (OpamPackage.t * float) list =
+  let compare_dates (_, d1) (_, d2) =
+    if reverse then compare d2 d1
+    else compare d1 d2
+  in
+  let sorted_packages = List.sort compare_dates packages in
+  match nlast with
+  | None -> sorted_packages
+  | Some nmax -> first_n nmax sorted_packages
+
 (* Create an association list (package_name -> reverse_dependencies) *)
 let reverse_dependencies (repository: OpamPath.Repository.r)
     (packages: OpamPackage.t list) : (OpamPackage.Name.t * OpamPackage.t list list) list =
@@ -67,7 +93,7 @@ let reverse_dependencies (repository: OpamPath.Repository.r)
 
 
 (* Create a list of package pages to generate for a repository *)
-let to_links (repository: OpamPath.Repository.r) (statistics: statistics option)
+let to_links (repository: OpamPath.Repository.r) (all_statistics: statistics_set option)
     : (Cow.Html.link * int * Cow.Html.t) list =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
@@ -76,7 +102,7 @@ let to_links (repository: OpamPath.Repository.r) (statistics: statistics option)
       let pkg_info = Package.get_info ~href_prefix:"pkg/" repository pkg in
       { text=pkg_info.pkg_title; href=pkg_info.pkg_href }, 1,
         (Package.to_html repository unique_packages
-            reverse_dependencies package_versions statistics pkg))
+            reverse_dependencies package_versions all_statistics pkg))
     package_versions
   in
   List.flatten (List.map aux unique_packages)
@@ -96,8 +122,7 @@ let sortby_links links (default: string) (active: string) =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html sortby (repository: OpamPath.Repository.r)
-    (statistics: statistics option) : Cow.Html.t =
+let to_html sortby (repository: OpamPath.Repository.r) : Cow.Html.t =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let sortby_links, active, compare_pkg = sortby in
@@ -125,23 +150,14 @@ let to_html sortby (repository: OpamPath.Repository.r)
         >>)
       sorted_packages
   in
-  let stats_html = match statistics with
-    | None -> <:xml< >>
-    | Some s -> <:xml<
-        <p class="span3">
-          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations<br />
-          <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
-        </p>
-      >>
-  in
   <:xml<
     <div class="row">
-      <div class="span3">
+      <div class="span9">
         <ul class="nav nav-pills">
           $list: sortby_links_html$
         </ul>
       </div>
-      <form class="span6 form-search">
+      <form class="span3 form-search">
         <div class="input-append">
           <input id="search" class="search-query" type="text" placeholder="Search packages" />
           <button id="search-button" class="btn add-on">
@@ -149,7 +165,6 @@ let to_html sortby (repository: OpamPath.Repository.r)
           </button>
         </div>
       </form>
-      $stats_html$
     </div>
     <table class="table"  id="packages">
       <thead>

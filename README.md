@@ -62,8 +62,5 @@ Resulting files will be located in the `website` directory.
 ### TODO
 
 - Drop package files in different directories for each repository
-- Links between packages
-- Add news
-- Add updates
-- Include documentation
-- Use markdown for static pages (home, news...)
+- More complex news system (one page per news, Markdown...)
+- More complex statistics (graphics over time...)
