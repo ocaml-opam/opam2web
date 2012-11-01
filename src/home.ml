@@ -2,7 +2,7 @@ open O2w_common
 
 (* OPAM website homepage *)
 let to_html (repository: OpamPath.Repository.r)
-    (statistics: statistics option) =
+    (statistics: statistics option) package_dates =
 
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
@@ -19,8 +19,7 @@ let to_html (repository: OpamPath.Repository.r)
         </tr>
       >>
     in
-    let package_dates = Statistics.date_of_packages repository in
-    let last_updates = Statistics.last_packages ~nlast: 10 package_dates in
+    let last_updates = Repository.last_packages ~nlast: 10 package_dates in
     let updated_items = List.map mk_update_li last_updates in
     <:xml<
       <div class="span3">
@@ -33,7 +32,7 @@ let to_html (repository: OpamPath.Repository.r)
             <tr>
               <td class="btn-more" colspan="2">
                 <button class="btn btn-small" type="button">
-                  <a href="pkg/index-updates.html">all packages</a>
+                  <a href="pkg/index-date.html">all packages</a>
                 </button>
               </td>
             </tr>

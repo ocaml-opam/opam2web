@@ -225,14 +225,6 @@ let basic_stats_of_logfiles ?(per_ip = false) (logfiles: string list): statistic
       update_stats = update_stats;
     }
 
-(* Retrieve the 'n' first elements of a list *)
-let first_n nmax l =
-  let rec aux acc n = function
-    | hd :: tl when n > 0 -> aux (hd :: acc) (n - 1) tl
-    | _ -> acc
-  in
-  List.rev (aux [] nmax l)
-
 (* Retrieve the 'ntop' number of packages with the higher (or lower) int value 
    associated *)
 let top_packages ?ntop ?(reverse = true) pkg_stats =
@@ -278,33 +270,4 @@ let top_maintainers ?ntop ?(reverse = true) repository
   match ntop with
   | None -> sorted_maintainers
   | Some nmax -> first_n nmax sorted_maintainers
-
-(* Retrieve the last update timestamp of package OPAM files *)
-let date_of_packages (repository: OpamPath.Repository.r)
-    : (OpamPackage.t * float) list =
-  let packages = Repository.get_packages repository in
-  let rec assoc_date acc packages = match packages with
-    | [] -> acc
-    | hd :: tl ->
-      let opam_filename =
-        OpamFilename.to_string (OpamPath.Repository.opam repository hd)
-      in
-      let opam_stat = Unix.stat opam_filename in
-      let dated_pkg = hd, opam_stat.st_mtime in
-      assoc_date (dated_pkg :: acc) tl
-  in
-  List.rev (assoc_date [] packages)
-
-(* Sort packages by date *)
-let last_packages ?nlast ?(reverse = true)
-    (packages: (OpamPackage.t * float) list)
-    : (OpamPackage.t * float) list =
-  let compare_dates (_, d1) (_, d2) =
-    if reverse then compare d2 d1
-    else compare d1 d2
-  in
-  let sorted_packages = List.sort compare_dates packages in
-  match nlast with
-  | None -> sorted_packages
-  | Some nmax -> first_n nmax sorted_packages
 

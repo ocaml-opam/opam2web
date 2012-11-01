@@ -33,6 +33,32 @@ let get_packages repository =
   let package_set = OpamRepository.packages repository in
   OpamPackage.Set.elements package_set
 
+(* Retrieve the last update timestamp of package OPAM files *)
+let date_of_packages (repository: OpamPath.Repository.r)
+    : (OpamPackage.t * float) list =
+  let packages = get_packages repository in
+  let rec assoc_date acc packages = match packages with
+    | [] -> acc
+    | hd :: tl ->
+      let last_update = Package.last_update repository hd in
+      let dated_pkg = hd, last_update in
+      assoc_date (dated_pkg :: acc) tl
+  in
+  List.rev (assoc_date [] packages)
+
+(* Sort packages by date *)
+let last_packages ?nlast ?(reverse = true)
+    (packages: (OpamPackage.t * float) list)
+    : (OpamPackage.t * float) list =
+  let compare_dates (_, d1) (_, d2) =
+    if reverse then compare d2 d1
+    else compare d1 d2
+  in
+  let sorted_packages = List.sort compare_dates packages in
+  match nlast with
+  | None -> sorted_packages
+  | Some nmax -> first_n nmax sorted_packages
+
 (* Create an association list (package_name -> reverse_dependencies) *)
 let reverse_dependencies (repository: OpamPath.Repository.r)
     (packages: OpamPackage.t list) : (OpamPackage.Name.t * OpamPackage.t list list) list =
@@ -136,12 +162,12 @@ let to_html sortby (repository: OpamPath.Repository.r)
   in
   <:xml<
     <div class="row">
-      <div class="span3">
+      <div class="span4">
         <ul class="nav nav-pills">
           $list: sortby_links_html$
         </ul>
       </div>
-      <form class="span6 form-search">
+      <form class="span5 form-search">
         <div class="input-append">
           <input id="search" class="search-query" type="text" placeholder="Search packages" />
           <button id="search-button" class="btn add-on">

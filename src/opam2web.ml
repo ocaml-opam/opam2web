@@ -76,26 +76,39 @@ let make_website (repository: OpamPath.Repository.r): unit =
   if List.length user_options.logfiles = 0 then
     user_options.logfiles <- ["access.log"];
   let statistics = Statistics.basic_stats_of_logfiles user_options.logfiles in
+  let package_dates = Repository.date_of_packages repository in
   let packages = Repository.to_links repository statistics in
   let links_of_doc = Documentation.to_links user_options.content_dir in
-  let criteria = ["name"; "popularity"] in
+  let criteria = ["name"; "popularity"; "date"] in
+  let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
-    | None -> fun _ -> []
+    | None -> Repository.sortby_links criteria_nostats "name"
     | Some _ ->  Repository.sortby_links criteria "name"
   in
   let criteria_links = match statistics with
-    | None -> []
+    | None ->
+      [
+        { text="Packages"; href="pkg/index-date.html" },
+            No_menu (1, (Repository.to_html (sortby_links, "date",
+                  Package.compare_date ~reverse: true package_dates)
+                repository statistics));
+      ]
     | Some s ->
       [
         { text="Packages"; href="pkg/index-popularity.html" },
             No_menu (1, (Repository.to_html (sortby_links, "popularity",
                   Package.compare_popularity ~reverse: true s.pkg_stats)
                 repository statistics));
+        { text="Packages"; href="pkg/index-date.html" },
+            No_menu (1, (Repository.to_html (sortby_links, "date",
+                  Package.compare_date ~reverse: true package_dates)
+                repository statistics));
       ]
   in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
-    { text="Home"; href="index.html" }, Internal (0, Home.to_html repository statistics);
+    { text="Home"; href="index.html" },
+        Internal (0, Home.to_html repository statistics package_dates);
     { text="Packages"; href="pkg/index.html" },
         Internal (1, (Repository.to_html
             (sortby_links, "name", Package.compare_alphanum)

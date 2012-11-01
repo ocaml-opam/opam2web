@@ -91,6 +91,16 @@ let documentation_pages = [
   "Packaging.md"
 ]
 
+(** List related functions *)
+
+(* Retrieve the 'n' first elements of a list *)
+let first_n nmax l =
+  let rec aux acc n = function
+    | hd :: tl when n > 0 -> aux (hd :: acc) (n - 1) tl
+    | _ -> acc
+  in
+  List.rev (aux [] nmax l)
+
 (* Date related functions *)
 
 let month_of_string: string -> int = function
