@@ -75,31 +75,44 @@ let include_files (path: string) files_path : unit =
 let make_website (repository: OpamPath.Repository.r): unit =
   if List.length user_options.logfiles = 0 then
     user_options.logfiles <- ["access.log"];
-  let statistics = Statistics.basic_stats_of_logfiles user_options.logfiles in
-  let packages = Repository.to_links repository statistics in
+  let statistics_set = Statistics.basic_statistics_set user_options.logfiles in
+  let package_dates = Repository.date_of_packages repository in
+  let packages = Repository.to_links repository statistics_set in
   let links_of_doc = Documentation.to_links user_options.content_dir in
-  let criteria = ["name"; "popularity"] in
-  let sortby_links = match statistics with
-    | None -> fun _ -> []
+  let criteria = ["name"; "popularity"; "date"] in
+  let criteria_nostats = ["name"; "date"] in
+  let sortby_links = match statistics_set with
+    | None -> Repository.sortby_links criteria_nostats "name"
     | Some _ ->  Repository.sortby_links criteria "name"
   in
-  let criteria_links = match statistics with
-    | None -> []
+  let criteria_links = match statistics_set with
+    | None ->
+      [
+        { text="Packages"; href="pkg/index-date.html" },
+            No_menu (1, (Repository.to_html (sortby_links, "date",
+                  Package.compare_date ~reverse: true package_dates)
+                repository));
+      ]
     | Some s ->
       [
         { text="Packages"; href="pkg/index-popularity.html" },
             No_menu (1, (Repository.to_html (sortby_links, "popularity",
-                  Package.compare_popularity ~reverse: true s.pkg_stats)
-                repository statistics));
+                  Package.compare_popularity ~reverse: true s.alltime_stats.pkg_stats)
+                repository));
+        { text="Packages"; href="pkg/index-date.html" },
+            No_menu (1, (Repository.to_html (sortby_links, "date",
+                  Package.compare_date ~reverse: true package_dates)
+                repository));
       ]
   in
   include_files user_options.out_dir user_options.files_dir;
   Template.generate ~out_dir: user_options.out_dir ([
-    { text="Home"; href="index.html" }, Internal (0, Home.to_html repository statistics);
+    { text="Home"; href="index.html" },
+        Internal (0, Home.to_html repository statistics_set package_dates);
     { text="Packages"; href="pkg/index.html" },
         Internal (1, (Repository.to_html
             (sortby_links, "name", Package.compare_alphanum)
-            repository statistics));
+            repository));
     { text="Documentation"; href="doc/index.html" },
         Submenu (links_of_doc documentation_pages);
   ] @ criteria_links, packages)

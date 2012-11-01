@@ -92,6 +92,6 @@ code {
   bottom: 140px;
 }
 
-.contribute-element {
+.contribute-element, .table td.btn-more {
   text-align: center;
 }

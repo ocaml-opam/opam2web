@@ -1,3 +1,5 @@
+open Unix
+
 open Cow.Html
 open O2w_common
 
@@ -8,7 +10,6 @@ let compare_alphanum  (p1: OpamPackage.t) (p2: OpamPackage.t): int =
 (* Comparison function using number of downloads for each package *)
 let compare_popularity ?(reverse = false) pkgver_stats
     (p1: OpamPackage.t) (p2: OpamPackage.t): int =
-  let p1, p2 = if reverse then p2, p1 else p1, p2 in
   let pkg_count pkg =
     try
       List.assoc pkg pkgver_stats
@@ -16,8 +17,34 @@ let compare_popularity ?(reverse = false) pkgver_stats
       Not_found -> Int64.zero
   in
   match pkg_count p1, pkg_count p2 with
-  | c1, c2 when c1 <> c2 -> Int64.compare c1 c2
+  | c1, c2 when c1 <> c2 ->
+    let c1, c2 = if reverse then c2, c1 else c1, c2 in
+    Int64.compare c1 c2
   | _ -> compare_alphanum p1 p2
+
+(* Comparison function using the last update time of packages *)
+let compare_date ?(reverse = false) pkgver_dates
+    (p1: OpamPackage.t) (p2: OpamPackage.t): int =
+  let pkg_date pkg =
+    try
+      List.assoc pkg pkgver_dates
+    with
+      Not_found -> 0.
+  in
+  match pkg_date p1, pkg_date p2 with
+  | d1, d2 when d1 <> d2 ->
+    let d1, d2 = if reverse then d2, d1 else d1, d2 in
+    compare d1 d2
+  | _ -> compare_alphanum p1 p2
+
+(* Get the last update timestamp of a package in a given repository *)
+let last_update (repository: OpamPath.Repository.r)
+    (package: OpamPackage.t): float =
+  let opam_filename =
+    OpamFilename.to_string (OpamPath.Repository.opam repository package)
+  in
+  let opam_stat = Unix.stat opam_filename in
+  opam_stat.st_mtime
 
 (* Build a record representing information about a package *)
 let get_info ?(href_prefix="") (repository: OpamPath.Repository.r)
@@ -38,6 +65,7 @@ let get_info ?(href_prefix="") (repository: OpamPath.Repository.r)
     Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
   in
   let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
+  let pkg_update = last_update repository pkg in
   {
     pkg_name     = pkg_name;
     pkg_version  = pkg_version;
@@ -80,7 +108,7 @@ let find_latest_version (unique_packages: OpamPackage.t list list)
 (* Returns a HTML description of the given package *)
 let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t list list)
     (reverse_dependencies: (OpamPackage.Name.t * OpamPackage.t list list) list)
-    (versions: OpamPackage.t list) (statistics: statistics option)
+    (versions: OpamPackage.t list) (all_statistics: statistics_set option)
     (pkg: OpamPackage.t): Cow.Html.t =
   let pkg_info = get_info repository pkg in
   let pkg_url =
@@ -122,6 +150,7 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     versions
   in
   let pkg_maintainer = OpamFile.OPAM.maintainer opam_file in
+  let pkg_update = string_of_timestamp (last_update repository pkg) in
   let html_of_dependencies title dependencies =
     let deps = List.map (fun (pkg_name, constr_opt) ->
         let name = OpamPackage.Name.to_string pkg_name in
@@ -175,9 +204,10 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
-  let pkgver_stats = match statistics with
+  let pkgver_stats = match all_statistics with
     | None -> <:xml< >>
-    | Some s ->
+    | Some sset ->
+      let s = sset.alltime_stats in
       let pkg_count =
         try
           List.assoc pkg s.pkgver_stats
@@ -218,6 +248,12 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
               <th>Maintainer</th>
               <td>
                 $str: pkg_maintainer$
+              </td>
+            </tr>
+            <tr>
+              <th>Last update</th>
+              <td>
+                $str: pkg_update$
               </td>
             </tr>
             $pkgver_stats$

@@ -5,21 +5,6 @@ open O2w_common
 
 module StringMap = Map.Make (String)
 
-let month_of_string: string -> int = function
-  | "Jan" -> 0
-  | "Feb" -> 1
-  | "Mar" -> 2
-  | "Apr" -> 3
-  | "May" -> 4
-  | "Jun" -> 5
-  | "Jul" -> 6
-  | "Aug" -> 7
-  | "Sep" -> 8
-  | "Oct" -> 9
-  | "Nov" -> 10
-  | "Dec" -> 11
-  | unknown -> failwith ("Unknown month: " ^ unknown)
-
 (* Retrieve log entries of an apache access.log file *)
 let entries_of_logfile (init: log_entry list) (filename: string)
     : log_entry list =
@@ -183,19 +168,29 @@ let incr_strmap (key: string) (map: int64 StringMap.t)
 let init_strmap (key: string): int64 StringMap.t =
   incr_strmap key StringMap.empty
 
+let apply_log_filter log_filter entries =
+  List.filter (fun e ->
+      if e.log_timestamp >= log_filter.log_start_time
+          && e.log_timestamp <= log_filter.log_end_time then
+        true
+      else false)
+    entries
+
 (* Count the number of update requests in a list of entries *)
-let count_updates ?(per_ip = false) (entries: log_entry list): int64 =
+let count_updates ?(log_filter = default_log_filter) (entries: log_entry list): int64 =
+  let filtered_entries = apply_log_filter log_filter entries in
   let count_map =
     List.fold_left (fun acc e -> match e.log_request with
         | Update_req -> incr_strmap e.log_host acc
         | _ -> acc)
-      StringMap.empty entries
+      StringMap.empty filtered_entries
   in
-  sum_strmap ~unique:per_ip count_map
+  sum_strmap ~unique:log_filter.log_per_ip count_map
 
 (* Count the number of downloads for each OPAM archive *)
-let count_archive_downloads ?(per_ip = false) ?(eq_pkg = (=)) (entries: log_entry list)
+let count_archive_downloads ?(log_filter = default_log_filter) (entries: log_entry list)
     : (OpamPackage.t * int64) list =
+  let filtered_entries = apply_log_filter log_filter entries in
   let compare_entries e1 e2 = match e1.log_request, e2.log_request with
     | Archive_req p1, Archive_req p2 ->
         String.compare (OpamPackage.to_string p1) (OpamPackage.to_string p2)
@@ -203,15 +198,15 @@ let count_archive_downloads ?(per_ip = false) ?(eq_pkg = (=)) (entries: log_entr
     | _, Archive_req _ -> (-1)
     | _ -> 0
   in
-  let sorted_entries = List.sort compare_entries entries in
+  let sorted_entries = List.sort compare_entries filtered_entries in
   let rec aux stats (prev_pkg, host_map) = function
-    | [] -> (prev_pkg, sum_strmap ~unique:per_ip host_map) :: stats
+    | [] -> (prev_pkg, sum_strmap ~unique:log_filter.log_per_ip host_map) :: stats
     | hd :: tl -> match hd.log_request with
       | Archive_req pkg ->
-        if eq_pkg pkg prev_pkg then
+        if log_filter.log_eq_pkg pkg prev_pkg then
           aux stats (pkg, incr_strmap hd.log_host host_map) tl
         else
-          aux ((prev_pkg, sum_strmap ~unique:per_ip host_map) :: stats)
+          aux ((prev_pkg, sum_strmap ~unique:log_filter.log_per_ip host_map) :: stats)
               (pkg, init_strmap hd.log_host) tl
       | _ ->
         aux stats (prev_pkg, host_map) tl
@@ -219,44 +214,82 @@ let count_archive_downloads ?(per_ip = false) ?(eq_pkg = (=)) (entries: log_entr
   aux [] (OpamPackage.of_string "InitStatDummyPackage.0", StringMap.empty)
       sorted_entries
 
+
+
 (* Generate basic statistics on log entries *)
-let basic_stats_of_logfiles ?(per_ip = false) (logfiles: string list): statistics option =
-  let entries = entries_of_logfiles logfiles in
-  let pkgver_stats = count_archive_downloads ~per_ip entries in
+let basic_stats_of_entries ?(log_filter = default_log_filter)
+    (entries: log_entry list): statistics =
+  (* TODO: factorize filtering of entries in count_updates and count_archive 
+     downloads *)
+  let pkgver_stats = count_archive_downloads ~log_filter: log_filter entries in
   let eq_pkg p1 p2 = OpamPackage.name p1 = OpamPackage.name p2 in
-  let pkg_stats = count_archive_downloads ~per_ip ~eq_pkg:eq_pkg entries
-  in
+  let filter = { log_filter with log_eq_pkg = eq_pkg } in
+  let pkg_stats = count_archive_downloads ~log_filter: filter entries in
   let global_stats =
     List.fold_left (fun acc (_, n) -> Int64.add n acc)
         Int64.zero pkg_stats
   in
-  let update_stats = count_updates entries in
-  if global_stats = Int64.zero && update_stats = Int64.zero then None
-  else Some
-    {
-      pkgver_stats = pkgver_stats;
-      pkg_stats = pkg_stats;
-      global_stats = global_stats;
-      update_stats = update_stats;
-    }
+  let update_stats = count_updates ~log_filter: log_filter entries in
+  {
+    pkgver_stats = pkgver_stats;
+    pkg_stats = pkg_stats;
+    global_stats = global_stats;
+    update_stats = update_stats;
+  }
 
-(* Retrieve the 'ntop' number of packages with the higher (or lower) int value
+(* Read log entries from log files and generate basic statistics *)
+let basic_stats_of_logfiles ?(log_filter = default_log_filter)
+    (logfiles: string list): statistics option =
+  let entries = entries_of_logfiles logfiles in
+  match entries with
+  | [] -> None
+  | some_entries -> Some
+      (basic_stats_of_entries ~log_filter: log_filter some_entries)
+
+let basic_statistics_set (logfiles: string list): statistics_set option =
+  let entries = entries_of_logfiles logfiles in
+  match entries with
+  | [] -> None
+  | some_entries ->
+      let now = Unix.time () in
+      let one_day = 3600. *. 24. in
+      let one_day_ago = now -. one_day in
+      let one_week_ago = now -. (one_day *. 7.) in
+      let alltime_stats = basic_stats_of_entries
+          ~log_filter: { default_log_filter with log_per_ip = true }
+          some_entries
+      in
+      let day_stats = basic_stats_of_entries
+          ~log_filter: { default_log_filter with log_start_time = one_day_ago; log_end_time = now }
+          some_entries
+      in
+      let week_stats = basic_stats_of_entries
+          ~log_filter: { default_log_filter with log_start_time = one_week_ago; log_end_time = now }
+          some_entries
+      in
+      Some {
+        day_stats = day_stats;
+        week_stats = week_stats;
+        month_stats = alltime_stats; (* FIXME: disabled for now *)
+        year_stats = alltime_stats; (* FIXME: disabled for now *)
+        alltime_stats = alltime_stats;
+      }
+
+(* Retrieve the 'ntop' number of packages with the higher (or lower) int value 
    associated *)
-let top_packages ?(ntop = 10) ?(reverse = true) pkg_stats =
+let top_packages ?ntop ?(reverse = true) pkg_stats =
   let compare_pkg (_, n1) (_, n2) =
     if reverse then Int64.compare n2 n1
     else Int64.compare n1 n2
   in
   let sorted_pkg = List.sort compare_pkg pkg_stats in
-  let rec aux acc ct = function
-    | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
-    | _ -> acc
-  in
-  List.rev (aux [] ntop sorted_pkg)
+  match ntop with
+  | None -> sorted_pkg
+  | Some nmax -> first_n nmax sorted_pkg
 
 (* Retrieve the 'ntop' number of maintainers with the higher (or lower) number 
    of associated packages *)
-let top_maintainers ?(ntop = 10) ?(reverse = true) repository
+let top_maintainers ?ntop ?(reverse = true) repository
     : (string * int) list =
   let packages = Repository.get_packages repository in
   let all_maintainers = List.map (fun pkg ->
@@ -284,8 +317,7 @@ let top_maintainers ?(ntop = 10) ?(reverse = true) repository
   let sorted_maintainers =
     List.sort compare_maintainers maintainer_stats
   in
-  let rec aux acc ct = function
-    | hd :: tl when ct > 0 -> aux (hd :: acc) (ct - 1) tl
-    | _ -> acc
-  in
-  List.rev (aux [] ntop sorted_maintainers)
+  match ntop with
+  | None -> sorted_maintainers
+  | Some nmax -> first_n nmax sorted_maintainers
+
