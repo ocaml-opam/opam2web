@@ -2,7 +2,7 @@ open O2w_common
 
 (* OPAM website homepage *)
 let to_html (repository: OpamPath.Repository.r)
-    (statistics: statistics option) package_dates =
+    (all_statistics: statistics_set option) package_dates =
 
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
@@ -53,7 +53,21 @@ let to_html (repository: OpamPath.Repository.r)
       >>
     in
     let top10_maintainers = Statistics.top_maintainers ~ntop: 10 repository in
-    let top10_items = List.map mk_top_li top10_maintainers in
+    (* If a name is present, keep it and remove e-mail address, e.g.
+       John Doe <john.doe@foobar.com> -> John Doe
+       john.doe@foobar.com -> john.doe@foobar.com
+     *)
+    let truncate_email (full_name, n) =
+      let blank_index =
+        try
+          String.rindex full_name ' '
+        with
+          Not_found -> String.length full_name
+      in
+      String.sub full_name 0 blank_index, n
+    in
+    let top10_names = List.map truncate_email top10_maintainers in
+    let top10_items = List.map mk_top_li top10_names in
     <:xml<
       <div class="span3">
         <table class="table">
@@ -68,9 +82,10 @@ let to_html (repository: OpamPath.Repository.r)
     >>
   in
 
-  let packages_top10 = match statistics with
+  let packages_top10 = match all_statistics with
     | None -> <:xml< >>
-    | Some s ->
+    | Some sset ->
+      let s = sset.alltime_stats in
       let mk_top_li (pkg, _) =
         let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
         let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
@@ -113,31 +128,38 @@ let to_html (repository: OpamPath.Repository.r)
       >>
   in
 
-  let global_stats = match statistics with
-    | None -> <:xml< >>
-    | Some s ->
-      <:xml<
-        <div class="span3">
-          <table class="table">
-            <thead>
-              <tr><th>Statistics</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      >>
+  let mk_stats (title: string) (stats: statistics)
+      : Cow.Html.t =
+    <:xml<
+      <table class="table">
+        <thead>
+          <tr><th>$str: title$</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <i class="icon-th-large"> </i> <strong>$str: Int64.to_string stats.global_stats$</strong> package installations
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <i class="icon-refresh"> </i> <strong>$str: Int64.to_string stats.update_stats$</strong> repository updates
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    >>
   in
+
+  let stats_html = match all_statistics with
+    | None -> [ <:xml< &>> ]
+    | Some s -> [
+        mk_stats "Last 24 hours statistics" s.day_stats;
+        mk_stats "Last week statistics" s.week_stats;
+        mk_stats "All-time (unique IPs)" s.alltime_stats;
+      ]
+  in
+
   <:xml<
       <!-- Main hero unit for a primary marketing message or call to action -->
       <div class="hero-unit">
@@ -206,7 +228,9 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
       </div>
       <hr />
       <div class="row">
-        $global_stats$
+        <div class="span3">
+          $list: stats_html$
+        </div>
         $updates_last10$
         $packages_top10$
         $maintainers_top10$

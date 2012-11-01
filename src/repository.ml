@@ -93,7 +93,7 @@ let reverse_dependencies (repository: OpamPath.Repository.r)
 
 
 (* Create a list of package pages to generate for a repository *)
-let to_links (repository: OpamPath.Repository.r) (statistics: statistics option)
+let to_links (repository: OpamPath.Repository.r) (all_statistics: statistics_set option)
     : (Cow.Html.link * int * Cow.Html.t) list =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
@@ -102,7 +102,7 @@ let to_links (repository: OpamPath.Repository.r) (statistics: statistics option)
       let pkg_info = Package.get_info ~href_prefix:"pkg/" repository pkg in
       { text=pkg_info.pkg_title; href=pkg_info.pkg_href }, 1,
         (Package.to_html repository unique_packages
-            reverse_dependencies package_versions statistics pkg))
+            reverse_dependencies package_versions all_statistics pkg))
     package_versions
   in
   List.flatten (List.map aux unique_packages)
@@ -122,8 +122,7 @@ let sortby_links links (default: string) (active: string) =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html sortby (repository: OpamPath.Repository.r)
-    (statistics: statistics option) : Cow.Html.t =
+let to_html sortby (repository: OpamPath.Repository.r) : Cow.Html.t =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in
   let sortby_links, active, compare_pkg = sortby in
@@ -151,23 +150,14 @@ let to_html sortby (repository: OpamPath.Repository.r)
         >>)
       sorted_packages
   in
-  let stats_html = match statistics with
-    | None -> <:xml< >>
-    | Some s -> <:xml<
-        <p class="span3">
-          <i class="icon-th-large"> </i> <strong>$str: Int64.to_string s.global_stats$</strong> package installations<br />
-          <i class="icon-refresh"> </i> <strong>$str: Int64.to_string s.update_stats$</strong> repository updates
-        </p>
-      >>
-  in
   <:xml<
     <div class="row">
-      <div class="span4">
+      <div class="span9">
         <ul class="nav nav-pills">
           $list: sortby_links_html$
         </ul>
       </div>
-      <form class="span5 form-search">
+      <form class="span3 form-search">
         <div class="input-append">
           <input id="search" class="search-query" type="text" placeholder="Search packages" />
           <button id="search-button" class="btn add-on">
@@ -175,7 +165,6 @@ let to_html sortby (repository: OpamPath.Repository.r)
           </button>
         </div>
       </form>
-      $stats_html$
     </div>
     <table class="table"  id="packages">
       <thead>

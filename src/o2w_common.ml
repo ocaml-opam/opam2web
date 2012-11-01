@@ -28,6 +28,14 @@ type statistics = {
   update_stats: int64;
 }
 
+type statistics_set = {
+  alltime_stats: statistics;
+  day_stats: statistics;
+  week_stats: statistics;
+  month_stats: statistics;
+  year_stats: statistics;
+}
+
 (** Log entry intermediate types *)
 
 type log_client_os =
@@ -69,6 +77,13 @@ type log_entry = {
   log_client: log_client;
 }
 
+type log_filter = {
+  log_per_ip: bool;
+  log_eq_pkg: OpamPackage.t -> OpamPackage.t -> bool;
+  log_start_time: float;
+  log_end_time: float;
+}
+
 (* Global values *)
 
 (* The list contains elements with this syntax :
@@ -90,6 +105,15 @@ let documentation_pages = [
   "For Packagers";
   "Packaging.md"
 ]
+
+(** Statistics related global values *)
+
+let default_log_filter = {
+  log_per_ip = false;
+  log_eq_pkg = (=);
+  log_start_time = 0.;
+  log_end_time = max_float;
+}
 
 (** List related functions *)
 

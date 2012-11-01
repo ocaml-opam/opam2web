@@ -108,7 +108,7 @@ let find_latest_version (unique_packages: OpamPackage.t list list)
 (* Returns a HTML description of the given package *)
 let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t list list)
     (reverse_dependencies: (OpamPackage.Name.t * OpamPackage.t list list) list)
-    (versions: OpamPackage.t list) (statistics: statistics option)
+    (versions: OpamPackage.t list) (all_statistics: statistics_set option)
     (pkg: OpamPackage.t): Cow.Html.t =
   let pkg_info = get_info repository pkg in
   let pkg_url =
@@ -204,9 +204,10 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
-  let pkgver_stats = match statistics with
+  let pkgver_stats = match all_statistics with
     | None -> <:xml< >>
-    | Some s ->
+    | Some sset ->
+      let s = sset.alltime_stats in
       let pkg_count =
         try
           List.assoc pkg s.pkgver_stats
