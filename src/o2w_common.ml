@@ -1,3 +1,5 @@
+open Unix
+
 type menu_item =
   | Internal of int * Cow.Html.t
   | No_menu of int * Cow.Html.t
@@ -88,3 +90,41 @@ let documentation_pages = [
   "For Packagers";
   "Packaging.md"
 ]
+
+(* Date related functions *)
+
+let month_of_string: string -> int = function
+  | "Jan" -> 0
+  | "Feb" -> 1
+  | "Mar" -> 2
+  | "Apr" -> 3
+  | "May" -> 4
+  | "Jun" -> 5
+  | "Jul" -> 6
+  | "Aug" -> 7
+  | "Sep" -> 8
+  | "Oct" -> 9
+  | "Nov" -> 10
+  | "Dec" -> 11
+  | unknown -> failwith ("Unknown month: " ^ unknown)
+
+let string_of_month: int -> string = function
+  | 0  -> "Jan"
+  | 1  -> "Feb"
+  | 2  -> "Mar"
+  | 3  -> "Apr"
+  | 4  -> "May"
+  | 5  -> "Jun"
+  | 6  -> "Jul"
+  | 7  -> "Aug"
+  | 8  -> "Sep"
+  | 9  -> "Oct"
+  | 10 -> "Nov"
+  | 11 -> "Dec"
+  | unknown -> failwith ("Unknown month: " ^ (string_of_int unknown))
+
+let string_of_timestamp (time: float): string =
+  let tm = Unix.gmtime time in
+  let month_str = string_of_month tm.tm_mon in
+  let year = 1900 + tm.tm_year in
+  Printf.sprintf "%s %d, %d" month_str tm.tm_mday year

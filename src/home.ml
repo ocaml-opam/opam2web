@@ -3,7 +3,25 @@ open O2w_common
 (* OPAM website homepage *)
 let to_html (repository: OpamPath.Repository.r)
     (statistics: statistics option) =
-  let last_updates =
+
+  let updates_last10 =
+    let mk_update_li (pkg, update_tm) =
+      let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
+      let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
+      let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
+      let pkg_date = string_of_timestamp update_tm in
+      <:xml<
+        <tr>
+          <td>
+            <a href="$str: pkg_href$">$str: pkg_name$</a>
+          </td>
+          <td>$str: pkg_date$</td>
+        </tr>
+      >>
+    in
+    let package_dates = Statistics.date_of_packages repository in
+    let last_updates = Statistics.last_packages ~nlast: 10 package_dates in
+    let updated_items = List.map mk_update_li last_updates in
     <:xml<
       <div class="span3">
         <table class="table">
@@ -11,11 +29,20 @@ let to_html (repository: OpamPath.Repository.r)
             <tr><th colspan="2">Recent updates</th></tr>
           </thead>
           <tbody>
+            $list: updated_items$
+            <tr>
+              <td class="btn-more" colspan="2">
+                <button class="btn btn-small" type="button">
+                  <a href="pkg/index-updates.html">all packages</a>
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
     >>
   in
+
   let maintainers_top10 =
     let mk_top_li (name, npkg) =
       let npkg_str = string_of_int npkg in
@@ -41,6 +68,7 @@ let to_html (repository: OpamPath.Repository.r)
       </div>
     >>
   in
+
   let packages_top10 = match statistics with
     | None -> <:xml< >>
     | Some s ->
@@ -73,16 +101,24 @@ let to_html (repository: OpamPath.Repository.r)
             </thead>
             <tbody>
               $list: top10_items$
+              <tr>
+                <td class="btn-more" colspan="2">
+                  <button class="btn btn-small" type="button">
+                    <a href="pkg/index-popularity.html">all packages</a>
+                  </button>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       >>
   in
+
   let global_stats = match statistics with
     | None -> <:xml< >>
     | Some s ->
       <:xml<
-        <div class="offset1 span3">
+        <div class="span3">
           <table class="table">
             <thead>
               <tr><th>Statistics</th></tr>
@@ -172,6 +208,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
       <hr />
       <div class="row">
         $global_stats$
+        $updates_last10$
         $packages_top10$
         $maintainers_top10$
       </div>
