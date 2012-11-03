@@ -293,6 +293,9 @@ let top_packages ?ntop ?(reverse = true) pkg_stats =
     if reverse then Int64.compare n2 n1
     else Int64.compare n1 n2
   in
+  let pkg_stats = List.filter (fun (pkg,_) ->
+    not (OpamMisc.starts_with ~prefix:"base" (OpamPackage.Name.to_string (OpamPackage.name pkg)))
+  ) pkg_stats in
   let sorted_pkg = List.sort compare_pkg pkg_stats in
   match ntop with
   | None -> sorted_pkg
