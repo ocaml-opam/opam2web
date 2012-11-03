@@ -159,4 +159,7 @@ let string_of_timestamp ?(short = false) (time: float): string =
   let tm = Unix.gmtime time in
   let month_str = string_of_month tm.tm_mon in
   let year = 1900 + tm.tm_year in
-  Printf.sprintf "%s %d, %d" month_str tm.tm_mday year
+  if short then
+    Printf.sprintf "%s %d" month_str tm.tm_mday
+  else
+    Printf.sprintf "%s %d, %d" month_str tm.tm_mday year
