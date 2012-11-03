@@ -8,6 +8,7 @@ module StringMap = Map.Make (String)
 (* Retrieve log entries of an apache access.log file *)
 let entries_of_logfile (init: log_entry list) (filename: string)
     : log_entry list =
+  Printf.printf "Parsing %s\n%!" filename;
   let file = OpamFilename.of_string filename in
   let html_regexp =
     Re_str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+"
@@ -248,10 +249,10 @@ let count_users (now: float) (entries: log_entry list): int =
   aux 0 ("", []) sorted_entries
 
 (* Generate basic statistics on log entries *)
-let basic_stats_of_entries ?(log_filter = default_log_filter)
-    (entries: log_entry list): statistics =
+let basic_stats_of_entries log_filter (entries: log_entry list): statistics =
   (* TODO: factorize filtering of entries in count_updates and count_archive
      downloads *)
+  Printf.printf "Basic statistics (%s)\n%!" log_filter.filter_name;
   let filtered_entries = apply_log_filter log_filter entries in
   let pkg_stats = count_archive_downloads ~log_filter entries in
   let global_stats =
@@ -266,20 +267,18 @@ let basic_stats_of_entries ?(log_filter = default_log_filter)
   }
 
 (* Read log entries from log files and generate basic statistics *)
-let basic_stats_of_logfiles ?(log_filter = default_log_filter)
-    (logfiles: string list): statistics option =
+let basic_stats_of_logfiles log_filter (logfiles: string list): statistics option =
   let entries = entries_of_logfiles logfiles in
   match entries with
   | [] -> None
-  | some_entries -> Some
-      (basic_stats_of_entries ~log_filter: log_filter some_entries)
+  | some_entries -> Some (basic_stats_of_entries log_filter some_entries)
 
 let basic_statistics_set (logfiles: string list): (statistics_set * int) option =
   let entries = entries_of_logfiles logfiles in
   match entries with
   | [] -> None
   | some_entries ->
-      let now = Unix.time () in
+      let now = default_log_filter.log_end_time in
       let one_day = 3600. *. 24. in
       let one_day_ago = now -. one_day in
       let one_week_ago = now -. (one_day *. 7.) in
@@ -287,23 +286,23 @@ let basic_statistics_set (logfiles: string list): (statistics_set * int) option 
       let one_year_ago = now -. (one_day *. 365.) in
 
       let alltime_stats = basic_stats_of_entries
-          ~log_filter: { default_log_filter with log_per_ip = false }
+          { default_log_filter with filter_name = "alltime" }
           some_entries
       in
       let day_stats = basic_stats_of_entries
-          ~log_filter: { default_log_filter with log_start_time = one_day_ago; log_end_time = now }
+          { default_log_filter with log_start_time = one_day_ago; filter_name = "day" }
           some_entries
       in
       let week_stats = basic_stats_of_entries
-          ~log_filter: { default_log_filter with log_start_time = one_week_ago; log_end_time = now }
+          { default_log_filter with log_start_time = one_week_ago; filter_name = "week" }
           some_entries
       in
       let month_stats = basic_stats_of_entries
-          ~log_filter: { default_log_filter with log_start_time = one_month_ago; log_end_time = now }
+          { default_log_filter with log_start_time = one_month_ago; filter_name = "month" }
           some_entries
       in
       let year_stats = basic_stats_of_entries
-          ~log_filter: { default_log_filter with log_start_time = one_year_ago; log_end_time = now }
+          { default_log_filter with log_start_time = one_year_ago; filter_name = "year" }
           some_entries
       in
 

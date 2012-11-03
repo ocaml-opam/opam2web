@@ -77,6 +77,7 @@ type log_entry = {
 }
 
 type log_filter = {
+  filter_name: string;
   log_per_ip: bool;
   log_start_time: float;
   log_end_time: float;
@@ -107,9 +108,10 @@ let documentation_pages = [
 (** Statistics related global values *)
 
 let default_log_filter = {
+  filter_name = "default";
   log_per_ip = false;
   log_start_time = 0.;
-  log_end_time = max_float;
+  log_end_time = Unix.time ();
 }
 
 (** List related functions *)
