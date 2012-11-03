@@ -209,8 +209,10 @@ let count_users (now: float) (entries: log_entry list): int =
   let filter_week = { default_log_filter with
       log_start_time = one_week_ago;
       log_end_time = now;
+      filter_name = "week";
     }
   in
+  Printf.printf "Counting users (%s)\n%!" filter_week.filter_name;
   let filtered_entries = apply_log_filter filter_week entries in
 
   let users =
