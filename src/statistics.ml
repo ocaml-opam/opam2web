@@ -174,7 +174,8 @@ let incr_hostmap (pkg: OpamPackage.t) (host: string) (map: int64 StringMap.t Opa
 let apply_log_filter log_filter entries =
   List.filter (fun e ->
       if e.log_timestamp >= log_filter.log_start_time
-          && e.log_timestamp <= log_filter.log_end_time then
+          && e.log_timestamp <= log_filter.log_end_time
+          && log_filter.log_custom e then
         true
       else false)
     entries
@@ -206,9 +207,15 @@ let count_archive_downloads ?(log_filter = default_log_filter) (entries: log_ent
 let count_users (now: float) (entries: log_entry list): int =
   let one_day = 3600. *. 24. in
   let one_week_ago = now -. (one_day *. 7.) in
+  let filter_opam_requests entry =
+    match entry.log_request with
+    | Archive_req _ | Update_req -> true
+    | Html_req _ | Unknown_req _ -> false
+  in
   let filter_week = { default_log_filter with
       log_start_time = one_week_ago;
       log_end_time = now;
+      log_custom = filter_opam_requests;
       filter_name = "week";
     }
   in
