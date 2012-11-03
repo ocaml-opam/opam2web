@@ -13,7 +13,7 @@ let to_html (repository: OpamPath.Repository.r)
       <:xml<
         <tr>
           <td>
-            <a href="$str: pkg_href$">$str: pkg_name$</a>
+            <a href="$str: pkg_href$">$str: pkg_name$ $str: pkg_version$</a>
           </td>
           <td>$str: pkg_date$</td>
         </tr>
@@ -99,7 +99,7 @@ let to_html (repository: OpamPath.Repository.r)
         <:xml<
           <tr>
             <td>
-              <a href="$str: pkg_href$">$str: pkg_name$</a>
+              <a href="$str: pkg_href$">$str: pkg_name$ $str: pkg_version$</a>
             </td>
             <td>$str: pkg_popularity$</td>
           </tr>
