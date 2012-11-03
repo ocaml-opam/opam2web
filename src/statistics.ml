@@ -202,8 +202,7 @@ let count_archive_downloads ?(log_filter = default_log_filter) (entries: log_ent
     (pkg, sum_strmap ~unique:log_filter.log_per_ip host_map) :: acc
   ) (aux OpamPackage.Map.empty entries) []
 
-(* Count hosts with at least 10 requests with two days interval over a week
-   timeframe *)
+(* Count hosts with at least 10 requests within the last week *)
 let count_users (now: float) (entries: log_entry list): int =
   let one_day = 3600. *. 24. in
   let one_week_ago = now -. (one_day *. 7.) in
@@ -213,40 +212,13 @@ let count_users (now: float) (entries: log_entry list): int =
     }
   in
   let filtered_entries = apply_log_filter filter_week entries in
-  let sorted_entries =
-    List.sort (fun e1 e2 -> compare e1.log_host e2.log_host) filtered_entries
-  in
 
-  let is_user dates =
-    let rec minmax mind maxd ds = match ds with
-      | [] -> mind, maxd
-      | hd :: tl when hd < mind -> minmax hd maxd tl
-      | hd :: tl when hd > maxd -> minmax mind hd tl
-      | _ :: tl -> minmax mind maxd tl
-    in
-    let init_date = List.hd dates in
-    let min_date, max_date = minmax init_date init_date dates in
-    (* At least 10 requests with two days between the oldest and the most recent
-       ones *)
-    let one_day = 3600. *. 24. in
-    if List.length dates >= 10 && (max_date -. min_date) > (one_day *. 2.) then
-      true
-    else
-      false
-  in
-  let incr_users dates nusers =
-    match dates with
-    | [] -> nusers
-    | _ -> if is_user dates then nusers + 1 else nusers
-  in
+  let users =
+    List.fold_left
+      (fun map elt -> incr_strmap elt.log_host map)
+      StringMap.empty filtered_entries in
 
-  let rec aux acc (prev_host, ds) entries = match entries with
-    | [] -> incr_users ds acc
-    | hd :: tl when hd.log_host = prev_host ->
-        aux acc (prev_host, hd.log_timestamp :: ds) tl
-    | hd :: tl -> aux (incr_users ds acc) (hd.log_host, [hd.log_timestamp]) tl
-  in
-  aux 0 ("", []) sorted_entries
+  StringMap.fold (fun _ i n -> if i > 10L then n+1 else n) users 0
 
 (* Generate basic statistics on log entries *)
 let basic_stats_of_entries log_filter (entries: log_entry list): statistics =
