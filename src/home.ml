@@ -203,12 +203,16 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
         </div>
         <div class="span3">
           <h2>Contribute</h2>
-          <p class="contribute-element">Contribute to packages <button class="btn btn-large btn-block" type="button">
-             <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">OCamlPro/opam-repository</a>
-          </button></p>
-          <p class="contribute-element">Contribute to the installer <button class="btn btn-large btn-block" type="button">
-             <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">OCamlPro/opam</a>
-          </button></p>
+          <ul>
+          <li>Contribute to
+             <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">packages</a>
+          </li>
+          <li>Contribute to the
+             <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">installer</a>
+          </li>
+          <li>Contribute to this
+             <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>
+          </li>
 <!--
           <table class="table tooltip-packages">
             <tbody>
