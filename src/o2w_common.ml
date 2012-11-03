@@ -80,6 +80,7 @@ type log_filter = {
   log_per_ip: bool;
   log_start_time: float;
   log_end_time: float;
+  log_custom: log_entry -> bool
 }
 
 (* Global values *)
@@ -111,6 +112,7 @@ let default_log_filter = {
   log_per_ip = false;
   log_start_time = 0.;
   log_end_time = Unix.time ();
+  log_custom = (fun _  -> true);
 }
 
 (** List related functions *)
