@@ -180,19 +180,17 @@ let apply_log_filter log_filter entries =
 
 (* Count the number of update requests in a list of entries *)
 let count_updates ?(log_filter = default_log_filter) (entries: log_entry list): int64 =
-  let filtered_entries = apply_log_filter log_filter entries in
   let count_map =
     List.fold_left (fun acc e -> match e.log_request with
         | Update_req -> incr_strmap e.log_host acc
         | _ -> acc)
-      StringMap.empty filtered_entries
+      StringMap.empty entries
   in
   sum_strmap ~unique:log_filter.log_per_ip count_map
 
 (* Count the number of downloads for each OPAM archive *)
 let count_archive_downloads ?(log_filter = default_log_filter) (entries: log_entry list)
     : (OpamPackage.t * int64) list =
-  let filtered_entries = apply_log_filter log_filter entries in
   let rec aux stats = function
     | []       -> stats
     | hd :: tl -> match hd.log_request with
@@ -249,24 +247,22 @@ let count_users (now: float) (entries: log_entry list): int =
   in
   aux 0 ("", []) sorted_entries
 
-
 (* Generate basic statistics on log entries *)
 let basic_stats_of_entries ?(log_filter = default_log_filter)
     (entries: log_entry list): statistics =
   (* TODO: factorize filtering of entries in count_updates and count_archive
      downloads *)
-  let pkgver_stats = count_archive_downloads ~log_filter entries in
+  let filtered_entries = apply_log_filter log_filter entries in
   let pkg_stats = count_archive_downloads ~log_filter entries in
   let global_stats =
     List.fold_left (fun acc (_, n) -> Int64.add n acc)
         Int64.zero pkg_stats
   in
-  let update_stats = count_updates ~log_filter: log_filter entries in
+  let update_stats = count_updates ~log_filter entries in
   {
-    pkgver_stats = pkgver_stats;
-    pkg_stats = pkg_stats;
-    global_stats = global_stats;
-    update_stats = update_stats;
+    pkg_stats;
+    global_stats;
+    update_stats;
   }
 
 (* Read log entries from log files and generate basic statistics *)

@@ -213,6 +213,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
           <li>Contribute to this
              <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>
           </li>
+        </ul>
 <!--
           <table class="table tooltip-packages">
             <tbody>

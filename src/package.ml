@@ -204,13 +204,13 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
     html_of_dependencies "Required by" requiredby_deps
   in
   let nodeps = <:xml< <tr><td>No dependency</td></tr> >> in
-  let pkgver_stats = match all_statistics with
+  let pkg_stats = match all_statistics with
     | None -> <:xml< >>
     | Some (sset, _) ->
       let s = sset.alltime_stats in
       let pkg_count =
         try
-          List.assoc pkg s.pkgver_stats
+          List.assoc pkg s.pkg_stats
         with
           Not_found -> Int64.zero
       in
@@ -256,7 +256,7 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
                 $str: pkg_update$
               </td>
             </tr>
-            $pkgver_stats$
+            $pkg_stats$
           </tbody>
         </table>
 

@@ -1,4 +1,5 @@
 open Unix
+open OpamTypes
 
 type menu_item =
   | Internal of int * Cow.Html.t
@@ -18,13 +19,11 @@ type package_info = {
 }
 
 type statistics = {
-  (** Individual package.version download count *)
-  pkgver_stats: (OpamPackage.t * int64) list;
   (** Individual package download count *)
-  pkg_stats: (OpamPackage.t * int64) list;
+  pkg_stats: (package * int64) list;
   (** Global download count (sum of all packages download count) *)
   global_stats: int64;
-  (** Update count (number of 'index.tar.gz' downloads *)
+  (** Update count (number of 'urls.txt' downloads *)
   update_stats: int64;
 }
 
@@ -58,7 +57,7 @@ type log_request =
   (** Request of type "GET /\\(.+\\)\\.html HTTP/[.0-9]+" *)
   | Html_req of string
   (** Request of type "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" *)
-  | Archive_req of OpamPackage.t
+  | Archive_req of package
   (** Request of type "GET /urls\\.txt HTTP/[.0-9]+" *)
   | Update_req
   | Unknown_req of string
