@@ -65,7 +65,7 @@ let get_info ?(href_prefix="") (repository: OpamPath.Repository.r)
     Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
   in
   let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
-  let pkg_update = last_update repository pkg in
+  (* let pkg_update = last_update repository pkg in *)
   {
     pkg_name     = pkg_name;
     pkg_version  = pkg_version;

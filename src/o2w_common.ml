@@ -79,7 +79,6 @@ type log_entry = {
 
 type log_filter = {
   log_per_ip: bool;
-  log_eq_pkg: OpamPackage.t -> OpamPackage.t -> bool;
   log_start_time: float;
   log_end_time: float;
 }
@@ -110,7 +109,6 @@ let documentation_pages = [
 
 let default_log_filter = {
   log_per_ip = false;
-  log_eq_pkg = (=);
   log_start_time = 0.;
   log_end_time = max_float;
 }
