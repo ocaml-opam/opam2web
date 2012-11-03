@@ -49,7 +49,7 @@ let entries_of_logfile (init: log_entry list) (filename: string)
           {
             tm_mday = int_of_string (Re_str.matched_group 1 e.date);
             tm_mon = month_of_string (Re_str.matched_group 2 e.date);
-            tm_year = int_of_string (Re_str.matched_group 3 e.date);
+            tm_year = int_of_string (Re_str.matched_group 3 e.date) - 1900;
             tm_hour = int_of_string (Re_str.matched_group 4 e.date);
             tm_min = int_of_string (Re_str.matched_group 5 e.date);
             tm_sec = int_of_string (Re_str.matched_group 6 e.date);
@@ -255,6 +255,9 @@ let basic_statistics_set (logfiles: string list): statistics_set option =
       let one_day = 3600. *. 24. in
       let one_day_ago = now -. one_day in
       let one_week_ago = now -. (one_day *. 7.) in
+      let one_month_ago = now -. (one_day *. 30.) in
+      let one_year_ago = now -. (one_day *. 365.) in
+
       let alltime_stats = basic_stats_of_entries
           ~log_filter: { default_log_filter with log_per_ip = false }
           some_entries
@@ -270,8 +273,8 @@ let basic_statistics_set (logfiles: string list): statistics_set option =
       Some {
         day_stats = day_stats;
         week_stats = week_stats;
-        month_stats = alltime_stats; (* FIXME: disabled for now *)
-        year_stats = alltime_stats; (* FIXME: disabled for now *)
+        month_stats = month_stats;
+        year_stats = year_stats;
         alltime_stats = alltime_stats;
       }
 
