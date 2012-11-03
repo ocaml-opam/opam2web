@@ -49,7 +49,7 @@ let entries_of_logfile (init: log_entry list) (filename: string)
           {
             tm_mday = int_of_string (Re_str.matched_group 1 e.date);
             tm_mon = month_of_string (Re_str.matched_group 2 e.date);
-            tm_year = int_of_string (Re_str.matched_group 3 e.date);
+            tm_year = int_of_string (Re_str.matched_group 3 e.date) - 1900;
             tm_hour = int_of_string (Re_str.matched_group 4 e.date);
             tm_min = int_of_string (Re_str.matched_group 5 e.date);
             tm_sec = int_of_string (Re_str.matched_group 6 e.date);
@@ -215,6 +215,52 @@ let count_archive_downloads ?(log_filter = default_log_filter) (entries: log_ent
       sorted_entries
 
 
+(* Count hosts with at least 10 requests with two days interval over a week 
+   timeframe *)
+let count_users (now: float) (entries: log_entry list): int =
+  let one_day = 3600. *. 24. in
+  let one_week_ago = now -. (one_day *. 7.) in
+  let filter_week = { default_log_filter with
+      log_start_time = one_week_ago;
+      log_end_time = now;
+    }
+  in
+  let filtered_entries = apply_log_filter filter_week entries in
+  let sorted_entries =
+    List.sort (fun e1 e2 -> compare e1.log_host e2.log_host) filtered_entries
+  in
+
+  let is_user dates =
+    let rec minmax mind maxd ds = match ds with
+      | [] -> mind, maxd
+      | hd :: tl when hd < mind -> minmax hd maxd tl
+      | hd :: tl when hd > maxd -> minmax mind hd tl
+      | _ :: tl -> minmax mind maxd tl
+    in
+    let init_date = List.hd dates in
+    let min_date, max_date = minmax init_date init_date dates in
+    (* At least 10 requests with two days between the oldest and the most recent 
+       ones *)
+    let one_day = 3600. *. 24. in
+    if List.length dates >= 10 && (max_date -. min_date) > (one_day *. 2.) then
+      true
+    else
+      false
+  in
+  let incr_users dates nusers =
+    match dates with
+    | [] -> nusers
+    | _ -> if is_user dates then nusers + 1 else nusers
+  in
+
+  let rec aux acc (prev_host, ds) entries = match entries with
+    | [] -> incr_users ds acc
+    | hd :: tl when hd.log_host = prev_host ->
+        aux acc (prev_host, hd.log_timestamp :: ds) tl
+    | hd :: tl -> aux (incr_users ds acc) (hd.log_host, [hd.log_timestamp]) tl
+  in
+  aux 0 ("", []) sorted_entries
+
 
 (* Generate basic statistics on log entries *)
 let basic_stats_of_entries ?(log_filter = default_log_filter)
@@ -246,7 +292,7 @@ let basic_stats_of_logfiles ?(log_filter = default_log_filter)
   | some_entries -> Some
       (basic_stats_of_entries ~log_filter: log_filter some_entries)
 
-let basic_statistics_set (logfiles: string list): statistics_set option =
+let basic_statistics_set (logfiles: string list): (statistics_set * int) option =
   let entries = entries_of_logfiles logfiles in
   match entries with
   | [] -> None
@@ -255,6 +301,9 @@ let basic_statistics_set (logfiles: string list): statistics_set option =
       let one_day = 3600. *. 24. in
       let one_day_ago = now -. one_day in
       let one_week_ago = now -. (one_day *. 7.) in
+      let one_month_ago = now -. (one_day *. 30.) in
+      let one_year_ago = now -. (one_day *. 365.) in
+
       let alltime_stats = basic_stats_of_entries
           ~log_filter: { default_log_filter with log_per_ip = false }
           some_entries
@@ -267,13 +316,24 @@ let basic_statistics_set (logfiles: string list): statistics_set option =
           ~log_filter: { default_log_filter with log_start_time = one_week_ago; log_end_time = now }
           some_entries
       in
-      Some {
+      let month_stats = basic_stats_of_entries
+          ~log_filter: { default_log_filter with log_start_time = one_month_ago; log_end_time = now }
+          some_entries
+      in
+      let year_stats = basic_stats_of_entries
+          ~log_filter: { default_log_filter with log_start_time = one_year_ago; log_end_time = now }
+          some_entries
+      in
+
+      let nusers = count_users now some_entries in
+      Some ({
         day_stats = day_stats;
         week_stats = week_stats;
-        month_stats = alltime_stats; (* FIXME: disabled for now *)
-        year_stats = alltime_stats; (* FIXME: disabled for now *)
+        month_stats = month_stats;
+        year_stats = year_stats;
         alltime_stats = alltime_stats;
-      }
+      },
+      nusers)
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower) int value 
    associated *)

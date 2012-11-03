@@ -2,7 +2,7 @@ open O2w_common
 
 (* OPAM website homepage *)
 let to_html (repository: OpamPath.Repository.r)
-    (all_statistics: statistics_set option) package_dates =
+    (all_statistics: (statistics_set * int) option) package_dates =
 
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
@@ -84,7 +84,7 @@ let to_html (repository: OpamPath.Repository.r)
 
   let packages_top10 = match all_statistics with
     | None -> <:xml< >>
-    | Some sset ->
+    | Some (sset, _) ->
       let s = sset.alltime_stats in
       let mk_top_li (pkg, _) =
         let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
@@ -153,11 +153,18 @@ let to_html (repository: OpamPath.Repository.r)
 
   let stats_html = match all_statistics with
     | None -> [ <:xml< &>> ]
-    | Some s -> [
+    | Some (s, _) -> [
         mk_stats "Last 24 hours statistics" s.day_stats;
         mk_stats "Last week statistics" s.week_stats;
         mk_stats "All-time statistics" s.alltime_stats;
       ]
+  in
+
+  let nusers_html = match all_statistics with
+    | None -> <:xml< &>>
+    | Some (_, nusers) -> <:xml<
+        <span class="badge badge-warning">$int: nusers$ users</span>
+      >>
   in
 
   <:xml<
@@ -180,6 +187,7 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
               href="doc/Basic_Usage.html">
             How to use OPAM »
           </a>
+          $nusers_html$
         </p>
       </div>
 

@@ -93,7 +93,7 @@ let make_website (repository: OpamPath.Repository.r): unit =
                   Package.compare_date ~reverse: true package_dates)
                 repository));
       ]
-    | Some s ->
+    | Some (s, _) ->
       [
         { text="Packages"; href="pkg/index-popularity.html" },
             No_menu (1, (Repository.to_html (sortby_links, "popularity",
