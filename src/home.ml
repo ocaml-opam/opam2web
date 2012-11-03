@@ -204,14 +204,14 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
         <div class="span3">
           <h2>Contribute</h2>
           <ul>
-          <li>Contribute to
-             <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">packages</a>
+          <li>Contribute to the
+             <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">packages</a>.
           </li>
           <li>Contribute to the
-             <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">installer</a>
+             <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">installer</a>.
           </li>
           <li>Contribute to this
-             <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>
+             <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>.
           </li>
         </ul>
 <!--
