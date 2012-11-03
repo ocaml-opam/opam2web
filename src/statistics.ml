@@ -226,8 +226,9 @@ let count_users (now: float) (entries: log_entry list): int =
 let basic_stats_of_entries log_filter (entries: log_entry list): statistics =
   (* TODO: factorize filtering of entries in count_updates and count_archive
      downloads *)
-  Printf.printf "Basic statistics (%s)\n%!" log_filter.filter_name;
-  let filtered_entries = apply_log_filter log_filter entries in
+  Printf.printf "Basic statistics (%s): %!" log_filter.filter_name;
+  let entries = apply_log_filter log_filter entries in
+  Printf.printf "%d entries\n%!" (List.length entries);
   let pkg_stats = count_archive_downloads ~log_filter entries in
   let global_stats =
     List.fold_left (fun acc (_, n) -> Int64.add n acc)
