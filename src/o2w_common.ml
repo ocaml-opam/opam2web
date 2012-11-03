@@ -32,7 +32,6 @@ type statistics_set = {
   day_stats: statistics;
   week_stats: statistics;
   month_stats: statistics;
-  year_stats: statistics;
 }
 
 (** Log entry intermediate types *)

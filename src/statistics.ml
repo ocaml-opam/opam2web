@@ -276,17 +276,12 @@ let basic_statistics_set (logfiles: string list): (statistics_set * int) option 
           { default_log_filter with log_start_time = one_month_ago; filter_name = "month" }
           some_entries
       in
-      let year_stats = basic_stats_of_entries
-          { default_log_filter with log_start_time = one_year_ago; filter_name = "year" }
-          some_entries
-      in
 
       let nusers = count_users now some_entries in
       Some ({
         day_stats = day_stats;
         week_stats = week_stats;
         month_stats = month_stats;
-        year_stats = year_stats;
         alltime_stats = alltime_stats;
       },
       nusers)
