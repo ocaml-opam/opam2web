@@ -155,7 +155,7 @@ let string_of_month: int -> string = function
   | 11 -> "Dec"
   | unknown -> failwith ("Unknown month: " ^ (string_of_int unknown))
 
-let string_of_timestamp (time: float): string =
+let string_of_timestamp ?(short = false) (time: float): string =
   let tm = Unix.gmtime time in
   let month_str = string_of_month tm.tm_mon in
   let year = 1900 + tm.tm_year in

@@ -9,7 +9,7 @@ let to_html (repository: OpamPath.Repository.r)
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
       let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
       let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
-      let pkg_date = string_of_timestamp update_tm in
+      let pkg_date = string_of_timestamp ~short:true update_tm in
       <:xml<
         <tr>
           <td>
