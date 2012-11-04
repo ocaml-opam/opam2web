@@ -179,14 +179,14 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
         <br/>
         <div class="offset6 span6">
         <div class="btn-group">
-          <button class="btn btn-large"
+          <a class="btn btn-large"
               href="doc/Quick_Install.html">
             Download and install OPAM »
-          </button>
-          <button class="btn btn-large"
+          </a>
+          <a class="btn btn-large"
               href="doc/Basic_Usage.html">
             How to use OPAM »
-          </button>
+          </a>
         </div>
         </div>
         <br/>
