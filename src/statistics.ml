@@ -209,7 +209,7 @@ let count_users (entries: log_entry list): int64 =
     List.fold_left
       (fun map elt -> incr_strmap elt.log_host map)
       StringMap.empty entries in
-  StringMap.fold (fun _ i n -> if i > 10L then Int64.succ n else n) users 0L
+  StringMap.fold (fun _ _ n -> Int64.succ n) users 0L
 
 (* Generate basic statistics on log entries *)
 let basic_stats_of_entries log_filter (entries: log_entry list): statistics =
