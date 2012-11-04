@@ -175,16 +175,22 @@ opam switch 4.00.0   # Switch to OCaml 4.00.0 environment
 opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
 ...
 </pre>
-        <p>
-          <a class="btn btn-primary btn-inverse btn-large"
+        <br/>
+        <br/>
+        <div class="offset6 span6">
+        <div class="btn-group">
+          <button class="btn btn-large"
               href="doc/Quick_Install.html">
             Download and install OPAM »
-          </a>
-          <a class="btn btn-primary btn-inverse btn-large"
+          </button>
+          <button class="btn btn-large"
               href="doc/Basic_Usage.html">
             How to use OPAM »
-          </a>
-        </p>
+          </button>
+        </div>
+        </div>
+        <br/>
+        <br/>
       </div>
 
       <!-- Example row of columns -->
