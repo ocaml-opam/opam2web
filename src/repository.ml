@@ -166,7 +166,7 @@ let to_html sortby (repository: OpamPath.Repository.r) : Cow.Html.t =
         </div>
       </form>
     </div>
-    <table class="table"  id="packages">
+    <table class="table table-hover"  id="packages">
       <thead>
         <tr>
           <th>Name</th>
