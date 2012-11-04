@@ -204,30 +204,12 @@ let count_archive_downloads ?(log_filter = default_log_filter) (entries: log_ent
   ) (aux OpamPackage.Map.empty entries) []
 
 (* Count hosts with at least 10 requests within the last week *)
-let count_users (now: float) (entries: log_entry list): int =
-  let one_day = 3600. *. 24. in
-  let one_week_ago = now -. (one_day *. 7.) in
-  let filter_opam_requests entry =
-    match entry.log_request with
-    | Archive_req _ | Update_req -> true
-    | Html_req _ | Unknown_req _ -> false
-  in
-  let filter_week = { default_log_filter with
-      log_start_time = one_week_ago;
-      log_end_time = now;
-      log_custom = filter_opam_requests;
-      filter_name = "week";
-    }
-  in
-  Printf.printf "Counting users (%s)\n%!" filter_week.filter_name;
-  let filtered_entries = apply_log_filter filter_week entries in
-
+let count_users (entries: log_entry list): int64 =
   let users =
     List.fold_left
       (fun map elt -> incr_strmap elt.log_host map)
-      StringMap.empty filtered_entries in
-
-  StringMap.fold (fun _ i n -> if i > 10L then n+1 else n) users 0
+      StringMap.empty entries in
+  StringMap.fold (fun _ i n -> if i > 10L then Int64.succ n else n) users 0L
 
 (* Generate basic statistics on log entries *)
 let basic_stats_of_entries log_filter (entries: log_entry list): statistics =
@@ -242,10 +224,12 @@ let basic_stats_of_entries log_filter (entries: log_entry list): statistics =
         Int64.zero pkg_stats
   in
   let update_stats = count_updates ~log_filter entries in
+  let users_stats = count_users entries in
   {
     pkg_stats;
     global_stats;
     update_stats;
+    users_stats;
   }
 
 (* Read log entries from log files and generate basic statistics *)
@@ -255,7 +239,7 @@ let basic_stats_of_logfiles log_filter (logfiles: string list): statistics optio
   | [] -> None
   | some_entries -> Some (basic_stats_of_entries log_filter some_entries)
 
-let basic_statistics_set (logfiles: string list): (statistics_set * int) option =
+let basic_statistics_set (logfiles: string list): statistics_set option =
   let entries = entries_of_logfiles logfiles in
   match entries with
   | [] -> None
@@ -265,7 +249,6 @@ let basic_statistics_set (logfiles: string list): (statistics_set * int) option 
       let one_day_ago = now -. one_day in
       let one_week_ago = now -. (one_day *. 7.) in
       let one_month_ago = now -. (one_day *. 30.) in
-      let one_year_ago = now -. (one_day *. 365.) in
 
       let alltime_stats = basic_stats_of_entries
           { default_log_filter with filter_name = "alltime" }
@@ -284,14 +267,12 @@ let basic_statistics_set (logfiles: string list): (statistics_set * int) option 
           some_entries
       in
 
-      let nusers = count_users now some_entries in
-      Some ({
+      Some {
         day_stats = day_stats;
         week_stats = week_stats;
         month_stats = month_stats;
         alltime_stats = alltime_stats;
-      },
-      nusers)
+      }
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower) int value
    associated *)

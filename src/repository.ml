@@ -93,7 +93,7 @@ let reverse_dependencies (repository: OpamPath.Repository.r)
 
 
 (* Create a list of package pages to generate for a repository *)
-let to_links (repository: OpamPath.Repository.r) (all_statistics: (statistics_set * int) option)
+let to_links (repository: OpamPath.Repository.r) (all_statistics: statistics_set option)
     : (Cow.Html.link * int * Cow.Html.t) list =
   let packages = get_packages repository in
   let unique_packages = unify_versions packages in

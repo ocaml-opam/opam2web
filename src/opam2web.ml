@@ -93,7 +93,7 @@ let make_website (repository: OpamPath.Repository.r): unit =
                   Package.compare_date ~reverse: true package_dates)
                 repository));
       ]
-    | Some (s, _) ->
+    | Some s ->
       [
         { text="Packages"; href="pkg/index-popularity.html" },
             No_menu (1, (Repository.to_html (sortby_links, "popularity",
@@ -117,19 +117,19 @@ let make_website (repository: OpamPath.Repository.r): unit =
         Submenu (links_of_doc documentation_pages);
   ] @ criteria_links, packages)
 
-(* Generate a website from the current working directory, assuming that it's an 
+(* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)
 let website_of_cwd () =
   Printf.printf "=== Repository: current working directory ===\n%!";
   make_website (OpamPath.Repository.raw (OpamFilename.cwd ()))
 
-(* Generate a website from the given directory, assuming that it's an OPAM 
+(* Generate a website from the given directory, assuming that it's an OPAM
    repository *)
 let website_of_path dirname =
   Printf.printf "=== Repository: %s ===\n%!" dirname;
   make_website (Repository.of_path dirname)
 
-(* Generate a website from the given repository name, trying to find it in local 
+(* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
 let website_of_opam repo_name =
   Printf.printf "=== Repository: %s [opam] ===\n%!" repo_name;
@@ -175,12 +175,12 @@ let specs = [
 
 (* Main *)
 let () =
-  (* Anonymous arguments are interpreted as directories where to find 
+  (* Anonymous arguments are interpreted as directories where to find
      repositories *)
   Arg.parse specs add_website_path
       (Printf.sprintf "%s [options]* [repository_name]*" Sys.argv.(0));
   if List.length user_options.operations = 0 then
-    (* If the arguments didn't trigger any operation, try to interpret the 
+    (* If the arguments didn't trigger any operation, try to interpret the
        current directory as a repository and make the website out of it *)
     website_of_cwd ()
   else

@@ -25,6 +25,8 @@ type statistics = {
   global_stats: int64;
   (** Update count (number of 'urls.txt' downloads *)
   update_stats: int64;
+  (** Number of unique IPs *)
+  users_stats: int64;
 }
 
 type statistics_set = {
@@ -106,14 +108,18 @@ let documentation_pages = [
 ]
 
 (** Statistics related global values *)
-
-let default_log_filter = {
-  filter_name = "default";
-  log_per_ip = false;
-  log_start_time = 0.;
-  log_end_time = Unix.time ();
-  log_custom = (fun _  -> true);
-}
+let default_log_filter =
+  let log_custom entry =
+    match entry.log_request with
+    | Archive_req _ | Update_req -> true
+    | Html_req _ | Unknown_req _ -> false
+  in {
+    filter_name = "default";
+    log_per_ip = false;
+    log_start_time = 0.;
+    log_end_time = Unix.time ();
+    log_custom;
+  }
 
 (** List related functions *)
 

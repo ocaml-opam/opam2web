@@ -2,7 +2,7 @@ open O2w_common
 
 (* OPAM website homepage *)
 let to_html (repository: OpamPath.Repository.r)
-    (all_statistics: (statistics_set * int) option) package_dates =
+    (all_statistics: statistics_set option) package_dates =
 
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
@@ -22,8 +22,8 @@ let to_html (repository: OpamPath.Repository.r)
     let last_updates = Repository.last_packages ~nlast: 10 package_dates in
     let updated_items = List.map mk_update_li last_updates in
     <:xml<
-      <div class="span3">
-        <table class="table">
+      <div class="span4">
+        <table class="table table-striped">
           <thead>
             <tr><th colspan="2">Recent updates</th></tr>
           </thead>
@@ -42,7 +42,7 @@ let to_html (repository: OpamPath.Repository.r)
     >>
   in
 
-  let maintainers_top10 =
+(*  let maintainers_top10 =
     let mk_top_li (name, npkg) =
       let npkg_str = string_of_int npkg in
       <:xml<
@@ -81,10 +81,10 @@ let to_html (repository: OpamPath.Repository.r)
       </div>
     >>
   in
-
+*)
   let packages_top10 = match all_statistics with
     | None -> <:xml< >>
-    | Some (sset, _) ->
+    | Some sset ->
       let s = sset.alltime_stats in
       let mk_top_li (pkg, _) =
         let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
@@ -108,8 +108,8 @@ let to_html (repository: OpamPath.Repository.r)
       let top10_pkgs = Statistics.top_packages ~ntop: 10 s.pkg_stats in
       let top10_items = List.map mk_top_li top10_pkgs in
       <:xml<
-        <div class="span3">
-          <table class="table">
+        <div class="span4">
+          <table class="table table-striped">
             <thead>
               <tr><th colspan="2">Most popular packages</th></tr>
             </thead>
@@ -128,14 +128,18 @@ let to_html (repository: OpamPath.Repository.r)
       >>
   in
 
-  let mk_stats (title: string) (stats: statistics)
-      : Cow.Html.t =
+  let mk_stats (title: string) (stats: statistics): Cow.Html.t =
     <:xml<
-      <table class="table">
+      <table class="table table-condensed">
         <thead>
           <tr><th>$str: title$</th></tr>
         </thead>
         <tbody>
+          <tr>
+            <td>
+              <i class="icon-user"> </i> <strong>$str: Int64.to_string stats.users_stats$</strong> users
+            </td>
+          </tr>
           <tr>
             <td>
               <i class="icon-th-large"> </i> <strong>$str: Int64.to_string stats.global_stats$</strong> package installations
@@ -153,18 +157,11 @@ let to_html (repository: OpamPath.Repository.r)
 
   let stats_html = match all_statistics with
     | None -> [ <:xml< &>> ]
-    | Some (s, _) -> [
-        mk_stats "Last 24 hours statistics" s.day_stats;
-        mk_stats "Last week statistics" s.week_stats;
-        mk_stats "All-time statistics" s.alltime_stats;
+    | Some s -> [
+        mk_stats "Last 24 hours" s.day_stats;
+        mk_stats "Last week" s.week_stats;
+        mk_stats "All-time" s.alltime_stats;
       ]
-  in
-
-  let nusers_html = match all_statistics with
-    | None -> <:xml< &>>
-    | Some (_, nusers) -> <:xml<
-        <span class="badge badge-warning">$int: nusers$ users</span>
-      >>
   in
 
   <:xml<
@@ -187,7 +184,6 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
               href="doc/Basic_Usage.html">
             How to use OPAM »
           </a>
-          $nusers_html$
         </p>
       </div>
 
@@ -214,19 +210,8 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
              <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>.
           </li>
         </ul>
-<!--
-          <table class="table tooltip-packages">
-            <tbody>
-              <tr>
-                <td><i class="icon-asterisk"> </i> <a href="#" rel="tooltip" data-original-title="'opam' package added">opam 0.4</a></td>
-              </tr>
-              <tr>
-                <td><i class="icon-repeat"> </i> <a href="#" rel="tooltip" data-original-title="'ocsigen' package updated">ocsigen 2.2.2</a></td>
-              </tr>
-            </tbody>
-          </table>
--->
         </div>
+
         <div class="span3">
           <h2>Tutorials</h2>
           <ul>
@@ -241,11 +226,10 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
       </div>
       <hr />
       <div class="row">
-        <div class="span3">
+        <div class="span4">
           $list: stats_html$
         </div>
         $updates_last10$
         $packages_top10$
-        $maintainers_top10$
       </div>
   >>
