@@ -158,8 +158,8 @@ let to_html (repository: OpamPath.Repository.r)
   let stats_html = match all_statistics with
     | None -> [ <:xml< &>> ]
     | Some s -> [
-        mk_stats "Last 24 hours" s.day_stats;
         mk_stats "Last week" s.week_stats;
+        mk_stats "Last month" s.month_stats;
         mk_stats "All-time" s.alltime_stats;
       ]
   in
