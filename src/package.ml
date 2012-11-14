@@ -164,7 +164,9 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
         let version = match constr_opt with
           | None -> ""
           | Some (r, v) ->
-              Printf.sprintf "( %s %s )" r (OpamPackage.Version.to_string v)
+              Printf.sprintf "( %s %s )"
+                (OpamFormula.string_of_relop r)
+                (OpamPackage.Version.to_string v)
         in
         <:xml<
           <tr>

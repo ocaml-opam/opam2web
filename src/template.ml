@@ -129,7 +129,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
       else ""
     in
     match c with
-    | External _ ->
+    | External   ->
       <:xml< <li class="$str: class_attr$">$html_of_link lnk$</li> >>
     | Internal _ ->
       let lnk = { lnk with href = prepend_root depth lnk.href } in
