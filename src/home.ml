@@ -198,8 +198,12 @@ opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
         <div class="offset1 span3">
           <h2>News</h2>
           <ul>
+            <li><strong>14/11/2012</strong> Version 0.8 is out</li>
             <li><strong>21/09/2012</strong> Version 0.7 is out</li>
-            <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a></li>
+            <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a>
+               <p>[ <a href="http://gazagnaire.org/ocamlpro/oud-opam.pdf">slides</a>
+                  | <a href="http://www.youtube.com/watch?v=ivLqeRZJTGs">video</a> ]</p>
+              </li>
             <li><strong>11/09/2012</strong> Version 0.6 is out</li>
           </ul>
         </div>
