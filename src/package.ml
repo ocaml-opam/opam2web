@@ -151,6 +151,12 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
   in
   let pkg_maintainer = OpamFile.OPAM.maintainer opam_file in
   let pkg_update = string_of_timestamp (last_update repository pkg) in
+  (* XXX: need to add hyperlink on package names *)
+  let mk_formula f = match f opam_file with
+    | OpamFormula.Empty -> None
+    | x                 -> Some (OpamFormula.to_string x) in
+  let pkg_depends = "Dependencies", mk_formula OpamFile.OPAM.depends in
+  let pkg_depopts = "Optional dependencies", mk_formula OpamFile.OPAM.depopts in
   let html_of_dependencies title dependencies =
     let deps = List.map (fun (pkg_name, constr_opt) ->
         let name = OpamPackage.Name.to_string pkg_name in
@@ -232,6 +238,15 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
         </tr>
       >>
   in
+  let mk_tr (title, contents) =
+    match contents with
+    | None   -> <:xml<&>>
+    | Some s -> <:xml<
+            <tr>
+              <th>$str: title$</th>
+              <td>$str: s$</td>
+            </tr>
+      >> in
   <:xml<
     <h2>$str: pkg_info.pkg_name$</h2>
 
@@ -252,6 +267,8 @@ let to_html (repository: OpamPath.Repository.r) (unique_packages: OpamPackage.t 
                 $str: pkg_maintainer$
               </td>
             </tr>
+            $mk_tr pkg_depends$
+            $mk_tr pkg_depopts$
             <tr>
               <th>Last update</th>
               <td>
