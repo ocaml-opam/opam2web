@@ -61,9 +61,16 @@ let get_info ?(href_prefix="") (repository: OpamPath.Repository.r)
   let pkg_descr_markdown =
     OpamFile.Descr.full (OpamFile.Descr.read (OpamPath.Repository.descr repository pkg))
   in
+  let short_descr, long_descr =
+    match OpamMisc.cut_at pkg_descr_markdown '\n' with
+    | None       -> pkg_descr_markdown, ""
+    | Some (s,d) -> s, d in
   let pkg_descr =
-    Cow.Markdown.to_html (Cow.Markdown.of_string pkg_descr_markdown)
-  in
+    let to_html md = Cow.Markdown.to_html (Cow.Markdown.of_string md) in
+    <:xml<
+      <h4>$to_html short_descr$</h4>
+      <p>$to_html long_descr$</p>
+    >> in
   let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
   (* let pkg_update = last_update repository pkg in *)
   {
