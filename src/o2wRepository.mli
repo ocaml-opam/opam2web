@@ -19,10 +19,7 @@ open OpamTypes
 open O2wTypes
 
 (** Get all available packages *)
-val get_packages: OpamPath.Repository.r -> package_set
-
-(** Retrieve the last update timestamp of package OPAM files *)
-val date_of_packages: OpamPath.Repository.r -> float package_map
+val get_dated_packages: OpamPath.Repository.r -> float package_map
 
 (** Create a list of package pages to generate for a repository *)
 val to_pages:
@@ -31,11 +28,15 @@ val to_pages:
   OpamPath.Repository.r -> page list
 
 (** Generate the list of HTML links for a list of page names *)
-val sortby_links: string list -> default:string -> active:string -> Cow.Html.t list
+val sortby_links:
+  links:string list ->
+  default:string ->
+  active:string ->
+  Cow.Html.t list
 
 (** Returns a HTML list of the packages in the given repository *)
 val to_html:
-  sortby_links:(string -> Cow.Html.t list) ->
+  sortby_links:(active:string -> Cow.Html.t list) ->
   dates:float package_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->

@@ -90,25 +90,26 @@ let make_website repository =
   if List.length user_options.logfiles = 0 then
     user_options.logfiles <- ["access.log"];
   let statistics = O2wStatistics.basic_statistics_set user_options.logfiles in
-  let packages = O2wRepository.get_packages repository in
-  let dates = O2wRepository.date_of_packages repository in
+  let dates = O2wRepository.get_dated_packages repository in
   let pages = O2wRepository.to_pages ~statistics ~dates repository in
   let menu_of_doc = O2wDocumentation.to_menu ~content_dir:user_options.content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
-    | None   -> (fun active -> O2wRepository.sortby_links criteria_nostats ~default:"name" ~active)
-    | Some _ -> (fun active -> O2wRepository.sortby_links criteria ~default:"name" ~active) in
+    | None   -> O2wRepository.sortby_links ~links:criteria_nostats ~default:"name"
+    | Some _ -> O2wRepository.sortby_links ~links:criteria ~default:"name" in
   let to_html = O2wRepository.to_html ~sortby_links ~dates in
   let popularities =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
-    | Some s -> O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats in
+    | Some s ->
+      let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
+      O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats packages in
   let criteria_links =
-    let package_dates = O2wPackage.compare_date ~reverse:true dates in
+    let compare_pkg = O2wPackage.compare_date ~reverse:true dates in
     let date = {
       menu_link = { text="Packages"; href="pkg/index-date.html" };
-      menu_item = No_menu (1, to_html "date" package_dates repository);
+      menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg repository);
     } in
     match statistics with
     | None -> [ date ]
@@ -116,7 +117,7 @@ let make_website repository =
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularities in
       let popularity = {
         menu_link = { text="Packages"; href="pkg/index-popularity.html" };
-        menu_item = No_menu (1, to_html "popularity" compare_pkg repository);
+        menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg repository);
       } in
       [ popularity; date ]
   in
@@ -125,16 +126,23 @@ let make_website repository =
     ([
       { menu_link = { text="Home"; href="index.html" };
         menu_item = Internal
-          (0, O2wHome.to_html ~statistics ~dates ~popularities ~packages repository ) };
+          (0, O2wHome.to_html ~statistics ~dates ~popularities repository ) };
 
       { menu_link = { text="Packages"; href="pkg/index.html" };
-        menu_item = Internal (1, to_html "name" O2wPackage.compare_alphanum repository) };
+        menu_item = Internal (1, to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repository) };
 
       { menu_link = { text="Documentation"; href="doc/index.html" };
         menu_item = Submenu (menu_of_doc ~pages:O2wGlobals.documentation_pages); };
 
      ] @ criteria_links)
-    pages
+    pages;
+  match statistics with
+  | None   -> ()
+  | Some s ->
+    let popularity = s.alltime_stats.pkg_stats in
+    O2wStatistics.to_csv popularity "stats.csv";
+    O2wStatistics.to_json popularity "stats.json"
+
 
 (* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)

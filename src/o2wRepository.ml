@@ -31,10 +31,6 @@ let of_opam repo_name =
 let of_path dirname =
   OpamPath.Repository.raw (OpamFilename.Dir.of_string dirname)
 
-let get_packages repository =
-  let all = OpamRepository.packages repository in
-  O2wPackage.remove_base_packages all
-
 (* Get the last update timestamp of a package in a given repository *)
 let last_update repository package =
   let open Unix in
@@ -44,9 +40,9 @@ let last_update repository package =
   let opam_stat = Unix.stat opam_filename in
   opam_stat.st_mtime
 
-(* Retrieve the last update timestamp of package OPAM files *)
-let date_of_packages repository =
-  let packages = get_packages repository in
+let get_dated_packages repository =
+  let all = OpamRepository.packages repository in
+  let packages = O2wPackage.remove_base_packages all in
   OpamPackage.Set.fold (fun pkg map ->
     let last_update = last_update repository pkg in
     OpamPackage.Map.add pkg last_update map
@@ -54,7 +50,6 @@ let date_of_packages repository =
 
 (* Create an association list (package_name -> reverse_dependencies) *)
 let reverse_dependencies repository packages =
-  let packages = get_packages repository in
   let revdeps_tbl: (name, name) Hashtbl.t = Hashtbl.create 300 in
   (* Fill a hash table with reverse dependecies (required by...) *)
   OpamPackage.Set.iter (fun pkg ->
@@ -74,7 +69,7 @@ let reverse_dependencies repository packages =
 
 (* Create a list of package pages to generate for a repository *)
 let to_pages ~statistics ~dates repository =
-  let packages = get_packages repository in
+  let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
   let unique_packages = O2wPackage.unify_versions packages in
   let reverse_dependencies = reverse_dependencies repository packages in
   let aux pkg acc =
@@ -95,7 +90,7 @@ let to_pages ~statistics ~dates repository =
     ) versions acc in
   OpamPackage.Set.fold aux unique_packages []
 
-let sortby_links links ~default ~active =
+let sortby_links ~links ~default ~active =
   let mk_item title =
     let href_str =
       if title = default
@@ -113,9 +108,9 @@ let sortby_links links ~default ~active =
 
 (* Returns a HTML list of the packages in the given repository *)
 let to_html ~sortby_links ~dates ~active ~compare_pkg repository =
-  let packages = get_packages repository in
+  let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
   let unique_packages = O2wPackage.unify_versions packages in
-  let sortby_links_html = sortby_links active in
+  let sortby_links_html = sortby_links ~active in
   let sorted_packages = List.sort compare_pkg (OpamPackage.Set.elements unique_packages) in
   let packages_html =
     List.map (fun pkg ->

@@ -276,16 +276,21 @@ let basic_statistics_set logfiles =
       alltime_stats = alltime_stats;
     }
 
-let aggregate_package_popularity pkg_stats =
+let aggregate_package_popularity pkg_stats packages =
   OpamPackage.Map.fold (fun pkg pkg_count acc ->
-    let pkg_name = OpamPackage.name pkg in
-    if not (OpamPackage.Name.Map.mem pkg_name acc) then
-      OpamPackage.Name.Map.add pkg_name pkg_count acc
+    if not (OpamPackage.Set.mem pkg packages) then
+      (* This can happen when some packages are deleted *)
+      acc
     else (
-      let last_count = OpamPackage.Name.Map.find pkg_name acc in
-      OpamPackage.Name.Map.add pkg_name
-        (Int64.add pkg_count last_count)
-        (OpamPackage.Name.Map.remove pkg_name acc)
+      let pkg_name = OpamPackage.name pkg in
+      if not (OpamPackage.Name.Map.mem pkg_name acc) then
+        OpamPackage.Name.Map.add pkg_name pkg_count acc
+      else (
+        let last_count = OpamPackage.Name.Map.find pkg_name acc in
+        OpamPackage.Name.Map.add pkg_name
+          (Int64.add pkg_count last_count)
+          (OpamPackage.Name.Map.remove pkg_name acc)
+      )
     )
   ) pkg_stats OpamPackage.Name.Map.empty
 
@@ -330,4 +335,31 @@ let top_maintainers ?ntop ?(reverse = true) repository =
   | None      -> sorted_maintainers
   | Some nmax -> O2wMisc.first_n nmax sorted_maintainers
 
+let to_csv popularity file =
+  let oc = open_out file in
+  Printf.fprintf oc "Name, Version, Downloads\n";
+  OpamPackage.Map.iter (fun pkg count ->
+    Printf.fprintf oc "%S, %S, %Ld\n"
+      (OpamPackage.Name.to_string (OpamPackage.name pkg))
+      (OpamPackage.Version.to_string (OpamPackage.version pkg))
+      count
+  ) popularity;
+  close_out oc
+
+let to_json popularity file =
+  let oc = open_out file in
+  Printf.fprintf oc "[";
+  let first = ref true in
+  OpamPackage.Map.iter (fun pkg count ->
+    if !first then
+      first := false
+    else
+      Printf.fprintf oc ",";
+    Printf.fprintf oc "{\n  \"name\": %S,\n  \"version\": %S,  \n  \"downloads\": %Ld\n}"
+      (OpamPackage.Name.to_string (OpamPackage.name pkg))
+      (OpamPackage.Version.to_string (OpamPackage.version pkg))
+      count
+  ) popularity;
+  Printf.fprintf oc "\n]";
+  close_out oc
 
