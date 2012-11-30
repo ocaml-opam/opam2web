@@ -1,16 +1,30 @@
-open O2w_common
+(***********************************************************************)
+(*                                                                     *)
+(*    Copyright 2012 OCamlPro                                          *)
+(*    Copyright 2012 INRIA                                             *)
+(*                                                                     *)
+(*  All rights reserved.  This file is distributed under the terms of  *)
+(*  the GNU Public License version 3.0.                                *)
+(*                                                                     *)
+(*  OPAM is distributed in the hope that it will be useful,            *)
+(*  but WITHOUT ANY WARRANTY; without even the implied warranty of     *)
+(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      *)
+(*  GNU General Public License for more details.                       *)
+(*                                                                     *)
+(***********************************************************************)
+
+open O2wTypes
 
 (* OPAM website homepage *)
-let to_html (repository: OpamPath.Repository.r)
-    (all_statistics: statistics_set option) package_dates =
+let to_html ~statistics ~dates ~popularities ~packages repository =
 
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
       let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
       let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
-      let pkg_date = string_of_timestamp ~short:true update_tm in
-      <:xml<
+      let pkg_date = O2wMisc.string_of_timestamp ~short:true update_tm in
+      <:html<
         <tr>
           <td>
             <a href="$str: pkg_href$">$str: pkg_name$ $str: pkg_version$</a>
@@ -19,9 +33,12 @@ let to_html (repository: OpamPath.Repository.r)
         </tr>
       >>
     in
-    let last_updates = Repository.last_packages ~nlast: 10 package_dates in
+    let dates_fn pkg =
+      try OpamPackage.Map.find pkg dates
+      with Not_found -> 0. in
+    let last_updates = O2wStatistics.top_packages ~reverse:true ~ntop:10 dates_fn packages in
     let updated_items = List.map mk_update_li last_updates in
-    <:xml<
+    <:html<
       <div class="span4">
         <table class="table table-striped">
           <thead>
@@ -45,7 +62,7 @@ let to_html (repository: OpamPath.Repository.r)
 (*  let maintainers_top10 =
     let mk_top_li (name, npkg) =
       let npkg_str = string_of_int npkg in
-      <:xml<
+      <:html<
         <tr>
           <td>$str: name$</td>
           <td>$str: npkg_str$</td>
@@ -68,7 +85,7 @@ let to_html (repository: OpamPath.Repository.r)
     in
     let top10_names = List.map truncate_email top10_maintainers in
     let top10_items = List.map mk_top_li top10_names in
-    <:xml<
+    <:html<
       <div class="span3">
         <table class="table">
           <thead>
@@ -82,32 +99,29 @@ let to_html (repository: OpamPath.Repository.r)
     >>
   in
 *)
-  let packages_top10 = match all_statistics with
-    | None -> <:xml< >>
+  let packages_top10 = match statistics with
+    | None -> <:html< >>
     | Some sset ->
-      let s = sset.alltime_stats in
-      let mk_top_li (pkg, _) =
+      let mk_top_li (pkg, pkg_count) =
         let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
         let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
         let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
-        let pkg_popularity =
-          try
-            Int64.to_string (List.assoc pkg s.pkg_stats)
-          with
-            Not_found -> ""
-        in
-        <:xml<
+        <:html<
           <tr>
             <td>
-              <a href="$str: pkg_href$">$str: pkg_name$ $str: pkg_version$</a>
+              <a href="$str: pkg_href$">$str: pkg_name$</a>
             </td>
-            <td>$str: pkg_popularity$</td>
+            <td>$str: Int64.to_string pkg_count$</td>
           </tr>
         >>
       in
-      let top10_pkgs = Statistics.top_packages ~ntop: 10 s.pkg_stats in
+      let popularity_fn pkg =
+        try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularities
+        with Not_found -> 0L in
+      let packages = O2wPackage.unify_versions packages in
+      let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
       let top10_items = List.map mk_top_li top10_pkgs in
-      <:xml<
+      <:html<
         <div class="span4">
           <table class="table table-striped">
             <thead>
@@ -129,7 +143,7 @@ let to_html (repository: OpamPath.Repository.r)
   in
 
   let mk_stats (title: string) (stats: statistics): Cow.Html.t =
-    <:xml<
+    <:html<
       <table class="table table-condensed">
         <thead>
           <tr><th>$str: title$</th></tr>
@@ -155,8 +169,8 @@ let to_html (repository: OpamPath.Repository.r)
     >>
   in
 
-  let stats_html = match all_statistics with
-    | None -> [ <:xml< &>> ]
+  let stats_html = match statistics with
+    | None -> [ <:html< &>> ]
     | Some s -> [
         mk_stats "Last week" s.week_stats;
         mk_stats "Last month" s.month_stats;
@@ -164,7 +178,7 @@ let to_html (repository: OpamPath.Repository.r)
       ]
   in
 
-  <:xml<
+  <:html<
       <!-- Main hero unit for a primary marketing message or call to action -->
       <div class="hero-unit">
         <h1>OCaml Package Manager</h1>

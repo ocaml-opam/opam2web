@@ -1,7 +1,21 @@
+(***********************************************************************)
+(*                                                                     *)
+(*    Copyright 2012 OCamlPro                                          *)
+(*    Copyright 2012 INRIA                                             *)
+(*                                                                     *)
+(*  All rights reserved.  This file is distributed under the terms of  *)
+(*  the GNU Public License version 3.0.                                *)
+(*                                                                     *)
+(*  OPAM is distributed in the hope that it will be useful,            *)
+(*  but WITHOUT ANY WARRANTY; without even the implied warranty of     *)
+(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      *)
+(*  GNU General Public License for more details.                       *)
+(*                                                                     *)
+(***********************************************************************)
+
 open Cow
 open Cow.Html
-
-open O2w_common
+open O2wTypes
 
 exception Unknown_repository of string
 
@@ -72,50 +86,55 @@ let include_files (path: string) files_path : unit =
   (*   Types.Dirname.copy files_dir dir *)
 
 (* Generate a whole static website using the given repository *)
-let make_website (repository: OpamPath.Repository.r): unit =
+let make_website repository =
   if List.length user_options.logfiles = 0 then
     user_options.logfiles <- ["access.log"];
-  let statistics_set = Statistics.basic_statistics_set user_options.logfiles in
-  let package_dates = Repository.date_of_packages repository in
-  let packages = Repository.to_links repository statistics_set in
-  let links_of_doc = Documentation.to_links user_options.content_dir in
+  let statistics = O2wStatistics.basic_statistics_set user_options.logfiles in
+  let packages = O2wRepository.get_packages repository in
+  let dates = O2wRepository.date_of_packages repository in
+  let pages = O2wRepository.to_pages ~statistics ~dates repository in
+  let menu_of_doc = O2wDocumentation.to_menu ~content_dir:user_options.content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
-  let sortby_links = match statistics_set with
-    | None -> Repository.sortby_links criteria_nostats "name"
-    | Some _ ->  Repository.sortby_links criteria "name"
-  in
-  let criteria_links = match statistics_set with
-    | None ->
-      [
-        { text="Packages"; href="pkg/index-date.html" },
-            No_menu (1, (Repository.to_html (sortby_links, "date",
-                  Package.compare_date ~reverse: true package_dates)
-                repository));
-      ]
+  let sortby_links = match statistics with
+    | None   -> (fun active -> O2wRepository.sortby_links criteria_nostats ~default:"name" ~active)
+    | Some _ -> (fun active -> O2wRepository.sortby_links criteria ~default:"name" ~active) in
+  let to_html = O2wRepository.to_html ~sortby_links ~dates in
+  let popularities =
+    match statistics with
+    | None   -> OpamPackage.Name.Map.empty
+    | Some s -> O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats in
+  let criteria_links =
+    let package_dates = O2wPackage.compare_date ~reverse:true dates in
+    let date = {
+      menu_link = { text="Packages"; href="pkg/index-date.html" };
+      menu_item = No_menu (1, to_html "date" package_dates repository);
+    } in
+    match statistics with
+    | None -> [ date ]
     | Some s ->
-      [
-        { text="Packages"; href="pkg/index-popularity.html" },
-            No_menu (1, (Repository.to_html (sortby_links, "popularity",
-                  Package.compare_popularity ~reverse: true s.alltime_stats.pkg_stats)
-                repository));
-        { text="Packages"; href="pkg/index-date.html" },
-            No_menu (1, (Repository.to_html (sortby_links, "date",
-                  Package.compare_date ~reverse: true package_dates)
-                repository));
-      ]
+      let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularities in
+      let popularity = {
+        menu_link = { text="Packages"; href="pkg/index-popularity.html" };
+        menu_item = No_menu (1, to_html "popularity" compare_pkg repository);
+      } in
+      [ popularity; date ]
   in
   include_files user_options.out_dir user_options.files_dir;
-  Template.generate ~out_dir: user_options.out_dir ([
-    { text="Home"; href="index.html" },
-        Internal (0, Home.to_html repository statistics_set package_dates);
-    { text="Packages"; href="pkg/index.html" },
-        Internal (1, (Repository.to_html
-            (sortby_links, "name", Package.compare_alphanum)
-            repository));
-    { text="Documentation"; href="doc/index.html" },
-        Submenu (links_of_doc documentation_pages);
-  ] @ criteria_links, packages)
+  O2wTemplate.generate ~out_dir: user_options.out_dir
+    ([
+      { menu_link = { text="Home"; href="index.html" };
+        menu_item = Internal
+          (0, O2wHome.to_html ~statistics ~dates ~popularities ~packages repository ) };
+
+      { menu_link = { text="Packages"; href="pkg/index.html" };
+        menu_item = Internal (1, to_html "name" O2wPackage.compare_alphanum repository) };
+
+      { menu_link = { text="Documentation"; href="doc/index.html" };
+        menu_item = Submenu (menu_of_doc ~pages:O2wGlobals.documentation_pages); };
+
+     ] @ criteria_links)
+    pages
 
 (* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)
@@ -127,23 +146,19 @@ let website_of_cwd () =
    repository *)
 let website_of_path dirname =
   Printf.printf "=== Repository: %s ===\n%!" dirname;
-  make_website (Repository.of_path dirname)
+  make_website (O2wRepository.of_path dirname)
 
 (* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
 let website_of_opam repo_name =
   Printf.printf "=== Repository: %s [opam] ===\n%!" repo_name;
   let load_repo r =
-    try
-      Repository.of_opam r
-    with
-      Not_found -> raise (Unknown_repository r)
+    try O2wRepository.of_opam r
+    with Not_found -> raise (Unknown_repository r)
   in
-  try
-    make_website (load_repo repo_name)
-  with
-    Unknown_repository repo_name ->
-      OpamGlobals.error "Opam repository '%s' not found!" repo_name
+  try make_website (load_repo repo_name)
+  with Unknown_repository repo_name ->
+    OpamGlobals.error "Opam repository '%s' not found!" repo_name
 
 (* Command-line arguments *)
 let specs = [

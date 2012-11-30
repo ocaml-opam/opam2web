@@ -55,7 +55,7 @@ and href = { href_target : string; href_desc : string; }
 
 and img_ref = { img_src : string; img_alt : string; }
 
-type t = paragraph list 
+type t = paragraph list
 
 type parse_state = { max : int; current : Buffer.t; fragments : text list; }
 
@@ -185,7 +185,7 @@ and read_html e s =
     match Enum.peek e with Some (_,_,x) -> x | _ -> true in
     let make_html ls =
       Some (Html (Html.of_string (String.concat "" (List.rev ls)))) in
-    let rec read_all accu = match Enum.get e with 
+    let rec read_all accu = match Enum.get e with
       | Some (_, s, _)
           when is_closing_tag e s -> make_html (s::accu)
       | Some (_,s,_)              -> read_all (s::accu)
@@ -414,41 +414,41 @@ let id_of_heading (h: paragraph): string =
   | _ -> failwith "id_of_heading: input element is not a heading!"
 
 let rec text = function
-    Text t    -> <:xml<$str:t$&>>
-  | Emph t    -> <:xml<<i>$str:t$</i>&>>
-  | Bold t    -> <:xml<<b>$str:t$</b>&>>
-  | Struck pt -> <:xml<<del>$par_text pt$</del>&>>
-  | Code t    -> <:xml<<code>$str:t$</code>&>>
-  | Link href -> <:xml<<a href=$str:href.href_target$>$str:href.href_desc$</a>&>>
-  | Anchor a  -> <:xml<<a name=$str:a$/>&>>
-  | Image img -> <:xml<<img src=$str:img.img_src$ alt=$str:img.img_alt$/>&>>
+    Text t    -> <:html<$str:t$&>>
+  | Emph t    -> <:html<<i>$str:t$</i>&>>
+  | Bold t    -> <:html<<b>$str:t$</b>&>>
+  | Struck pt -> <:html<<del>$par_text pt$</del>&>>
+  | Code t    -> <:html<<code>$str:t$</code>&>>
+  | Link href -> <:html<<a href=$str:href.href_target$>$str:href.href_desc$</a>&>>
+  | Anchor a  -> <:html<<a name=$str:a$/>&>>
+  | Image img -> <:html<<img src=$str:img.img_src$ alt=$str:img.img_alt$/>&>>
 
 and para p =
   let heading_content h pt =
-    <:xml<$par_text pt$<a name="$str: id_of_heading h$" class="anchor-toc"> </a>&>>
+    <:html<$par_text pt$<a name="$str: id_of_heading h$" class="anchor-toc"> </a>&>>
   in
   match p with
-    Normal pt        -> <:xml<$par_text pt$>>
-  | Html html        -> <:xml<<p>$html$</p>&>>
+    Normal pt        -> <:html<$par_text pt$>>
+  | Html html        -> <:html<<p>$html$</p>&>>
   (* XXX: we assume that this is ocaml code *)
-  | Pre (t,kind)     -> <:xml<$ Code.ocaml t$>>
-  | Heading (1,pt) as h -> <:xml<<h1>$heading_content h pt$</h1>&>>
-  | Heading (2,pt) as h -> <:xml<<h2>$heading_content h pt$</h2>&>>
-  | Heading (3,pt) as h -> <:xml<<h3>$heading_content h pt$</h3>&>>
-  | Heading (_,pt) as h -> <:xml<<h4>$heading_content h pt$</h4>&>>
-  | Quote pl         -> <:xml<<blockquote>$paras pl$</blockquote>&>>
-  | Ulist (pl,pll)   -> let l = pl :: pll in <:xml<<ul>$li l$</ul>&>>
-  | Olist (pl,pll)   -> let l = pl :: pll in <:xml<<ol>$li l$</ol>&>>
+  | Pre (t,kind)     -> <:html<$ Code.ocaml t$>>
+  | Heading (1,pt) as h -> <:html<<h1>$heading_content h pt$</h1>&>>
+  | Heading (2,pt) as h -> <:html<<h2>$heading_content h pt$</h2>&>>
+  | Heading (3,pt) as h -> <:html<<h3>$heading_content h pt$</h3>&>>
+  | Heading (_,pt) as h -> <:html<<h4>$heading_content h pt$</h4>&>>
+  | Quote pl         -> <:html<<blockquote>$paras pl$</blockquote>&>>
+  | Ulist (pl,pll)   -> let l = pl :: pll in <:html<<ul>$li l$</ul>&>>
+  | Olist (pl,pll)   -> let l = pl :: pll in <:html<<ol>$li l$</ol>&>>
 
-and par_text pt = <:xml<$list:List.map text pt$>>
+and par_text pt = <:html<$list:List.map text pt$>>
 
 and li pl =
-  let aux p = <:xml<<li>$paras p$</li>&>> in
-  <:xml< $list:List.map aux pl$ >>
+  let aux p = <:html<<li>$paras p$</li>&>> in
+  <:html< $list:List.map aux pl$ >>
 
 and paras ps =
-  let aux p = <:xml<<p>$para p$</p>&>> in
-  <:xml< $list:List.map aux  ps$ >>
+  let aux p = <:html<<p>$para p$</p>&>> in
+  <:html< $list:List.map aux  ps$ >>
 
 let to_html ps = paras ps
 
@@ -456,21 +456,21 @@ let of_string = parse_text
 
 
 (* Default html creation functions for table of contents *)
-let wrap_li ~depth c = <:xml<<li>$c$</li>&>>
+let wrap_li ~depth c = <:html<<li>$c$</li>&>>
 
 let wrap_a ~depth ~heading c =
   let href = "#" ^ id_of_heading heading in
-  wrap_li ~depth <:xml<<a href="$str: href$">$c$</a>&>>
+  wrap_li ~depth <:html<<a href="$str: href$">$c$</a>&>>
 
 let wrap_ul ~depth l =
   if depth = 0 then
-    <:xml<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
+    <:html<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
   else
     wrap_li ~depth
-        <:xml<<ul>$l$</ul>&>>
+        <:html<<ul>$l$</ul>&>>
 
 
-(* Extract a HTML table of contents from markdown elements. Depth can be 
+(* Extract a HTML table of contents from markdown elements. Depth can be
    modified with the corresponding optional argument. *)
 let to_html_toc ?(wrap_list=wrap_ul) ?(wrap_item=wrap_a) ?(depth=2) ps =
   let rec aux level ps = match ps with
@@ -485,10 +485,10 @@ let to_html_toc ?(wrap_list=wrap_ul) ?(wrap_item=wrap_a) ?(depth=2) ps =
           | n when n > level && n <= depth ->
               let acc, r = aux (level+1) ps in
               let racc, rr = aux level r in
-              wrap_list ~depth:level <:xml< $list: acc$ >> :: racc, rr
+              wrap_list ~depth:level <:html< $list: acc$ >> :: racc, rr
           | n when n < level -> [], ps
           | _ -> aux level t
         end
       | _ -> aux level t
-  in wrap_list ~depth:0 <:xml< $list: fst (aux 1 ps)$ >>
+  in wrap_list ~depth:0 <:html< $list: fst (aux 1 ps)$ >>
 

@@ -1,5 +1,20 @@
+(***********************************************************************)
+(*                                                                     *)
+(*    Copyright 2012 OCamlPro                                          *)
+(*    Copyright 2012 INRIA                                             *)
+(*                                                                     *)
+(*  All rights reserved.  This file is distributed under the terms of  *)
+(*  the GNU Public License version 3.0.                                *)
+(*                                                                     *)
+(*  OPAM is distributed in the hope that it will be useful,            *)
+(*  but WITHOUT ANY WARRANTY; without even the implied warranty of     *)
+(*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      *)
+(*  GNU General Public License for more details.                       *)
+(*                                                                     *)
+(***********************************************************************)
+
 open Cow.Html
-open O2w_common
+open O2wTypes
 
 type doc_kind =
   | Html
@@ -24,34 +39,33 @@ let split_filename (file: string): (string * string) =
   try
     let dot_index = String.rindex file '.' in
     (String.sub file 0 dot_index,
-      String.sub file (dot_index + 1) (String.length file - dot_index - 1))
+     String.sub file (dot_index + 1) (String.length file - dot_index - 1))
   with
     Not_found -> file, ""
 
-(* Generate the HTML corresponding to a documentation page in the <content>/doc 
+(* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_links (content_dir: string) (pages: string list)
-    : (Cow.Html.link * menu_item) list =
+let to_menu ~content_dir ~pages =
 
-  let wrap_li ~depth c = <:xml<<li>$c$</li>&>> in
+  let wrap_li ~depth c = <:html<<li>$c$</li>&>> in
 
   let wrap_a ~depth ~heading c =
     let href = "#" ^ Markdown_github.id_of_heading heading in
     let html_a =
-      if depth > 1 then <:xml<<a href="$str: href$"><small>$c$</small></a>&>>
-      else <:xml<<a href="$str: href$"><strong>$c$</strong></a>&>>
+      if depth > 1 then <:html<<a href="$str: href$"><small>$c$</small></a>&>>
+      else <:html<<a href="$str: href$"><strong>$c$</strong></a>&>>
     in wrap_li ~depth html_a
   in
 
   let wrap_ul ~depth l =
     if depth = 0 then
-      <:xml<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
+      <:html<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
     else
-      <:xml<$l$&>>
+      <:html<$l$&>>
   in
 
   (* Convert a content page to html *)
-  let of_kind doc_menu kind filename: Cow.Html.t =
+  let to_html doc_menu kind filename: Cow.Html.t =
     let content = OpamFilename.read filename in
     match kind with
     | "html" -> Cow.Html.of_string content
@@ -61,7 +75,7 @@ let to_links (content_dir: string) (pages: string list)
           Markdown_github.to_html_toc
               ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
         in
-        <:xml<
+        <:html<
           <div class="row">
             <div class="span3">
             <span> </span>
@@ -77,7 +91,7 @@ let to_links (content_dir: string) (pages: string list)
             </div>
           </div>
         >>
-    | _ -> <:xml< >>
+    | _ -> <:html< >>
   in
 
   (* Documentation menu and links creation *)
@@ -106,21 +120,21 @@ let to_links (content_dir: string) (pages: string list)
     let menu_items = List.map (fun (src, _, lnk, kind) -> match kind with
         | Submenu _ | No_menu _ -> Cow.Html.nil
         | Nav_header ->
-          <:xml<
+          <:html<
             <li class="disabled">
               <a href="#"><strong>$str: lnk.text$</strong></a>
             </li>
           >>
         | Divider ->
-          <:xml<<li class="disabled divider"><a href="#"> </a></li>&>>
+          <:html<<li class="disabled divider"><a href="#"> </a></li>&>>
         | External | Internal _ ->
           let classes = if active_src = src then "active" else "" in
-          <:xml<<li class="$str: classes$">
+          <:html<<li class="$str: classes$">
             <a href="$str: lnk.href$"> $str: lnk.text$</a>
           </li>&>>
       ) menu_pages
     in
-    <:xml<
+    <:html<
       <ul class="nav nav-pills nav-stacked">
         $list: menu_items$
       </ul>
@@ -130,11 +144,18 @@ let to_links (content_dir: string) (pages: string list)
   (* Pages creation *)
   let aux_page (source_filename, extension, lnk, page) =
     match page with
-    | Submenu _ | Nav_header | Divider | External -> (lnk, page)
+    | Submenu _ | Nav_header | Divider | External ->
+        {
+          menu_link = lnk;
+          menu_item = page
+        }
     | Internal (level, _) | No_menu (level, _) ->
         let doc_menu = documentation_menu source_filename in
-        let html_page = of_kind doc_menu extension source_filename in
-        ({ lnk with href = "doc/" ^ lnk.href }, Internal(level, html_page))
+        let html_page = to_html doc_menu extension source_filename in
+        {
+          menu_link = { lnk with href = "doc/" ^ lnk.href };
+          menu_item = Internal (level, html_page);
+        }
   in
 
   List.map aux_page menu_pages
