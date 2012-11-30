@@ -38,6 +38,7 @@ val sortby_links:
 val to_html:
   sortby_links:(active:string -> Cow.Html.t list) ->
   dates:float package_map ->
+  popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
   OpamPath.Repository.r -> Cow.Html.t

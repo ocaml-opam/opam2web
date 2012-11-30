@@ -107,25 +107,32 @@ let sortby_links ~links ~default ~active =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html ~sortby_links ~dates ~active ~compare_pkg repository =
+let to_html ~sortby_links ~dates ~popularity ~active ~compare_pkg repository =
   let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
   let unique_packages = O2wPackage.unify_versions packages in
   let sortby_links_html = sortby_links ~active in
   let sorted_packages = List.sort compare_pkg (OpamPackage.Set.elements unique_packages) in
   let packages_html =
     List.map (fun pkg ->
-        let pkg_info = O2wPackage.get_info ~dates repository pkg in
-        <:html<
-          <tr>
-            <td>
-              <a href="$str: pkg_info.pkg_href$">
-                $str: pkg_info.pkg_name$
-              </a>
-            </td>
-            <td>$str: pkg_info.pkg_version$</td>
-            <td>$str: pkg_info.pkg_synopsis$</td>
-          </tr>
-        >>)
+      let pkg_info = O2wPackage.get_info ~dates repository pkg in
+      let pkg_download =
+        try
+          let d = OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity in
+          Printf.sprintf "Downloads: %Ld | Last update: %s"
+            d (O2wMisc.string_of_timestamp pkg_info.pkg_update)
+        with Not_found ->
+          Printf.sprintf "Last update: %s" (O2wMisc.string_of_timestamp pkg_info.pkg_update) in
+      <:html<
+        <tr>
+          <td title=$str:pkg_download$>
+             <a href=$str:pkg_info.pkg_href$>
+               $str: pkg_info.pkg_name$
+             </a>
+          </td>
+          <td>$str: pkg_info.pkg_version$</td>
+          <td>$str: pkg_info.pkg_synopsis$</td>
+        </tr>
+      >>)
       sorted_packages
   in
   <:html<

@@ -98,13 +98,13 @@ let make_website repository =
   let sortby_links = match statistics with
     | None   -> O2wRepository.sortby_links ~links:criteria_nostats ~default:"name"
     | Some _ -> O2wRepository.sortby_links ~links:criteria ~default:"name" in
-  let to_html = O2wRepository.to_html ~sortby_links ~dates in
-  let popularities =
+  let popularity =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
     | Some s ->
       let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
       O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats packages in
+  let to_html = O2wRepository.to_html ~sortby_links ~dates ~popularity in
   let criteria_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true dates in
     let date = {
@@ -114,7 +114,7 @@ let make_website repository =
     match statistics with
     | None -> [ date ]
     | Some s ->
-      let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularities in
+      let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
         menu_link = { text="Packages"; href="pkg/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg repository);
@@ -126,7 +126,7 @@ let make_website repository =
     ([
       { menu_link = { text="Home"; href="index.html" };
         menu_item = Internal
-          (0, O2wHome.to_html ~statistics ~dates ~popularities repository ) };
+          (0, O2wHome.to_html ~statistics ~dates ~popularity repository ) };
 
       { menu_link = { text="Packages"; href="pkg/index.html" };
         menu_item = Internal (1, to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repository) };

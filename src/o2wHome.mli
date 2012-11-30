@@ -22,5 +22,5 @@ open O2wTypes
 val to_html:
   statistics:statistics_set option ->
   dates:float package_map ->
-  popularities:int64 name_map ->
+  popularity:int64 name_map ->
   OpamPath.Repository.r -> Cow.Html.t

@@ -16,7 +16,7 @@
 open O2wTypes
 
 (* OPAM website homepage *)
-let to_html ~statistics ~dates ~popularities repository =
+let to_html ~statistics ~dates ~popularity repository =
   let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
@@ -116,7 +116,7 @@ let to_html ~statistics ~dates ~popularities repository =
         >>
       in
       let popularity_fn pkg =
-        try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularities
+        try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity
         with Not_found -> 0L in
       let packages = O2wPackage.unify_versions packages in
       let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
