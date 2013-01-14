@@ -5,11 +5,16 @@ let win = Dom_html.window
 let _s = Js.string
 
 let get_element_by_id id =
-  Js.Opt.get (doc##getElementById (Js.string id)) 
+  Js.Opt.get (doc##getElementById (Js.string id))
     (fun () -> Firebug.console##log (_s id); assert false)
 
+let from_option opt =
+  match Js.Opt.to_option opt with
+  | None -> assert false
+  | Some t -> t
+
 (* Column position in the HTML table *)
-let by_name = 0  
+let by_name = 0
 let by_descr = 2
 
 (* Hide the row [tr] of a table element *)
@@ -24,37 +29,26 @@ let show tr =
    name (position 0) and the description (position 2) *)
 let filter str tbl =
   for i = 1 to (tbl##rows##length) do
-    let tr = 
-      Js.Optdef.get (tbl##rows##item (i)) (fun () -> assert false) in
+    let tr = from_option (tbl##rows##item (i)) in
     (* Get the [td] corresponding to the name column *)
-    let name  = 
-      Js.Optdef.get (tr##cells##item (by_name)) (fun () -> assert false) in
+    let name = from_option (tr##cells##item (by_name)) in
     (* Get the [td] corresponding to the description column *)
-    let descr = 
-      Js.Optdef.get (tr##cells##item (by_descr)) (fun () -> assert false) in
+    let descr = from_option (tr##cells##item (by_descr)) in
     (* Filter name or column column of the table *)
     if (Regexp.search (Regexp.regexp (String.lowercase (Js.to_string str)))
           (String.lowercase (Js.to_string name##innerHTML)) 0) <> None ||
       (Regexp.search (Regexp.regexp (String.lowercase (Js.to_string str)))
-          (String.lowercase (Js.to_string descr##innerHTML)) 0) <> None
-    then 
+         (String.lowercase (Js.to_string descr##innerHTML)) 0) <> None
+    then
       show tr
-    else 
+    else
       hide tr
   done
 
-let _= 
+let _=
   let tbl = get_element_by_id "packages" in
-  let tbl =
-    match Js.Opt.to_option (Dom_html.CoerceTo.table tbl) with
-      | None ->  assert false
-      | Some t -> t 
-  in
+  let tbl = from_option (Dom_html.CoerceTo.table tbl) in
   let search = get_element_by_id "search" in
-  let search =
-    match Js.Opt.to_option (Dom_html.CoerceTo.input search) with
-   | None ->  assert false
-   | Some t -> t 
-  in
+  let search = from_option (Dom_html.CoerceTo.input search) in
   search##onkeyup <- Dom_html.handler
     (fun _ -> filter search##value tbl; Js._false);
