@@ -112,7 +112,7 @@ let to_html repository ~unique_packages ~reverse_dependencies ~versions ~all_sta
     try
       let url_file = OpamFile.URL.read (OpamPath.Repository.url repository pkg) in
       let kind = match OpamFile.URL.kind url_file with
-        | Some k -> <:html< [$str: k$] >>
+        | Some k -> <:html< [$str: OpamTypes.string_of_repository_kind k$] >>
         | None -> <:html< >>
       in
       let checksum = match OpamFile.URL.checksum url_file with

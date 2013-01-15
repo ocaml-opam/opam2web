@@ -39,12 +39,11 @@ val compare_popularity: ?reverse:bool -> int64 name_map ->
 val get_info:
   ?href_prefix:string ->
   dates:float package_map ->
-  OpamPath.Repository.r ->
-  package -> package_info
+  dirname -> package -> package_info
 
 (** Returns a HTML description of the given package info *)
 val to_html:
-  OpamPath.Repository.r ->
+  dirname ->
   unique_packages:package_set ->
   reverse_dependencies:name_set name_map ->
   versions:version_set ->

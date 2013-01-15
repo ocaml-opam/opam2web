@@ -50,7 +50,7 @@ let to_menu ~content_dir ~pages =
   let wrap_li ~depth c = <:html<<li>$c$</li>&>> in
 
   let wrap_a ~depth ~heading c =
-    let href = "#" ^ Markdown_github.id_of_heading heading in
+    let href = "#" ^ Cow.Markdown.id_of_heading heading in
     let html_a =
       if depth > 1 then <:html<<a href="$str: href$"><small>$c$</small></a>&>>
       else <:html<<a href="$str: href$"><strong>$c$</strong></a>&>>
@@ -70,9 +70,9 @@ let to_menu ~content_dir ~pages =
     match kind with
     | "html" -> Cow.Html.of_string content
     | "md" ->
-        let md_content = Markdown_github.of_string content in
+        let md_content = Cow.Markdown.of_string content in
         let html_toc =
-          Markdown_github.to_html_toc
+          Cow.Markdown.to_html_toc
               ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
         in
         <:html<
@@ -87,7 +87,7 @@ let to_menu ~content_dir ~pages =
             </div>
             </div>
             <div class="span9">
-            $Markdown_github.to_html md_content$
+            $Cow.Markdown.to_html md_content$
             </div>
           </div>
         >>

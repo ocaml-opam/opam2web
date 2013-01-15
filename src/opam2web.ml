@@ -148,7 +148,7 @@ let make_website repository =
    OPAM repository *)
 let website_of_cwd () =
   Printf.printf "=== Repository: current working directory ===\n%!";
-  make_website (OpamPath.Repository.raw (OpamFilename.cwd ()))
+  make_website (OpamFilename.cwd ())
 
 (* Generate a website from the given directory, assuming that it's an OPAM
    repository *)

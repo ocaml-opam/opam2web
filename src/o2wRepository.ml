@@ -29,7 +29,7 @@ let of_opam repo_name =
 
 (* Load a repository from a directory *)
 let of_path dirname =
-  OpamPath.Repository.raw (OpamFilename.Dir.of_string dirname)
+  OpamFilename.Dir.of_string dirname
 
 (* Get the last update timestamp of a package in a given repository *)
 let last_update repository package =
@@ -74,7 +74,7 @@ let to_pages ~statistics ~dates repository =
   let reverse_dependencies = reverse_dependencies repository packages in
   let aux pkg acc =
     let name = OpamPackage.name pkg in
-    let versions = OpamPackage.versions packages name in
+    let versions = OpamPackage.versions_of_name packages name in
     OpamPackage.Version.Set.fold (fun version acc ->
       let pkg = OpamPackage.create name version in
       let pkg_info = O2wPackage.get_info ~href_prefix:"pkg/" repository ~dates pkg in

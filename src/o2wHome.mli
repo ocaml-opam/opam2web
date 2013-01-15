@@ -23,4 +23,4 @@ val to_html:
   statistics:statistics_set option ->
   dates:float package_map ->
   popularity:int64 name_map ->
-  OpamPath.Repository.r -> Cow.Html.t
+  dirname -> Cow.Html.t
