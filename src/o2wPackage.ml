@@ -76,7 +76,7 @@ let get_info ?(href_prefix="") ~dates repository pkg =
     | None       -> pkg_descr_markdown, ""
     | Some (s,d) -> s, d in
   let pkg_descr =
-    let to_html md = Cow.Markdown.to_html (Cow.Markdown.of_string md) in
+    let to_html md = Cow.Markdown.to_html (Cow.Markdown_github.of_string md) in
     <:html<
       <h4>$to_html short_descr$</h4>
       <p>$to_html long_descr$</p>

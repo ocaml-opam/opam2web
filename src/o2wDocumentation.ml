@@ -70,7 +70,7 @@ let to_menu ~content_dir ~pages =
     match kind with
     | "html" -> Cow.Html.of_string content
     | "md" ->
-        let md_content = Cow.Markdown.of_string content in
+        let md_content = Cow.Markdown_github.of_string content in
         let html_toc =
           Cow.Markdown.to_html_toc
               ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
