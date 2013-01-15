@@ -21,8 +21,6 @@ open O2wTypes
    empty <string> -> A menu divider
  *)
 let documentation_pages = [
-  "Home.md";
-  "";
   "Primer";
   "About.md";
   "Quick_Install.md";
