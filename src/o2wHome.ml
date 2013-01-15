@@ -184,10 +184,9 @@ let to_html ~statistics ~dates ~popularity repository =
         <h1>OCaml Package Manager</h1>
         <p>OPAM is a package manager for OCaml. Managing your OCaml installation can be as simple as:</p>
         <pre class="prettyprint lang-sh linenums">
-opam install lwt     # Install lwt
-opam switch 4.00.0   # Switch to OCaml 4.00.0 environment
-opam pin lwt 2.3.2   # Mark version 2.3.2 to be used in place of the latest one
-...
+opam list            # List the available packages
+opam install lwt     # Install LWT
+opam update          # Update the package list
 </pre>
         <br/>
         <br/>
