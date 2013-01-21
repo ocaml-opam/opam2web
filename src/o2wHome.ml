@@ -211,6 +211,7 @@ opam update          # Update the package list
         <div class="offset1 span3">
           <h2>News</h2>
           <ul>
+            <li><strong>15/01/2013</strong> Version 0.9 (BETA release) is out</li>
             <li><strong>14/11/2012</strong> Version 0.8 is out</li>
             <li><strong>21/09/2012</strong> Version 0.7 is out</li>
             <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a>
