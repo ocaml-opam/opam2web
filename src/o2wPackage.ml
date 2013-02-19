@@ -106,7 +106,7 @@ let to_html repository ~unique_packages ~reverse_dependencies ~versions ~all_sta
       (OpamPackage.Version.of_string pkg_info.pkg_version) in
   let pkg_url =
     let file = OpamPath.Repository.url repository pkg in
-    if Filename.exists file then (
+    if OpamFilename.exists file then (
       let url_file = OpamFile.URL.read file in
       let kind = match OpamFile.URL.kind url_file with
         | Some k -> <:html< [$str: OpamTypes.string_of_repository_kind k$] >>
