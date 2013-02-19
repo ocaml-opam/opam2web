@@ -233,6 +233,8 @@ opam update          # Update the package list
           <li>Contribute to this
              <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>.
           </li>
+          <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs on the installer</a></li>
+          <li><a href="https://github.com/OCamlPro/opam-repository/issues" title="Issues - OCamlPro/opam-repository">Report bugs on the package metadata</a></li>
         </ul>
         </div>
 
@@ -241,7 +243,6 @@ opam update          # Update the package list
           <ul>
             <li><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></li>
             <li><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></li>
-            <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs</a></li>
           </ul>
         </div>
         <div class="span2">
