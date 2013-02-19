@@ -61,16 +61,11 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
 let get_info ?(href_prefix="") ~dates repository pkg =
   let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
   let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-  let pkg_href =
-    Printf.sprintf "%s%s.%s.html" href_prefix pkg_name pkg_version
-  in
-  let pkg_synopsis =
-    OpamFile.Descr.synopsis
-      (OpamFile.Descr.read (OpamPath.Repository.descr repository pkg))
-  in
-  let pkg_descr_markdown =
-    OpamFile.Descr.full (OpamFile.Descr.read (OpamPath.Repository.descr repository pkg))
-  in
+  let pkg_href = Printf.sprintf "%s%s.%s.html" href_prefix pkg_name pkg_version in
+
+  let descr = OpamFile.Descr.safe_read (OpamPath.Repository.descr repository pkg) in
+  let pkg_synopsis = OpamFile.Descr.synopsis descr in
+  let pkg_descr_markdown = OpamFile.Descr.full descr in
   let short_descr, long_descr =
     match OpamMisc.cut_at pkg_descr_markdown '\n' with
     | None       -> pkg_descr_markdown, ""
@@ -81,6 +76,7 @@ let get_info ?(href_prefix="") ~dates repository pkg =
       <h4>$to_html short_descr$</h4>
       <p>$to_html long_descr$</p>
     >> in
+
   let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
   let pkg_update = OpamPackage.Map.find pkg dates in
   {
@@ -109,8 +105,9 @@ let to_html repository ~unique_packages ~reverse_dependencies ~versions ~all_sta
       (OpamPackage.Name.of_string pkg_info.pkg_name)
       (OpamPackage.Version.of_string pkg_info.pkg_version) in
   let pkg_url =
-    try
-      let url_file = OpamFile.URL.read (OpamPath.Repository.url repository pkg) in
+    let file = OpamPath.Repository.url repository pkg in
+    if Filename.exists file then (
+      let url_file = OpamFile.URL.read file in
       let kind = match OpamFile.URL.kind url_file with
         | Some k -> <:html< [$str: OpamTypes.string_of_repository_kind k$] >>
         | None -> <:html< >>
@@ -129,8 +126,8 @@ let to_html repository ~unique_packages ~reverse_dependencies ~versions ~all_sta
         </td>
       </tr>
       >>
-    with
-      OpamGlobals.Exit _ -> <:html< >> in
+    ) else
+      <:html< >> in
   let opam_file =
     OpamFile.OPAM.read (OpamPath.Repository.opam repository pkg) in
   let version_links =
