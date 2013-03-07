@@ -48,9 +48,9 @@ let to_html ~statistics ~dates ~popularity repository =
             $list: updated_items$
             <tr>
               <td class="btn-more" colspan="2">
-                <button class="btn btn-small" type="button">
-                  <a href="pkg/index-date.html">all packages</a>
-                </button>
+                <a href="pkg/index-date.html">
+                  <button class="btn btn-small">all packages</button>
+                </a>
               </td>
             </tr>
           </tbody>
@@ -131,9 +131,9 @@ let to_html ~statistics ~dates ~popularity repository =
               $list: top10_items$
               <tr>
                 <td class="btn-more" colspan="2">
-                  <button class="btn btn-small" type="button">
-                    <a href="pkg/index-popularity.html">all packages</a>
-                  </button>
+                  <a href="pkg/index-popularity.html">
+                   <button class="btn btn-small" type="button">all packages</button>
+                  </a>
                 </td>
               </tr>
             </tbody>
