@@ -22,7 +22,7 @@ run: $(NATIVE).native
 	_build/$< -c ../content -o $(WWWDIR) -l default
 
 install: $(NATIVE).native
-	install -D _build/$< $(PREFIX)/bin/$(NATIVE)
+	install _build/$< $(PREFIX)/bin/$(NATIVE)
 
 clean:
 	ocamlbuild -clean
