@@ -122,6 +122,31 @@ let make_website repository =
       [ popularity; date ]
   in
   include_files user_options.out_dir user_options.files_dir;
+  let about_page =
+    <:html<
+      <div class="container">
+      <div class="page-header"><h2>OPAM</h2></div>
+
+      <p>OPAM has been created and is maintained by
+      <a href="http://www.ocamlpro.com">OCamlPro</a>.</p>
+
+      <p>Bug reports and feature requests for the OPAM tool should be
+      reported <a href="http://github.com/OCamlPro/opam/issues">here</a>.</p>
+
+      <p>Packaging issues or requests for a new package should be reported
+      <a href="hhttp://github.com/OCamlPro/opam-repository/issues">here</a>.</p>
+
+      <p>General queries both the tool and the packages should be addressed
+      <a href="http://lists.ocaml.org/listinfo/platform">here</a> and for
+      for the tool and its evolution
+      <a href="http://lists.ocaml.org/listinfo/opam-devel">here</a>.</p>
+
+      Standard commercial terms and support, as well as training and consulting
+      services on OPAM are provided by <a href="mailto:contact@ocamlpro.com">OCamlPro</a>.
+      </div>
+
+    >>
+  in
   O2wTemplate.generate ~out_dir: user_options.out_dir
     ([
       { menu_link = { text="Home"; href="index.html" };
@@ -133,6 +158,9 @@ let make_website repository =
 
       { menu_link = { text="Documentation"; href="doc/index.html" };
         menu_item = Submenu (menu_of_doc ~pages:O2wGlobals.documentation_pages); };
+
+      { menu_link = { text="About"; href="about.html" };
+        menu_item = Internal (0, about_page) };
 
      ] @ criteria_links)
     pages;

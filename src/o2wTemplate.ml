@@ -129,18 +129,24 @@ let create ~title ~header ~body ~footer ~depth =
 
 let make_nav (active, depth) pages: Cow.Html.t =
   let category_of_href href =
-    try
-      String.sub href 0 (String.index href '/')
-    with
-      Not_found -> ""
-  in
+    try Some (String.sub href 0 (String.index href '/'))
+    with Not_found -> None in
   let active_category = category_of_href active.href in
   let rec make_item ?(subnav=false) m =
     let item_category = category_of_href m.menu_link.href in
     let class_attr =
       if subnav && active.href = m.menu_link.href then "active"
-      else if (not subnav) && active_category = item_category then "active"
-      else ""
+      else if (not subnav)
+           && (active = m.menu_link
+              || active_category <> None
+                 && active_category = item_category) then
+        "active"
+      else if (not subnav)
+           && item_category = None
+           && active = m.menu_link then
+        "active"
+      else
+        ""
     in
     match m.menu_item with
     | External   ->
@@ -154,8 +160,11 @@ let make_nav (active, depth) pages: Cow.Html.t =
     | Divider ->
       <:html< <li class="divider"></li> >>
     | Submenu sub_items ->
+      let class_attr = match class_attr with
+        | "" -> "dropdown"
+        | _  -> Printf.sprintf "dropdown active" in
       <:html<
-        <li class="dropdown">
+        <li class="$str:class_attr$">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown">
             $str:m.menu_link.text$ <b class="caret"> </b>
           </a>

@@ -182,11 +182,15 @@ let to_html ~statistics ~dates ~popularity repository =
       <!-- Main hero unit for a primary marketing message or call to action -->
       <div class="hero-unit">
         <h1>OCaml Package Manager</h1>
-        <p>OPAM is a package manager for OCaml. Managing your OCaml installation can be as simple as:</p>
+        <p>OPAM is a source-based package manager for OCaml. It supports multiple simultaneous
+           compiler installations, flexible package constraints, and a Git-friendly development
+           workflow. Managing your OCaml installation can be as simple as:</p>
         <pre class="prettyprint lang-sh linenums">
 opam list            # List the available packages
 opam install lwt     # Install LWT
 opam update          # Update the package list
+...
+opam upgrade         # Upgrade the installed packages to their latest version
 </pre>
         <br/>
         <br/>
@@ -208,46 +212,39 @@ opam update          # Update the package list
 
       <!-- Example row of columns -->
       <div class="row">
-        <div class="offset1 span3">
+        <div class="span4">
           <h2>News</h2>
-          <ul>
-            <li><strong>15/01/2013</strong> Version 0.9 (BETA release) is out</li>
-            <li><strong>14/11/2012</strong> Version 0.8 is out</li>
-            <li><strong>21/09/2012</strong> Version 0.7 is out</li>
-            <li><strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a>
-               <p>[ <a href="http://gazagnaire.org/ocamlpro/oud-opam.pdf">slides</a>
+          <p><i class="icon-ok"> </i> <strong>15/01/2013</strong> Version 1.0 is out!<br/></p>
+          <p><i class="icon-ok"> </i> <strong>15/01/2013</strong> Version 0.9 (BETA release) is out!<br/></p>
+          <p><i class="icon-eye-open"> </i> <strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a>
+                 [ <a href="http://gazagnaire.org/ocamlpro/oud-opam.pdf">slides</a>
                   | <a href="http://www.youtube.com/watch?v=ivLqeRZJTGs">video</a> ]</p>
-              </li>
-            <li><strong>11/09/2012</strong> Version 0.6 is out</li>
-          </ul>
         </div>
-        <div class="span3">
+        <div class="span5">
           <h2>Contribute</h2>
-          <ul>
-          <li>Contribute to the
-             <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">packages</a>.
-          </li>
-          <li>Contribute to the
-             <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">installer</a>.
-          </li>
-          <li>Contribute to this
-             <a href="https://github.com/OCamlPro/opam2web" title="OCamlPro/opam">website</a>.
-          </li>
-          <li><a href="https://github.com/OCamlPro/opam/issues" title="Issues - OCamlPro/opam">Report bugs on the installer</a></li>
-          <li><a href="https://github.com/OCamlPro/opam-repository/issues" title="Issues - OCamlPro/opam-repository">Report bugs on the package metadata</a></li>
-        </ul>
+          <p>
+          <i class="icon-tag"> </i> <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Reports and ask</a> for feature requests for the OPAM tool<br/>
+          <i class="icon-tags"> </i> <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">Report</a> packaging issues or requests
+           for a new package<br/></p>
+
+          General queries can be addressed at:
+          <p>
+          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/platform">the platform mailing-list</a> for the both the tool and packages<br/>
+          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/opam-devel">the OPAM devel mailing-list</a> for the tool and its evolution<br/>
+          </p>
         </div>
 
         <div class="span3">
           <h2>Tutorials</h2>
-          <ul>
-            <li><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></li>
-            <li><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></li>
-          </ul>
+          <p><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></p>
+          <p><a href="doc/Quick_install.html" title="Installing OPAM">Installing OPAM</a></p>
+          <p><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></p>
         </div>
+<!--
         <div class="span2">
           <img src="ext/img/camel_rider.png" alt="Camel Rider" />
         </div>
+-->
       </div>
       <hr />
       <div class="row">
