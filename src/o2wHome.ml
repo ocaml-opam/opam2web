@@ -176,16 +176,14 @@ let to_html ~statistics ~dates ~popularity repository =
     | Some s -> [
         mk_stats "Last week" s.week_stats;
         mk_stats "Last month" s.month_stats;
-        mk_stats "All-time" s.alltime_stats;
+(*        mk_stats "All-time" s.alltime_stats; *)
       ]
   in
 
   let number_of_packages nb packages =
     <:html<
-      <div class="page-header">
-      <h2 class="text-error">$int:nb$
-      <small>$str:packages$</small>
-      </h2>
+      <div class="page-header text-center">
+      <h2 class="text-error">$int:nb$ <small>$str:packages$</small></h2>
       </div>
     >> in
   let number_of_packages =
@@ -229,7 +227,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
 
       <!-- Example row of columns -->
       <div class="row">
-        <div class="span4">
+        <div class="offset1 span4">
           <h2>News</h2>
           <p><i class="icon-ok"> </i> <strong>14/03/2013</strong> Version 1.0 is out!<br/></p>
           <p><i class="icon-ok"> </i> <strong>15/01/2013</strong> Version 0.9 (BETA release) is out!<br/></p>
@@ -251,11 +249,11 @@ opam upgrade         # Upgrade the installed packages to their latest version
           </p>
         </div>
 
-        <div class="span3">
+        <div class="span2">
           <h2>Tutorials</h2>
           <p><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></p>
           <p><a href="doc/Quick_install.html" title="Installing OPAM">Installing OPAM</a></p>
-          <p><a href="doc/Packaging.html" title="Creating OPAM packages">Create packages</a></p>
+          <p><a href="doc/Packaging.html" title="Creating OPAM packages">Creating ackages</a></p>
         </div>
 <!--
         <div class="span2">
