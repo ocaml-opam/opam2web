@@ -252,7 +252,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
         <div class="span2">
           <h2>Tutorials</h2>
           <p><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></p>
-          <p><a href="doc/Quick_install.html" title="Installing OPAM">Installing OPAM</a></p>
+          <p><a href="doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
           <p><a href="doc/Packaging.html" title="Creating OPAM packages">Creating ackages</a></p>
         </div>
 <!--
