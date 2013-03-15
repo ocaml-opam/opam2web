@@ -99,8 +99,8 @@ let to_html ~statistics ~dates ~popularity repository =
     >>
   in
 *)
-  let packages_top10 = match statistics with
-    | None -> <:html< >>
+  let nb_packages, packages_top10 = match statistics with
+    | None      -> 0, <:html< >>
     | Some sset ->
       let mk_top_li (pkg, pkg_count) =
         let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
@@ -119,8 +119,10 @@ let to_html ~statistics ~dates ~popularity repository =
         try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity
         with Not_found -> 0L in
       let packages = O2wPackage.unify_versions packages in
+      let nb_packages = OpamPackage.Set.cardinal packages in
       let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
       let top10_items = List.map mk_top_li top10_pkgs in
+      nb_packages,
       <:html<
         <div class="span4">
           <table class="table table-striped">
@@ -177,6 +179,21 @@ let to_html ~statistics ~dates ~popularity repository =
         mk_stats "All-time" s.alltime_stats;
       ]
   in
+
+  let number_of_packages nb packages =
+    <:html<
+      <div class="page-header">
+      <h2 class="text-error">$int:nb$
+      <small>$str:packages$</small>
+      </h2>
+      </div>
+    >> in
+  let number_of_packages =
+    let packages = match nb_packages with
+      | 0
+      | 1 -> "package"
+      | _ -> "packages" in
+    number_of_packages nb_packages packages in
 
   <:html<
       <!-- Main hero unit for a primary marketing message or call to action -->
@@ -249,6 +266,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
       <hr />
       <div class="row">
         <div class="span4">
+          $number_of_packages$
           $list: stats_html$
         </div>
         $updates_last10$
