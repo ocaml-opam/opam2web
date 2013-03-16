@@ -95,3 +95,56 @@ code {
 .contribute-element, .table td.btn-more {
   text-align: center;
 }
+
+#wrap {
+  min-height: 100%;
+}
+
+#main {
+  overflow:auto;
+  padding-bottom:50px; /* this needs to be bigger than footer height*/
+  clear:both;
+}
+
+html, body {
+  height: 100%;
+}
+
+.footer {
+  position: relative;
+  margin-top: -50px; /* negative value of footer height */
+  height: 50px;
+  clear: both;
+  text-align: center;
+  padding-top:20px;
+  border-top: 10px #EBEBEB solid;
+} 
+
+.footer .copyright {
+  clear: both;
+}
+
+.footer .icons {
+  margin: auto;
+  padding-bottom: 20px;
+  width: 150px;
+  overflow: auto;
+}
+
+.footer .icons .icon {
+  width: 32px;
+  height: 32px;
+  vertical-align: middle;
+  margin: 0 2px;
+  float: left;
+}
+
+.footer a {
+  text-decoration: none;
+  border-bottom: 0;
+}
+
+.footer a:hover {
+  text-decoration: none;
+  border-bottom: 0;
+}
