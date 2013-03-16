@@ -235,21 +235,23 @@ opam upgrade         # Upgrade the installed packages to their latest version
                  [ <a href="http://gazagnaire.org/ocamlpro/oud-opam.pdf">slides</a>
                   | <a href="http://www.youtube.com/watch?v=ivLqeRZJTGs">video</a> ]</p>
         </div>
-        <div class="span5">
+        <div class="span4">
           <h2>Contribute</h2>
           <p>
-          <i class="icon-tag"> </i> <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Reports and ask</a> for feature requests for the OPAM tool<br/>
-          <i class="icon-tags"> </i> <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">Report</a> packaging issues or requests
-           for a new package<br/></p>
-
-          General queries can be addressed at:
+          <i class="icon-tag"> </i>
+          <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Report</a> and
+          <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">ask for feature requests</a>
+          the OPAM tool<br/>
+          <i class="icon-tags"> </i>
+          <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">Report</a> packaging issues or
+          <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">request</a> new packages<br/></p>
           <p>
-          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/platform">the platform mailing-list</a> for the both the tool and packages<br/>
-          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/opam-devel">the OPAM devel mailing-list</a> for the tool and its evolution<br/>
+          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/platform">Address</a> general queries on the tool and packages<br/>
+          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/opam-devel">Discuss</a> the tool internals<br/>
           </p>
         </div>
 
-        <div class="span2">
+        <div class="span2 text-right">
           <h2>Tutorials</h2>
           <p><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></p>
           <p><a href="doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
