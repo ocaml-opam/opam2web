@@ -22,7 +22,6 @@ open O2wTypes
  *)
 let documentation_pages = [
   "Primer";
-  "About.md";
   "Quick_Install.md";
   "Basic_Usage.md";
   "";

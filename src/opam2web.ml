@@ -123,28 +123,14 @@ let make_website repository =
   in
   include_files user_options.out_dir user_options.files_dir;
   let about_page =
+    let filename = Printf.sprintf "%s/doc/About.md" user_options.content_dir in
+    let contents = OpamFilename.read (OpamFilename.of_string filename) in
+    let contents = Cow.Markdown_github.of_string contents in
+    let contents = Cow.Markdown.to_html contents in
     <:html<
       <div class="container">
-      <div class="page-header"><h2>OPAM</h2></div>
-
-      <p>OPAM has been created and is maintained by
-      <a href="http://www.ocamlpro.com">OCamlPro</a>.</p>
-
-      <p>Bug reports and feature requests for the OPAM tool should be
-      reported <a href="http://github.com/OCamlPro/opam/issues">here</a>.</p>
-
-      <p>Packaging issues or requests for a new package should be reported
-      <a href="hhttp://github.com/OCamlPro/opam-repository/issues">here</a>.</p>
-
-      <p>General queries both the tool and the packages should be addressed
-      <a href="http://lists.ocaml.org/listinfo/platform">here</a> and for
-      for the tool and its evolution
-      <a href="http://lists.ocaml.org/listinfo/opam-devel">here</a>.</p>
-
-      Standard commercial terms and support, as well as training and consulting
-      services on OPAM are provided by <a href="mailto:contact@ocamlpro.com">OCamlPro</a>.
+      $contents$
       </div>
-
     >>
   in
   O2wTemplate.generate ~out_dir: user_options.out_dir
