@@ -17,6 +17,12 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
+let remove_base_packages packages =
+  OpamPackage.Set.filter (fun pkg ->
+    let name = OpamPackage.name pkg in
+    not (OpamMisc.starts_with ~prefix:"base" (OpamPackage.Name.to_string name))
+  ) packages
+
 (* Load a repository from the local OPAM installation *)
 let of_opam repo_name =
   let default_path = OpamPath.default () in
@@ -27,12 +33,14 @@ let of_opam repo_name =
   in
   let root = OpamPath.Repository.create default_path repo in
   let prefix, packages = OpamRepository.packages root in
+  let packages = remove_base_packages packages in
   { root; prefix; packages }
 
 (* Load a repository from a directory *)
 let of_path dirname =
   let root = OpamFilename.Dir.of_string dirname in
   let prefix, packages = OpamRepository.packages root in
+  let packages = remove_base_packages packages in
   { root; prefix; packages }
 
 (* Get the last update timestamp of a package in a given repository *)
@@ -46,11 +54,10 @@ let last_update repository package =
   opam_stat.st_mtime
 
 let get_dated_packages repository =
-  let packages = O2wPackage.remove_base_packages repository.packages in
   OpamPackage.Set.fold (fun pkg map ->
     let last_update = last_update repository pkg in
     OpamPackage.Map.add pkg last_update map
-  ) packages OpamPackage.Map.empty
+  ) repository.packages OpamPackage.Map.empty
 
 (* Create an association list (package_name -> reverse_dependencies) *)
 let reverse_dependencies repository packages =

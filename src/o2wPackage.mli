@@ -18,9 +18,6 @@
 open OpamTypes
 open O2wTypes
 
-(** Remove base packages *)
-val remove_base_packages: package_set -> package_set
-
 (** Unify package versions by keeping the max one *)
 val unify_versions: package_set -> package_set
 

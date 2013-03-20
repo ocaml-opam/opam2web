@@ -16,12 +16,6 @@
 open Cow.Html
 open O2wTypes
 
-let remove_base_packages pkg_stats =
-  OpamPackage.Set.filter (fun pkg ->
-    let name = OpamPackage.name pkg in
-    not (OpamMisc.starts_with ~prefix:"base" (OpamPackage.Name.to_string name))
-  ) pkg_stats
-
 (* Remove multiple vUnify multiple versions of the same packages in a list of lists *)
 let unify_versions packages =
   let versions = OpamPackage.to_map packages in
