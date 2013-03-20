@@ -150,13 +150,31 @@ let to_html ~unique_packages ~reverse_dependencies ~versions ~statistics reposit
           <:html< <li><a href="$str: href$">$str: version$</a></li> >>)
       (OpamPackage.Version.Set.elements versions) in
   let pkg_maintainer = OpamFile.OPAM.maintainer opam_file in
+  let pkg_authors =
+    match OpamFile.OPAM.authors opam_file with
+    | []  -> None
+    | [a] -> Some ("Author" , <:html<$str:a$>>)
+    | a   -> Some ("Authors", <:html<$str:OpamMisc.pretty_list a$>>) in
+  let pkg_license =
+    match OpamFile.OPAM.license opam_file with
+    | None   -> None
+    | Some l -> Some ("License", <:html<$str:l$>> ) in
+  let pkg_homepage =
+    match OpamFile.OPAM.homepage opam_file with
+    | None   -> None
+    | Some h -> Some ("Homepage", <:html<<a href=$str:h$>$str:h$</a>&>>) in
+  let pkg_tags =
+    match OpamFile.OPAM.tags opam_file with
+    | []  -> None
+    | [t] -> Some ("Tag" , <:html<$str:t$>>)
+    | ts  -> Some ("Tags", <:html<$str:OpamMisc.pretty_list ts$>>) in
   let pkg_update = O2wMisc.string_of_timestamp pkg_info.pkg_update in
   (* XXX: need to add hyperlink on package names *)
-  let mk_formula f = match f opam_file with
+  let mk_formula name f = match f opam_file with
     | OpamFormula.Empty -> None
-    | x                 -> Some (OpamFormula.to_string x) in
-  let pkg_depends = "Dependencies", mk_formula OpamFile.OPAM.depends in
-  let pkg_depopts = "Optional dependencies", mk_formula OpamFile.OPAM.depopts in
+    | x                 -> Some (name, <:html<$str:OpamFormula.to_string x$>>) in
+  let pkg_depends = mk_formula "Dependencies" OpamFile.OPAM.depends in
+  let pkg_depopts = mk_formula "Optional dependencies" OpamFile.OPAM.depopts in
   let html_of_dependencies title dependencies =
     let deps = List.map (fun (pkg_name, constr_opt) ->
         let latest_version = find_latest_version unique_packages pkg_name in
@@ -232,13 +250,13 @@ let to_html ~unique_packages ~reverse_dependencies ~versions ~statistics reposit
         </tr>
       >>
   in
-  let mk_tr (title, contents) =
-    match contents with
-    | None   -> <:html<&>>
-    | Some s -> <:html<
+  let mk_tr = function
+    | None                   -> <:html<&>>
+    | Some (title, contents) ->
+      <:html<
             <tr>
               <th>$str: title$</th>
-              <td>$str: s$</td>
+              <td>$contents$</td>
             </tr>
       >> in
   <:html<
@@ -254,12 +272,13 @@ let to_html ~unique_packages ~reverse_dependencies ~versions ~statistics reposit
 
         <table class="table">
           <tbody>
-            $pkg_url$
+            $mk_tr pkg_authors$
+            $mk_tr pkg_license$
+            $mk_tr pkg_homepage$
+            $mk_tr pkg_tags$
             <tr>
               <th>Maintainer</th>
-              <td>
-                $str: pkg_maintainer$
-              </td>
+              <td>$str: pkg_maintainer$</td>
             </tr>
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
@@ -269,6 +288,7 @@ let to_html ~unique_packages ~reverse_dependencies ~versions ~statistics reposit
                 $str: pkg_update$
               </td>
             </tr>
+            $pkg_url$
             $pkg_stats$
           </tbody>
         </table>
