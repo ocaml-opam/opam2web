@@ -102,8 +102,7 @@ let make_website repository =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
     | Some s ->
-      let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
-      O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats packages in
+      O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats repository.packages in
   let to_html = O2wRepository.to_html ~sortby_links ~dates ~popularity in
   let criteria_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true dates in
@@ -162,7 +161,7 @@ let make_website repository =
    OPAM repository *)
 let website_of_cwd () =
   Printf.printf "=== Repository: current working directory ===\n%!";
-  make_website (OpamFilename.cwd ())
+  make_website (O2wRepository.of_path (Sys.getcwd ()))
 
 (* Generate a website from the given directory, assuming that it's an OPAM
    repository *)

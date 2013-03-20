@@ -312,13 +312,15 @@ let top_packages ?ntop ?(reverse = true) stats packages =
 (* Retrieve the 'ntop' number of maintainers with the higher (or lower) number
    of associated packages *)
 let top_maintainers ?ntop ?(reverse = true) repository =
-  let packages = OpamPackage.to_map (OpamRepository.packages repository) in
+  let prefix, packages = OpamRepository.packages repository in
+  let packages = OpamPackage.to_map packages in
   let all_maintainers =
     OpamPackage.Name.Map.fold (fun name versions acc ->
       OpamPackage.Version.Set.fold
         (fun version acc ->
           let pkg = OpamPackage.create name version in
-          let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository pkg) in
+          let prefix = OpamRepository.find_prefix prefix pkg in
+          let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository prefix pkg) in
           let maintainer = OpamFile.OPAM.maintainer opam_file in
           if OpamMisc.StringMap.mem maintainer acc then
             let count = OpamMisc.StringMap.find maintainer acc in

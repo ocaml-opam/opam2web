@@ -25,24 +25,28 @@ let of_opam repo_name =
   let repo =
     List.find (fun r -> (OpamRepositoryName.to_string r) = repo_name) all_repositories
   in
-  OpamPath.Repository.create default_path repo
+  let root = OpamPath.Repository.create default_path repo in
+  let prefix, packages = OpamRepository.packages root in
+  { root; prefix; packages }
 
 (* Load a repository from a directory *)
 let of_path dirname =
-  OpamFilename.Dir.of_string dirname
+  let root = OpamFilename.Dir.of_string dirname in
+  let prefix, packages = OpamRepository.packages root in
+  { root; prefix; packages }
 
 (* Get the last update timestamp of a package in a given repository *)
 let last_update repository package =
   let open Unix in
+  let prefix = OpamRepository.find_prefix repository.prefix package in
   let opam_filename =
-    OpamFilename.to_string (OpamPath.Repository.opam repository package)
+    OpamFilename.to_string (OpamPath.Repository.opam repository.root prefix package)
   in
   let opam_stat = Unix.stat opam_filename in
   opam_stat.st_mtime
 
 let get_dated_packages repository =
-  let all = OpamRepository.packages repository in
-  let packages = O2wPackage.remove_base_packages all in
+  let packages = O2wPackage.remove_base_packages repository.packages in
   OpamPackage.Set.fold (fun pkg map ->
     let last_update = last_update repository pkg in
     OpamPackage.Map.add pkg last_update map
@@ -54,7 +58,8 @@ let reverse_dependencies repository packages =
   (* Fill a hash table with reverse dependecies (required by...) *)
   OpamPackage.Set.iter (fun pkg ->
     let name = OpamPackage.name pkg in
-    let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository pkg) in
+    let prefix = OpamRepository.find_prefix repository.prefix pkg in
+    let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository.root prefix pkg) in
     let dependencies = OpamFormula.atoms (OpamFile.OPAM.depends opam_file) in
     let deps = List.map (fun (name, _) -> name) dependencies in
     List.iter (fun dep -> Hashtbl.add revdeps_tbl dep name) deps)
@@ -69,7 +74,7 @@ let reverse_dependencies repository packages =
 
 (* Create a list of package pages to generate for a repository *)
 let to_pages ~statistics ~dates repository =
-  let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
+  let packages = repository.packages in
   let unique_packages = O2wPackage.unify_versions packages in
   let reverse_dependencies = reverse_dependencies repository packages in
   let aux pkg acc =
@@ -77,16 +82,20 @@ let to_pages ~statistics ~dates repository =
     let versions = OpamPackage.versions_of_name packages name in
     OpamPackage.Version.Set.fold (fun version acc ->
       let pkg = OpamPackage.create name version in
-      let pkg_info = O2wPackage.get_info ~href_prefix:"pkg/" repository ~dates pkg in
-      let page = {
-        page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
-        page_depth    = 1;
-        page_contents =
-          O2wPackage.to_html
-            repository unique_packages reverse_dependencies versions statistics
-            pkg_info
-      } in
-      page :: acc
+      match O2wPackage.get_info ~href_prefix:"pkg/" repository ~dates pkg with
+      | None  ->
+        Printf.printf "Skipping %s\n%!" (OpamPackage.to_string pkg);
+        acc
+      | Some pkg_info ->
+        let page = {
+          page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
+          page_depth    = 1;
+          page_contents =
+            O2wPackage.to_html
+              ~unique_packages ~reverse_dependencies ~versions ~statistics
+              repository pkg_info
+        } in
+        page :: acc
     ) versions acc in
   OpamPackage.Set.fold aux unique_packages []
 
@@ -108,32 +117,36 @@ let sortby_links ~links ~default ~active =
 
 (* Returns a HTML list of the packages in the given repository *)
 let to_html ~sortby_links ~dates ~popularity ~active ~compare_pkg repository =
-  let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
+  let packages = repository.packages in
   let unique_packages = O2wPackage.unify_versions packages in
   let sortby_links_html = sortby_links ~active in
   let sorted_packages = List.sort compare_pkg (OpamPackage.Set.elements unique_packages) in
   let packages_html =
-    List.map (fun pkg ->
-      let pkg_info = O2wPackage.get_info ~dates repository pkg in
-      let pkg_download =
-        try
-          let d = OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity in
-          Printf.sprintf "Downloads: %Ld | Last update: %s"
-            d (O2wMisc.string_of_timestamp pkg_info.pkg_update)
-        with Not_found ->
-          Printf.sprintf "Last update: %s" (O2wMisc.string_of_timestamp pkg_info.pkg_update) in
-      <:html<
-        <tr>
-          <td title=$str:pkg_download$>
+    List.fold_left (fun acc pkg ->
+      match O2wPackage.get_info ~dates repository pkg with
+      | None          -> acc
+      | Some pkg_info ->
+        let pkg_download =
+          try
+            let d = OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity in
+            Printf.sprintf "Downloads: %Ld | Last update: %s"
+              d (O2wMisc.string_of_timestamp pkg_info.pkg_update)
+          with Not_found ->
+            Printf.sprintf "Last update: %s" (O2wMisc.string_of_timestamp pkg_info.pkg_update)
+        in
+        <:html<
+          <tr>
+            <td title=$str:pkg_download$>
              <a href=$str:pkg_info.pkg_href$>
                $str: pkg_info.pkg_name$
              </a>
-          </td>
-          <td>$str: pkg_info.pkg_version$</td>
-          <td>$str: pkg_info.pkg_synopsis$</td>
-        </tr>
-      >>)
-      sorted_packages
+            </td>
+            <td>$str: pkg_info.pkg_version$</td>
+            <td>$str: pkg_info.pkg_synopsis$</td>
+          </tr>
+        >> :: acc)
+      []
+      (List.rev sorted_packages)
   in
   <:html<
     <div class="row">

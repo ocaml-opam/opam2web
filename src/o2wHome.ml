@@ -17,7 +17,7 @@ open O2wTypes
 
 (* OPAM website homepage *)
 let to_html ~statistics ~dates ~popularity repository =
-  let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys dates) in
+  let packages = repository.packages in
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in

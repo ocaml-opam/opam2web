@@ -19,13 +19,13 @@ open OpamTypes
 open O2wTypes
 
 (** Get all available packages *)
-val get_dated_packages: dirname -> float package_map
+val get_dated_packages: repository -> float package_map
 
 (** Create a list of package pages to generate for a repository *)
 val to_pages:
   statistics:statistics_set option ->
   dates:float package_map ->
-  dirname -> page list
+  repository -> page list
 
 (** Generate the list of HTML links for a list of page names *)
 val sortby_links:
@@ -41,13 +41,13 @@ val to_html:
   popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
-  dirname -> Cow.Html.t
+  repository -> Cow.Html.t
 
 (** Load a repository from the local OPAM installation *)
-val of_opam: string -> dirname
+val of_opam: string -> repository
 
 (** Load a repository from a directory *)
-val of_path: string -> dirname
+val of_path: string -> repository
 
 (** Compute the reverse dependency matrix *)
-val reverse_dependencies: dirname -> package_set -> name_set name_map
+val reverse_dependencies: repository -> package_set -> name_set name_map

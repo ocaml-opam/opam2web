@@ -111,3 +111,9 @@ type log_filter = {
   log_end_time: float;
   log_custom: log_entry -> bool
 }
+
+type repository = {
+  root: dirname;
+  packages: package_set;
+  prefix: string name_map;
+}

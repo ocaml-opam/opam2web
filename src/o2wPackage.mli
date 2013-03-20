@@ -39,13 +39,12 @@ val compare_popularity: ?reverse:bool -> int64 name_map ->
 val get_info:
   ?href_prefix:string ->
   dates:float package_map ->
-  dirname -> package -> package_info
+  repository -> package -> package_info option
 
 (** Returns a HTML description of the given package info *)
 val to_html:
-  dirname ->
   unique_packages:package_set ->
   reverse_dependencies:name_set name_map ->
   versions:version_set ->
-  all_statistics:statistics_set option ->
-  package_info -> Cow.Html.t
+  statistics:statistics_set option ->
+  repository -> package_info -> Cow.Html.t
