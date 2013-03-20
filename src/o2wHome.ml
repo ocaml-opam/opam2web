@@ -209,7 +209,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
 </pre>
         <br/>
         <br/>
-        <div class="offset6 span6">
+        <div class="text-right">
         <div class="btn-group">
           <a class="btn btn-large"
               href="doc/Quick_Install.html">
@@ -221,8 +221,6 @@ opam upgrade         # Upgrade the installed packages to their latest version
           </a>
         </div>
         </div>
-        <br/>
-        <br/>
       </div>
 
       <!-- Example row of columns -->
