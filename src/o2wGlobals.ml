@@ -24,6 +24,7 @@ let documentation_pages = [
   "Primer";
   "Quick_Install.md";
   "Basic_Usage.md";
+  "FAQ.md";
   "";
   "Go Further";
   "Advanced_Install.md";
