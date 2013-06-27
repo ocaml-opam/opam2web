@@ -254,6 +254,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
           <p><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></p>
           <p><a href="doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
           <p><a href="doc/Packaging.html" title="Creating OPAM packages">Creating Packages</a></p>
+          <p><a href="https://github.com/OCamlPro/opam/raw/master/doc/dev-manual/dev-manual.pdf" title="Developer Manual for OPAM">Developer Manual</a></p>
         </div>
 <!--
         <div class="span2">
