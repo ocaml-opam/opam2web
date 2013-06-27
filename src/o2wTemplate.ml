@@ -86,7 +86,7 @@ let create ~title ~header ~body ~footer ~depth =
             <span class="icon-bar"> </span>
             <span class="icon-bar"> </span>
           </a>
-          <a class="brand" href="$str: home_href$">OPAM</a>
+          <a class="brand" href="https://github.com/OCamlPro/opam">OPAM on Github</a>
           <div class="nav-collapse collapse">
             $header$
 <!--
