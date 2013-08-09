@@ -117,9 +117,11 @@ let mk_entry e = {
 (* Retrieve log entries of an apache access.log file *)
 let entries_of_logfile filter init filename =
   if Sys.file_exists filename then (
-    Printf.printf "Parsing web server log file '%s'...\n" filename;
+    Printf.printf "+++ Parsing the file: %s.\n%!" filename;
     let entries = Readcombinedlog.readlog filename filter in
-    Printf.printf "+++ %s contains %d entries.\n" filename (List.length entries);
+    Printf.printf
+      "+++ %s contains %d lines. Building the corresponding entries\n%!"
+      filename (List.length entries);
     List.fold_left (fun acc e -> mk_entry e :: acc) init entries
   ) else (
     OpamGlobals.warning "No access.log provided.";
