@@ -192,7 +192,7 @@ let website_of_cwd href_prefix =
    repository *)
 let website_of_path href_prefix dirname =
   Printf.printf "=== Repository: %s ===\n%!" dirname;
-  make_website (O2wRepository.of_path ~href_prefix (OpamFilename.raw_dir dirname))
+  make_website (O2wRepository.of_path ~href_prefix (OpamFilename.Dir.of_string dirname))
 
 (* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
