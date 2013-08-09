@@ -243,4 +243,4 @@ let generate ~out_dir menu pages =
   in
   List.iter aux menu_pages;
   List.iter aux pages;
-  Printf.printf "\r[-5%d/%d]\n%!" n n
+  Printf.printf "\r[%-5d/%d]\n%!" n n
