@@ -16,8 +16,8 @@
 APache's Common Logifle format:
 
 
-HOST - - [DATUM/ZEIT] "KOMMANDO" STATUS SIZE "-" "Browser/Client" 
-HOST - - [DATUM/ZEIT] "KOMMANDO" STATUS SIZE "Referrer" "Browser/Client" 
+HOST - - [DATUM/ZEIT] "KOMMANDO" STATUS SIZE "-" "Browser/Client"
+HOST - - [DATUM/ZEIT] "KOMMANDO" STATUS SIZE "Referrer" "Browser/Client"
 
   http://httpd.apache.org/docs/1.3/mod/mod_log_common.html
 
@@ -77,4 +77,3 @@ let readlog logname filter =
                       prerr_endline "READY!";
                      *)
                       List.rev !recordlist
-  
