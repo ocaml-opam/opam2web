@@ -111,11 +111,14 @@ let save_statistic_set cache (stats:statistics_set option) =
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
   let stats_cache = load_statistic_sets user_options.stats_cache in
+  Printf.printf "++ Building the statistics.\n";
   let statistics =
     O2wStatistics.basic_statistics_set stats_cache user_options.logfiles in
   save_statistic_set user_options.stats_cache statistics;
   let href_prefix = user_options.href_prefix in
+  Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
+  Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc =
     O2wDocumentation.to_menu ~href_prefix ~content_dir:user_options.content_dir in
   let criteria = ["name"; "popularity"; "date"] in
@@ -131,6 +134,7 @@ let make_website repo_info =
     | Some s -> O2wStatistics.aggregate_package_popularity
                   s.alltime_stats.pkg_stats repo_info.packages in
   let to_html = O2wRepository.to_html ~sortby_links ~popularity in
+  Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true repo_info.pkgs_dates in
     let date = {
@@ -195,8 +199,9 @@ let website_of_cwd href_prefix =
 (* Generate a website from the given directory, assuming that it's an OPAM
    repository *)
 let website_of_path href_prefix dirname =
-  Printf.printf "=== Repository: %s ===\n%!" dirname;
-  make_website (O2wRepository.of_path ~href_prefix (OpamFilename.Dir.of_string dirname))
+  let dirname = OpamFilename.Dir.of_string dirname in
+  Printf.printf "=== Repository: %s ===\n%!" (OpamFilename.Dir.to_string dirname);
+  make_website (O2wRepository.of_path ~href_prefix dirname)
 
 (* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
