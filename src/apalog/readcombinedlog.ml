@@ -54,7 +54,11 @@ let readlog logname filter =
       let date     = Lexcombinedlog.date lexbuf in
       let request  = Lexcombinedlog.token lexbuf in
       let status   = Lexcombinedlog.token lexbuf in
-      let size     = try Lexcombinedlog.size lexbuf with _ -> "0" in
+      let size     =
+        try Lexcombinedlog.size lexbuf
+        with _ ->
+          Printf.eprintf "error while parsing:\n%s\n" line;
+          "0" in
       let referrer = Lexcombinedlog.token lexbuf in
       let client   = Lexcombinedlog.token lexbuf in
 
