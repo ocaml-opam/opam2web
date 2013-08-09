@@ -31,6 +31,7 @@ type options = {
   mutable logfiles: string list;
   mutable operations: opam2web_operation list;
   mutable stats_cache: string;
+  mutable href_prefix: string;
 }
 
 let user_options: options = {
@@ -40,6 +41,7 @@ let user_options: options = {
   logfiles = [];
   operations = [];
   stats_cache = "stats.dat";
+  href_prefix = "";
 }
 
 let set_out_dir (dir: string) =
@@ -63,6 +65,9 @@ let add_website_opam (repo: string) =
 let set_cache_stats (file: string) =
   user_options.stats_cache <- file
 
+let set_href_prefix name =
+  user_options.href_prefix <- name
+
 let include_files (path: string) files_path : unit =
   let subpathes = ["doc"; "pkg"] in
   let pathes =
@@ -85,10 +90,12 @@ let include_files (path: string) files_path : unit =
 
 let load_statistic_sets cache : (float * statistics_set) option =
   if Sys.file_exists cache then
-    let ic = open_in cache in
-    let date, stats = Marshal.from_channel ic in
-    close_in ic;
-    Some (date, stats)
+    try
+      let ic = open_in cache in
+      let date, stats = Marshal.from_channel ic in
+      close_in ic;
+      Some (date, stats)
+    with _ -> None
   else
     None
 
@@ -103,8 +110,6 @@ let save_statistic_set cache (stats:statistics_set option) =
 
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
-  if List.length user_options.logfiles = 0 then
-    user_options.logfiles <- ["access.log"];
   let stats_cache = load_statistic_sets user_options.stats_cache in
   let statistics =
     O2wStatistics.basic_statistics_set stats_cache user_options.logfiles in
@@ -154,7 +159,7 @@ let make_website repo_info =
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repo_info in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
-  O2wTemplate.generate ~out_dir: user_options.out_dir
+  O2wTemplate.generate ~out_dir:user_options.out_dir
     ([
       { menu_link = { text="Home"; href="index.html" };
         menu_item = Internal (0, home_index) };
@@ -179,22 +184,22 @@ let make_website repo_info =
 
 (* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)
-let website_of_cwd () =
+let website_of_cwd href_prefix =
   Printf.printf "=== Repository: current working directory ===\n%!";
-  make_website (O2wRepository.of_path (Sys.getcwd ()))
+  make_website (O2wRepository.of_path ~href_prefix (OpamFilename.cwd ()))
 
 (* Generate a website from the given directory, assuming that it's an OPAM
    repository *)
-let website_of_path dirname =
+let website_of_path href_prefix dirname =
   Printf.printf "=== Repository: %s ===\n%!" dirname;
-  make_website (O2wRepository.of_path dirname)
+  make_website (O2wRepository.of_path ~href_prefix (OpamFilename.raw_dir dirname))
 
 (* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
-let website_of_opam repo_name =
+let website_of_opam href_prefix repo_name =
   Printf.printf "=== Repository: %s [opam] ===\n%!" repo_name;
   let load_repo r =
-    try O2wRepository.of_opam r
+    try O2wRepository.of_opam ~href_prefix (OpamRepositoryName.of_string r)
     with Not_found -> raise (Unknown_repository r)
   in
   try make_website (load_repo repo_name)
@@ -223,10 +228,9 @@ let specs = [
   ("--local", Arg.String add_website_opam,
     "Generate a website from an opam repository in the local opam installation");
 
-  (* ("-i", Arg.String set_files_dir, ""); *)
-  (* ("--include", Arg.String set_files_dir, *)
-  (*   "Copy this directory content to the output directory"); *)
-
+  ("-p", Arg.String set_href_prefix, "");
+  ("--prefix", Arg.String set_href_prefix,
+   "Specify the prefix hyper-link (default is the contents of [--output])");
 ]
 
 (* Main *)
@@ -234,14 +238,21 @@ let () =
   (* Anonymous arguments are interpreted as directories where to find
      repositories *)
   Arg.parse specs add_website_path
-      (Printf.sprintf "%s [options]* [repository_name]*" Sys.argv.(0));
+    (Printf.sprintf "%s [options]* [repository_name]*" Sys.argv.(0));
+
+  if List.length user_options.logfiles = 0 then
+    user_options.logfiles <- ["access.log"];
+  if user_options.out_dir = "" then
+    user_options.out_dir <- Sys.getcwd ();
+  if user_options.href_prefix = "" then
+    user_options.href_prefix <- user_options.out_dir;
   if List.length user_options.operations = 0 then
     (* If the arguments didn't trigger any operation, try to interpret the
        current directory as a repository and make the website out of it *)
-    website_of_cwd ()
+    website_of_cwd user_options.href_prefix
   else
     let exec_operation = function
-      | Website_of_path p -> website_of_path p
-      | Website_of_opam r -> website_of_opam r
+      | Website_of_path p -> website_of_path user_options.href_prefix p
+      | Website_of_opam r -> website_of_opam user_options.href_prefix r
     in
     List.iter exec_operation user_options.operations

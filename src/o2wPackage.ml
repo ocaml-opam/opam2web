@@ -44,10 +44,10 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
   | _ -> compare_alphanum p1 p2
 
 (* Build a record representing information about a package *)
-let get_info ?(href_prefix="") ~dates repo prefix pkg =
+let get_info ~href_prefix ~dates repo prefix pkg =
   let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
   let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-  let pkg_href = Printf.sprintf "%s%s.%s.html" href_prefix pkg_name pkg_version in
+  let pkg_href = Printf.sprintf "%s/pkg/%s.%s.html" href_prefix pkg_name pkg_version in
   let descr = OpamFile.Descr.safe_read (OpamPath.Repository.descr repo prefix pkg) in
   let pkg_synopsis = OpamFile.Descr.synopsis descr in
   let pkg_descr_markdown = OpamFile.Descr.full descr in

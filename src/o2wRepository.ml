@@ -50,9 +50,9 @@ let max_packages max_versions =
       OpamPackage.Set.add (OpamPackage.create name version) set
     ) max_versions OpamPackage.Set.empty
 
-let infos repo dates packages =
+let infos ~href_prefix repo dates packages =
   OpamPackage.Map.fold (fun pkg prefix map ->
-      let info = O2wPackage.get_info ~href_prefix:"pkg/" ~dates repo prefix pkg in
+      let info = O2wPackage.get_info ~href_prefix ~dates repo prefix pkg in
       OpamPackage.Map.add pkg info map
     ) packages OpamPackage.Map.empty
 
@@ -91,7 +91,7 @@ let reverse_dependencies repo packages =
     OpamPackage.Name.Map.add name names acc
   ) OpamPackage.Name.Map.empty names
 
-let mk_repo_info repo =
+let mk_repo_info ~href_prefix repo =
   let root = repo.repo_root in
   let packages = OpamRepository.packages_with_prefixes repo in
   let packages = remove_base_packages packages in
@@ -100,23 +100,20 @@ let mk_repo_info repo =
   let max_packages = max_packages max_versions in
   let reverse_deps = reverse_dependencies repo packages in
   let pkgs_dates = dates repo packages in
-  let pkgs_infos = infos repo pkgs_dates packages in
+  let pkgs_infos = infos ~href_prefix repo pkgs_dates packages in
   { root; repo; versions; packages; max_versions; max_packages; reverse_deps;
     pkgs_infos; pkgs_dates }
 
 (* Load a repository from the local OPAM installation *)
-let of_opam repo_name =
+let of_opam ~href_prefix repo_name =
   let t = OpamState.load_state "opam2web" in
-  let repo = OpamRepositoryName.Map.find
-      (OpamRepositoryName.of_string repo_name)
-      t.OpamState.Types.repositories in
-  mk_repo_info repo
+  let repo = OpamRepositoryName.Map.find repo_name t.OpamState.Types.repositories in
+  mk_repo_info ~href_prefix repo
 
 (* Load a repository from a directory *)
-let of_path dirname =
-  let root = OpamFilename.Dir.of_string dirname in
+let of_path ~href_prefix root =
   let repo = OpamRepository.local root in
-  mk_repo_info repo
+  mk_repo_info ~href_prefix repo
 
 let to_page ~statistics repo_info pkg pkg_info acc =
   match pkg_info with

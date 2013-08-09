@@ -37,7 +37,7 @@ val to_html:
   repository_info -> Cow.Html.t
 
 (** Load a repository from the local OPAM installation *)
-val of_opam: string -> repository_info
+val of_opam: href_prefix:string -> repository_name -> repository_info
 
 (** Load a repository from a directory *)
-val of_path: string -> repository_info
+val of_path: href_prefix:string -> dirname -> repository_info
