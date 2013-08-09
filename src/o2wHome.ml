@@ -17,6 +17,7 @@ open O2wTypes
 
 (* OPAM website homepage *)
 let to_html ~href_prefix ~statistics ~popularity repo_info =
+  let url str = href_prefix ^ str in
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
@@ -50,7 +51,7 @@ let to_html ~href_prefix ~statistics ~popularity repo_info =
             $list: updated_items$
             <tr>
               <td class="btn-more" colspan="2">
-                <a href="$str:href_prefix$pkg/index-date.html">
+                <a href=$str:url "pkg/index-date.html"$>
                   <button class="btn btn-small">all packages</button>
                 </a>
               </td>
@@ -96,7 +97,7 @@ let to_html ~href_prefix ~statistics ~popularity repo_info =
               $list: top10_items$
               <tr>
                 <td class="btn-more" colspan="2">
-                  <a href="$str:href_prefix$pkg/index-popularity.html">
+                  <a href=$str:url "pkg/index-popularity.html"$>
                    <button class="btn btn-small" type="button">all packages</button>
                   </a>
                 </td>
@@ -175,11 +176,11 @@ opam upgrade         # Upgrade the installed packages to their latest version
         <div class="text-right">
         <div class="btn-group">
           <a class="btn btn-large"
-              href="$str:href_prefix$doc/Quick_Install.html">
+              href=$str:url "doc/Quick_Install.html"$>
             Download and install OPAM »
           </a>
           <a class="btn btn-large"
-              href="$str:href_prefix$doc/Basic_Usage.html">
+              href=$str:url "doc/Basic_Usage.html"$>
             How to use OPAM »
           </a>
         </div>
@@ -214,14 +215,14 @@ opam upgrade         # Upgrade the installed packages to their latest version
 
         <div class="span2 text-right">
           <h2>Tutorials</h2>
-          <p><a href="$str:href_prefix$doc/About.html" title="Getting started with OPAM">Getting started</a></p>
-          <p><a href="$str:href_prefix$doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
-          <p><a href="$str:href_prefix$doc/Packaging.html" title="Creating OPAM packages">Creating Packages</a></p>
+          <p><a href=$str:url "doc/About.html"$ title="Getting started with OPAM">Getting started</a></p>
+          <p><a href=$str:url "doc/Quick_Install.html"$ title="Installing OPAM">Installing OPAM</a></p>
+          <p><a href=$str:url "doc/Packaging.html"$ title="Creating OPAM packages">Creating Packages</a></p>
           <p><a href="https://github.com/OCamlPro/opam/raw/master/doc/dev-manual/dev-manual.pdf" title="Developer Manual for OPAM">Developer Manual</a></p>
         </div>
 <!--
         <div class="span2">
-          <img src="$str:href_prefix$ext/img/camel_rider.png" alt="Camel Rider" />
+          <img src=$str:url "ext/img/camel_rider.png"$ alt="Camel Rider" />
         </div>
 -->
       </div>
