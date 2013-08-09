@@ -206,26 +206,7 @@ let make_footer depth =
 >>
 
 let generate ~out_dir menu pages =
-  Printf.printf "Generating html files:\n%!";
-  let aux page =
-    Printf.printf "> %s... %!" page.page_link.href;
-    let header = make_nav (page.page_link, page.page_depth) menu in
-    let footer = make_footer page.page_depth in
-    let path =
-      if String.length out_dir > 0
-      then Printf.sprintf "%s/%s" out_dir page.page_link.href
-      else page.page_link.href in
-    let chan = open_out path in
-    let page =
-      create
-        ~header ~footer
-        ~title:page.page_link.text
-        ~body:page.page_contents
-        ~depth:page.page_depth in
-    output_string chan (Html.to_string page);
-    close_out chan;
-    Printf.printf "[Done]\n"
-  in
+  Printf.printf "++ Generating html files:\n%!";
   (* Filter out external links from the menu pages to generate *)
   let menu_pages =
     let rec aux acc pages =
@@ -243,5 +224,23 @@ let generate ~out_dir menu pages =
         | No_menu (d, c) -> aux (mk d c :: acc) t
     in aux [] menu
   in
+  let c = ref 1 in
+  let n = List.length pages + List.length menu_pages in
+  let aux page =
+    Printf.printf "\r[%-5d/%d] %s %40s%!" !c n page.page_link.href ""; incr c;
+    let header = make_nav (page.page_link, page.page_depth) menu in
+    let footer = make_footer page.page_depth in
+    let path = Printf.sprintf "%s%s" out_dir page.page_link.href in
+    let chan = open_out path in
+    let page =
+      create
+        ~header ~footer
+        ~title:page.page_link.text
+        ~body:page.page_contents
+        ~depth:page.page_depth in
+    output_string chan (Html.to_string page);
+    close_out chan;
+  in
   List.iter aux menu_pages;
-  List.iter aux pages
+  List.iter aux pages;
+  Printf.printf "\r[-5%d/%d]\n%!" n n

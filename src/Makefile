@@ -1,12 +1,12 @@
 .PHONY: all run clean
 
-PREFIX="/usr"
-WWWDIR="www"
+PREFIX=/usr/local
+WWWDIR=www
 
 OCAMLBUILD=ocamlbuild -classic-display
 PACKAGES=-pkgs cow,cow.syntax,opam.client
 SYNTAX=-tags "syntax(camlp4o)"
-FLAGS=-use-ocamlfind -cflags "-bin-annot" -no-links
+FLAGS=-use-ocamlfind -cflags "-bin-annot" -no-links -tags "debug"
 INCLUDES=-I apalog
 TARGET=opam2web
 

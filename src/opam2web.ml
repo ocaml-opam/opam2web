@@ -77,16 +77,7 @@ let include_files (path: string) files_path : unit =
       subpathes
   in
   (* Check if output directory exists, create it if it doesn't *)
-  List.iter (fun p ->
-      let dir = OpamFilename.Dir.of_string p in
-      if not (OpamFilename.exists_dir dir) then
-        begin
-          OpamFilename.mkdir dir;
-          Printf.printf "Directory '%s' created\n%!" p
-        end
-      else
-        (Printf.printf "Directory '%s' already exists\n%!" p))
-    pathes
+  List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
 let load_statistic_sets cache : (float * statistics_set) option =
   if Sys.file_exists cache then
@@ -111,7 +102,7 @@ let save_statistic_set cache (stats:statistics_set option) =
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
   let stats_cache = load_statistic_sets user_options.stats_cache in
-  Printf.printf "++ Building the statistics.\n";
+  Printf.printf "++ Building the statistics.\n%!";
   let statistics =
     O2wStatistics.basic_statistics_set stats_cache user_options.logfiles in
   save_statistic_set user_options.stats_cache statistics;
@@ -119,8 +110,7 @@ let make_website repo_info =
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
   Printf.printf "++ Building the documentation pages.\n%!";
-  let menu_of_doc =
-    O2wDocumentation.to_menu ~href_prefix ~content_dir:user_options.content_dir in
+  let menu_of_doc = O2wDocumentation.to_menu ~content_dir:user_options.content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
@@ -133,12 +123,12 @@ let make_website repo_info =
     | None   -> OpamPackage.Name.Map.empty
     | Some s -> O2wStatistics.aggregate_package_popularity
                   s.alltime_stats.pkg_stats repo_info.packages in
-  let to_html = O2wRepository.to_html ~sortby_links ~popularity in
+  let to_html = O2wRepository.to_html ~href_prefix ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true repo_info.pkgs_dates in
     let date = {
-      menu_link = { text="Packages"; href=href_prefix^"pkg/index-date.html" };
+      menu_link = { text="Packages"; href="pkg/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg repo_info);
     } in
     match statistics with
@@ -146,7 +136,7 @@ let make_website repo_info =
     | Some s ->
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
-        menu_link = { text="Packages"; href=href_prefix^"pkg/index-popularity.html" };
+        menu_link = { text="Packages"; href="pkg/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg repo_info);
       } in
       [ popularity; date ]
@@ -154,31 +144,35 @@ let make_website repo_info =
   include_files user_options.out_dir user_options.files_dir;
   let about_page =
     let filename = Printf.sprintf "%s/doc/About.md" user_options.content_dir in
-    let contents = OpamFilename.read (OpamFilename.of_string filename) in
-    let contents = Cow.Markdown_github.of_string contents in
-    let contents = Cow.Markdown.to_html contents in
-    <:html<
-      <div class="container">
-      $contents$
-      </div>
-    >>
-  in
+    try
+      let filename = OpamFilename.of_string filename in
+      let contents = OpamFilename.read filename in
+      let contents = Cow.Markdown_github.of_string contents in
+      let contents = Cow.Markdown.to_html contents in
+      <:html<
+        <div class="container">
+        $contents$
+        </div>
+      >>
+    with _ ->
+      OpamGlobals.warning "%s is not available." filename;
+      <:html< >> in
   let home_index = O2wHome.to_html ~href_prefix ~statistics ~popularity repo_info in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repo_info in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   O2wTemplate.generate ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href=href_prefix^"index.html" };
+      { menu_link = { text="Home"; href="index.html" };
         menu_item = Internal (0, home_index) };
 
-      { menu_link = { text="Packages"; href=href_prefix^"pkg/index.html" };
+      { menu_link = { text="Packages"; href="pkg/index.html" };
         menu_item = Internal (1, package_index) };
 
-      { menu_link = { text="Documentation"; href=href_prefix^"doc/index.html" };
+      { menu_link = { text="Documentation"; href="doc/index.html" };
         menu_item = Submenu doc_menu; };
 
-      { menu_link = { text="About"; href=href_prefix^"about.html" };
+      { menu_link = { text="About"; href="about.html" };
         menu_item = Internal (0, about_page) };
 
     ] @ package_links)
@@ -192,23 +186,23 @@ let make_website repo_info =
 
 (* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)
-let website_of_cwd href_prefix =
+let website_of_cwd () =
   Printf.printf "=== Repository: current working directory ===\n%!";
-  make_website (O2wRepository.of_path ~href_prefix (OpamFilename.cwd ()))
+  make_website (O2wRepository.of_path (OpamFilename.cwd ()))
 
 (* Generate a website from the given directory, assuming that it's an OPAM
    repository *)
-let website_of_path href_prefix dirname =
+let website_of_path dirname =
   let dirname = OpamFilename.Dir.of_string dirname in
   Printf.printf "=== Repository: %s ===\n%!" (OpamFilename.Dir.to_string dirname);
-  make_website (O2wRepository.of_path ~href_prefix dirname)
+  make_website (O2wRepository.of_path dirname)
 
 (* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
-let website_of_opam href_prefix repo_name =
+let website_of_opam repo_name =
   Printf.printf "=== Repository: %s [opam] ===\n%!" repo_name;
   let load_repo r =
-    try O2wRepository.of_opam ~href_prefix (OpamRepositoryName.of_string r)
+    try O2wRepository.of_opam (OpamRepositoryName.of_string r)
     with Not_found -> raise (Unknown_repository r)
   in
   try make_website (load_repo repo_name)
@@ -242,6 +236,12 @@ let specs = [
    "Specify the prefix hyper-link (default is the contents of [--output])");
 ]
 
+let normalize d =
+  if d.[String.length d - 1] <> '/' then
+    d ^ "/"
+  else
+    d
+
 (* Main *)
 let () =
   (* Anonymous arguments are interpreted as directories where to find
@@ -255,13 +255,17 @@ let () =
     user_options.out_dir <- Sys.getcwd ();
   if user_options.href_prefix = "" then
     user_options.href_prefix <- user_options.out_dir;
+
+  user_options.href_prefix <- normalize user_options.href_prefix;
+  user_options.out_dir <- normalize user_options.out_dir;
+
   if List.length user_options.operations = 0 then
     (* If the arguments didn't trigger any operation, try to interpret the
        current directory as a repository and make the website out of it *)
-    website_of_cwd user_options.href_prefix
+    website_of_cwd ()
   else
     let exec_operation = function
-      | Website_of_path p -> website_of_path user_options.href_prefix p
-      | Website_of_opam r -> website_of_opam user_options.href_prefix r
+      | Website_of_path p -> website_of_path p
+      | Website_of_opam r -> website_of_opam r
     in
     List.iter exec_operation user_options.operations

@@ -32,6 +32,7 @@ val sortby_links:
 
 (** Returns a HTML list of the packages in the given repository *)
 val to_html:
+  href_prefix:string ->
   sortby_links:(active:string -> Cow.Html.t list) ->
   popularity:int64 name_map ->
   active:string ->
@@ -39,7 +40,7 @@ val to_html:
   repository_info -> Cow.Html.t
 
 (** Load a repository from the local OPAM installation *)
-val of_opam: href_prefix:string -> repository_name -> repository_info
+val of_opam: repository_name -> repository_info
 
 (** Load a repository from a directory *)
-val of_path: href_prefix:string -> dirname -> repository_info
+val of_path: dirname -> repository_info

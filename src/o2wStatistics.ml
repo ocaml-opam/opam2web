@@ -121,7 +121,7 @@ let entries_of_logfile filter init filename =
     let entries = Readcombinedlog.readlog filename filter in
     List.fold_left (fun acc e -> mk_entry e :: acc) init entries
   ) else (
-    Printf.printf "No web server log file found.\n";
+    OpamGlobals.warning "No access.log provided.";
     init
   )
 

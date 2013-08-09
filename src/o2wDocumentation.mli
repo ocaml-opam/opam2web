@@ -19,4 +19,4 @@ open O2wTypes
 
 (** Generate the HTML corresponding to a documentation page in the
     <content>/doc directory *)
-val to_menu: href_prefix:string -> content_dir:string -> pages:string list -> menu list
+val to_menu: content_dir:string -> pages:string list -> menu list

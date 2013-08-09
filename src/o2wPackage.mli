@@ -30,7 +30,7 @@ val compare_popularity: ?reverse:bool -> int64 name_map ->
   package -> package -> int
 
 (** Return package info *)
-val get_info: href_prefix:string -> dates:float package_map ->
+val get_info: dates:float package_map ->
   repository -> string option -> package -> package_info option
 
 (** Returns a HTML description of the given package info *)
@@ -38,4 +38,4 @@ val to_html: href_prefix:string -> statistics:statistics_set option ->
   repository_info -> package_info -> Cow.Html.t
 
 (** Return the hyper link for a given package *)
-val href: href_prefix:string -> name -> version -> string
+val href: ?href_prefix:string -> name -> version -> string

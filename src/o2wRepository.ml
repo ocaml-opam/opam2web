@@ -50,11 +50,19 @@ let max_packages max_versions =
       OpamPackage.Set.add (OpamPackage.create name version) set
     ) max_versions OpamPackage.Set.empty
 
-let infos ~href_prefix repo dates packages =
-  OpamPackage.Map.fold (fun pkg prefix map ->
-      let info = O2wPackage.get_info ~href_prefix ~dates repo prefix pkg in
+let infos repo dates packages =
+  let n = OpamPackage.Map.cardinal packages in
+  let c = ref 1 in
+  let msg () =
+    Printf.printf "\r++ Building the package infos: %-5d/%d%!" !c n;
+    incr c in
+  let result = OpamPackage.Map.fold (fun pkg prefix map ->
+      msg ();
+      let info = O2wPackage.get_info ~dates repo prefix pkg in
       OpamPackage.Map.add pkg info map
-    ) packages OpamPackage.Map.empty
+    ) packages OpamPackage.Map.empty in
+  Printf.printf "\n%!";
+  result
 
 (* Get the last update timestamp of a package in a given repository *)
 let last_update repo prefix package =
@@ -91,7 +99,7 @@ let reverse_dependencies repo packages =
     OpamPackage.Name.Map.add name names acc
   ) OpamPackage.Name.Map.empty names
 
-let mk_repo_info ~href_prefix repo =
+let mk_repo_info repo =
   let root = repo.repo_root in
   let packages = OpamRepository.packages_with_prefixes repo in
   let packages = remove_base_packages packages in
@@ -100,20 +108,20 @@ let mk_repo_info ~href_prefix repo =
   let max_packages = max_packages max_versions in
   let reverse_deps = reverse_dependencies repo packages in
   let pkgs_dates = dates repo packages in
-  let pkgs_infos = infos ~href_prefix repo pkgs_dates packages in
+  let pkgs_infos = infos repo pkgs_dates packages in
   { root; repo; versions; packages; max_versions; max_packages; reverse_deps;
     pkgs_infos; pkgs_dates }
 
 (* Load a repository from the local OPAM installation *)
-let of_opam ~href_prefix repo_name =
+let of_opam repo_name =
   let t = OpamState.load_state "opam2web" in
   let repo = OpamRepositoryName.Map.find repo_name t.OpamState.Types.repositories in
-  mk_repo_info ~href_prefix repo
+  mk_repo_info repo
 
 (* Load a repository from a directory *)
-let of_path ~href_prefix root =
+let of_path root =
   let repo = OpamRepository.local root in
-  mk_repo_info ~href_prefix repo
+  mk_repo_info repo
 
 let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
   match pkg_info with
@@ -150,7 +158,7 @@ let sortby_links ~href_prefix ~links ~default ~active =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html ~sortby_links ~popularity ~active ~compare_pkg repo_info =
+let to_html ~href_prefix ~sortby_links ~popularity ~active ~compare_pkg repo_info =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
     let packages = OpamPackage.Set.elements repo_info.max_packages in
@@ -175,7 +183,7 @@ let to_html ~sortby_links ~popularity ~active ~compare_pkg repo_info =
           <:html<
             <tr>
               <td title=$str:pkg_download$>
-               <a href=$str:pkg_info.pkg_href$>
+               <a href=$str:href_prefix^pkg_info.pkg_href$>
                  $str: pkg_info.pkg_name$
                </a>
               </td>

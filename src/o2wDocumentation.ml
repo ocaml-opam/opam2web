@@ -45,7 +45,7 @@ let split_filename (file: string): (string * string) =
 
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_menu ~href_prefix ~content_dir ~pages =
+let to_menu ~content_dir ~pages =
 
   let wrap_li ~depth c = <:html<<li>$c$</li>&>> in
 
@@ -66,18 +66,22 @@ let to_menu ~href_prefix ~content_dir ~pages =
 
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
-    let content = OpamFilename.read filename in
-    match kind with
-    | "html" -> Cow.Html.of_string content
-    | "md" ->
-      let md_content = Cow.Markdown_github.of_string content in
-      let html_toc =
-        Cow.Markdown.to_html_toc
-          ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
-      in
-      <:html<
-        <div class="row">
-          <div class="span3">
+    if not (OpamFilename.exists filename) then (
+      OpamGlobals.warning "%s is not available." (OpamFilename.to_string filename);
+      <:html< >>
+    ) else
+      let content = OpamFilename.read filename in
+      match kind with
+      | "html" -> Cow.Html.of_string content
+      | "md" ->
+        let md_content = Cow.Markdown_github.of_string content in
+        let html_toc =
+          Cow.Markdown.to_html_toc
+            ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
+        in
+        <:html<
+          <div class="row">
+            <div class="span3">
           <span> </span>
           <div class="bs-docs-menu"
               data-spy="affix"
@@ -109,7 +113,7 @@ let to_menu ~href_prefix ~content_dir ~pages =
         Printf.sprintf "%s/doc/%s.%s" content_dir title extension
       in
       let source_filename = OpamFilename.of_string source_file in
-      let dest_file = Printf.sprintf "%sdoc/%s.html" href_prefix title in
+      let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
        { text=human_title; href=dest_file }, Internal (1, Cow.Html.nil))
   in
