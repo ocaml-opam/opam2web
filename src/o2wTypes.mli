@@ -43,6 +43,8 @@ type package_info = {
   pkg_href     : string;
   pkg_title    : string;
   pkg_update   : float;
+  pkg_opam     : OpamFile.OPAM.t;
+  pkg_url      : OpamFile.URL.t option;
 }
 
 type statistics = {
@@ -112,8 +114,14 @@ type log_filter = {
   log_custom: log_entry -> bool
 }
 
-type repository = {
-  root: dirname;
-  packages: package_set;
-  prefix: string name_map;
+type repository_info = {
+  root        : dirname;
+  repo        : repository;
+  packages    : string option package_map;
+  versions    : version_set name_map;
+  max_packages: package_set;
+  max_versions: version name_map;
+  reverse_deps: name_set name_map;
+  pkgs_infos  : package_info option package_map;
+  pkgs_dates  : float package_map;
 }

@@ -54,7 +54,6 @@ let create ~title ~header ~body ~footer ~depth =
   let js_html = List.map (fun f ->
       <:html< <script src="$str: prepend_root f$"> </script> >>) js_files
   in
-  let home_href = prepend_root "index.html" in
   <:html<
 <html lang="en">
   <head>
@@ -246,4 +245,3 @@ let generate ~out_dir menu pages =
   in
   List.iter aux menu_pages;
   List.iter aux pages
-

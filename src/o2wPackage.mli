@@ -18,9 +18,6 @@
 open OpamTypes
 open O2wTypes
 
-(** Unify package versions by keeping the max one *)
-val unify_versions: package_set -> package_set
-
 (** Comparison function using string representation of an OpamPackage *)
 val compare_alphanum: package -> package -> int
 
@@ -33,15 +30,9 @@ val compare_popularity: ?reverse:bool -> int64 name_map ->
   package -> package -> int
 
 (** Return package info *)
-val get_info:
-  ?href_prefix:string ->
-  dates:float package_map ->
-  repository -> package -> package_info option
+val get_info: ?href_prefix:string -> dates:float package_map ->
+  repository -> string option -> package -> package_info option
 
 (** Returns a HTML description of the given package info *)
-val to_html:
-  unique_packages:package_set ->
-  reverse_dependencies:name_set name_map ->
-  versions:version_set ->
-  statistics:statistics_set option ->
-  repository -> package_info -> Cow.Html.t
+val to_html: statistics:statistics_set option ->
+  repository_info -> package_info -> Cow.Html.t

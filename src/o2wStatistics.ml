@@ -17,138 +17,116 @@ open O2wTypes
 
 module StringMap = Map.Make (String)
 
-(* Retrieve log entries of an apache access.log file *)
-let entries_of_logfile init filename =
-  Printf.printf "Parsing %s\n%!" filename;
-  let file = OpamFilename.of_string filename in
-  let html_regexp =
-    Re_str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+"
-  in
-  let archive_regexp =
-    Re_str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+"
-  in
-  let update_regexp =
-    Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+"
-  in
+let timestamp_of_entry e =
   let timestamp_regexp =
-    Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
-  in
+    Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
+                   \\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+" in
+  let open Unix in
+  let open Logentry in
+  if Re_str.string_match timestamp_regexp e.date 0 then
+    fst (Unix.mktime {
+        tm_mday = int_of_string (Re_str.matched_group 1 e.date);
+        tm_mon  = O2wMisc.month_of_string (Re_str.matched_group 2 e.date);
+        tm_year = int_of_string (Re_str.matched_group 3 e.date) - 1900;
+        tm_hour = int_of_string (Re_str.matched_group 4 e.date);
+        tm_min  = int_of_string (Re_str.matched_group 5 e.date);
+        tm_sec  = int_of_string (Re_str.matched_group 6 e.date);
+        (* Initial dummy values *)
+        tm_wday  = 0;
+        tm_yday  = 0;
+        tm_isdst = false;
+      })
+  else 0.
+
+let request_of_entry e =
+  let html_regexp =
+    Re_str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
+  let archive_regexp =
+    Re_str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
+  let update_regexp =
+    Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
+  let open Logentry in
+  if Re_str.string_match html_regexp e.request 0 then
+    Html_req (Re_str.matched_group 1 e.request)
+  else if Re_str.string_match archive_regexp e.request 0 then
+    Archive_req (OpamPackage.of_string (Re_str.matched_group 1 e.request))
+  else if Re_str.string_match update_regexp e.request 0 then
+    Update_req
+  else
+    Unknown_req e.request
+
+let referrer_of_entry e =
   let internal_regexp =
-    Re_str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?"
-  in
+    Re_str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?" in
+  let open Logentry in
+  match e.referrer with
+  | "-" -> No_ref
+  | s when Re_str.string_match internal_regexp e.referrer 0 ->
+    Internal_ref (Re_str.matched_group 1 e.referrer)
+  | s -> External_ref s
+
+let client_of_entry e =
   let browser_regexp =
-    Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
-  in
+    Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)" in
   let os_regexp =
-    Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|Android\\|Linux\\|FreeBSD\\)"
-  in
+    Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
+                   Android\\|Linux\\|FreeBSD\\)" in
+  let open Logentry in
+  (* TODO: refine client string parsing (versions, more browsers...)  *)
+  let match_browser =
+    try Re_str.search_forward browser_regexp e.client 0
+    with Not_found -> (-1) in
+  let browser =
+    if match_browser >= 0 then
+      let browser_str =
+        try Re_str.matched_group 1 e.client
+        with Not_found -> "" in
+      match browser_str with
+      | "Chrome" -> Chrome ""
+      | "Firefox" -> Firefox ""
+      | "MSIE" -> Internet_explorer ""
+      | "Safari" -> Safari ""
+      | s -> Unknown_browser s
+    else
+      Unknown_browser "" in
+  let match_os =
+    try Re_str.search_forward os_regexp e.client 0
+    with Not_found -> (-1) in
+  let os =
+    if match_os >= 0 then
+      let os_str =
+        try Re_str.matched_group 1 e.client
+        with Not_found -> "" in
+      match os_str with
+      | "Windows" -> Windows ""
+      | "Macintosh" | "iPad" | "iPhone" -> Mac_osx ""
+      | "Linux" | "FreeBSD" -> Unix ""
+      | s -> Unknown_os s
+    else
+      Unknown_os "" in
+  os, browser
 
-  let mk_entry e =
-    let open Logentry in
-    let request =
-      if Re_str.string_match html_regexp e.request 0 then
-        Html_req (Re_str.matched_group 1 e.request)
-      else if Re_str.string_match archive_regexp e.request 0 then
-        Archive_req (OpamPackage.of_string (Re_str.matched_group 1 e.request))
-      else if Re_str.string_match update_regexp e.request 0 then
-        Update_req
-      else
-        Unknown_req e.request
-    in
+let mk_entry e = {
+  log_request   = request_of_entry e;
+  log_timestamp = timestamp_of_entry e;
+  log_referrer  = referrer_of_entry e;
+  log_client    = client_of_entry e;
+  log_host      = e.Logentry.host;
+}
 
-    let timestamp =
-      let open Unix in
-      if Re_str.string_match timestamp_regexp e.date 0 then
-        fst (Unix.mktime
-               {
-                 tm_mday = int_of_string (Re_str.matched_group 1 e.date);
-                 tm_mon  = O2wMisc.month_of_string (Re_str.matched_group 2 e.date);
-                 tm_year = int_of_string (Re_str.matched_group 3 e.date) - 1900;
-                 tm_hour = int_of_string (Re_str.matched_group 4 e.date);
-                 tm_min  = int_of_string (Re_str.matched_group 5 e.date);
-                 tm_sec  = int_of_string (Re_str.matched_group 6 e.date);
-                 (* Initial dummy values *)
-                 tm_wday  = 0;
-                 tm_yday  = 0;
-                 tm_isdst = false;
-               })
-      else 0.
-    in
-
-    let referrer = match e.referrer with
-      | "-" -> No_ref
-      | s when Re_str.string_match internal_regexp e.referrer 0 ->
-        Internal_ref (Re_str.matched_group 1 e.referrer)
-      | s -> External_ref s
-    in
-
-    let client =
-      (* TODO: refine client string parsing (versions, more browsers...)  *)
-      let match_browser =
-        try Re_str.search_forward browser_regexp e.client 0
-        with Not_found -> (-1)
-      in
-      let browser =
-        if match_browser >= 0 then
-          let browser_str =
-            try Re_str.matched_group 1 e.client
-            with Not_found -> ""
-          in
-          match browser_str with
-          | "Chrome" -> Chrome ""
-          | "Firefox" -> Firefox ""
-          | "MSIE" -> Internet_explorer ""
-          | "Safari" -> Safari ""
-          | s -> Unknown_browser s
-        else
-          Unknown_browser ""
-      in
-      let match_os =
-        try Re_str.search_forward os_regexp e.client 0
-        with Not_found -> (-1)
-      in
-      let os =
-        if match_os >= 0 then
-          let os_str =
-            try Re_str.matched_group 1 e.client
-            with Not_found -> ""
-          in
-          match os_str with
-          | "Windows" -> Windows ""
-          | "Macintosh" | "iPad" | "iPhone" -> Mac_osx ""
-          | "Linux" | "FreeBSD" -> Unix ""
-          | s -> Unknown_os s
-        else
-          Unknown_os ""
-      in
-      os, browser
-    in
-
-    {
-      log_timestamp = timestamp;
-      log_host = e.host;
-      log_request = request;
-      log_referrer = referrer;
-      log_client = client;
-    }
-  in
-
-  let parse_log () =
-    let log_entries: Logentry.entry_t list =
-      Readcombinedlog.readlog filename (fun _ -> true)
-    in
-    List.fold_left (fun acc e -> mk_entry e :: acc) init log_entries
-  in
-  if OpamFilename.exists file then (
+(* Retrieve log entries of an apache access.log file *)
+let entries_of_logfile filter init filename =
+  if Sys.file_exists filename then (
     Printf.printf "Parsing web server log file '%s'...\n" filename;
-    parse_log ()
+    let entries = Readcombinedlog.readlog filename filter in
+    List.fold_left (fun acc e -> mk_entry e :: acc) init entries
   ) else (
     Printf.printf "No web server log file found.\n";
     init
   )
 
-let entries_of_logfiles logfiles =
-  List.fold_left entries_of_logfile [] logfiles
+let entries_of_logfiles filter logfiles =
+  List.fold_left (entries_of_logfile filter) [] logfiles
 
 (* Sum the values of a (int64 StringMap), possibly reducing the value to one
    unique count per string key if the 'unique' optional argument is true *)
@@ -191,7 +169,7 @@ let count_updates ?(log_filter = O2wGlobals.default_log_filter) entries =
   sum_strmap ~unique:log_filter.log_per_ip count_map
 
 (* Count the number of downloads for each OPAM archive *)
-let count_archive_downloads ?(log_filter = O2wGlobals.default_log_filter) entries =
+let count_archive_downloads log_filter entries =
   let rec aux stats = function
     | []       -> stats
     | hd :: tl ->
@@ -219,12 +197,9 @@ let basic_stats_of_entries log_filter entries =
   Printf.printf "Basic statistics (%s): %!" log_filter.filter_name;
   let entries = apply_log_filter log_filter entries in
   Printf.printf "%d entries\n%!" (List.length entries);
-  let pkg_stats = count_archive_downloads ~log_filter entries in
+  let pkg_stats = count_archive_downloads log_filter entries in
   let global_stats =
-    OpamPackage.Map.fold
-      (fun _ n acc -> Int64.add n acc)
-      pkg_stats Int64.zero
-  in
+    OpamPackage.Map.fold (fun _ n acc -> Int64.add n acc) pkg_stats Int64.zero in
   let update_stats = count_updates ~log_filter entries in
   let users_stats = count_users entries in
   {
@@ -234,18 +209,32 @@ let basic_stats_of_entries log_filter entries =
     users_stats;
   }
 
-(* Read log entries from log files and generate basic statistics *)
-let basic_stats_of_logfiles log_filter logfiles =
-  let entries = entries_of_logfiles logfiles in
-  match entries with
-  | []           -> None
-  | some_entries -> Some (basic_stats_of_entries log_filter some_entries)
+let add_statistics s1 s2 = {
+  pkg_stats    = OpamPackage.Map.union Int64.add s1.pkg_stats s2.pkg_stats;
+  global_stats = Int64.add s1.global_stats s2.global_stats;
+  update_stats = Int64.add s1.update_stats s2.update_stats;
+  users_stats  = Int64.add s1.users_stats s2.users_stats;
+}
 
-let basic_statistics_set logfiles =
-  let entries = entries_of_logfiles logfiles in
-  match entries with
-  | []           -> None
-  | some_entries ->
+let add_statistics_set s1 s2 = {
+  alltime_stats = add_statistics s1.alltime_stats s2.alltime_stats;
+  day_stats     = add_statistics s1.day_stats s2.day_stats;
+  week_stats    = add_statistics s1.week_stats s2.week_stats;
+  month_stats   = add_statistics s1.month_stats s2.month_stats;
+}
+
+let basic_statistics_set cache logfiles =
+  let filter e =
+    match cache with
+    | None       -> true
+    | Some (t,_) -> timestamp_of_entry e > t in
+  match entries_of_logfiles filter logfiles with
+  | []           ->
+    begin match cache with
+      | None       -> None
+      | Some (_,s) -> Some s
+    end
+  | entries ->
     let now = O2wGlobals.default_log_filter.log_end_time in
     let one_day = 3600. *. 24. in
     let one_day_ago = now -. one_day in
@@ -253,32 +242,36 @@ let basic_statistics_set logfiles =
     let one_month_ago = now -. (one_day *. 30.) in
 
     let alltime_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter with filter_name = "alltime" }
-      some_entries
-    in
+      { O2wGlobals.default_log_filter
+        with filter_name = "alltime" }
+      entries in
     let day_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter with log_start_time = one_day_ago; filter_name = "day" }
-      some_entries
-    in
+      { O2wGlobals.default_log_filter
+        with log_start_time = one_day_ago; filter_name = "day" }
+      entries in
     let week_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter with log_start_time = one_week_ago; filter_name = "week" }
-      some_entries
-    in
+      { O2wGlobals.default_log_filter
+        with log_start_time = one_week_ago; filter_name = "week" }
+      entries in
     let month_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter with log_start_time = one_month_ago; filter_name = "month" }
-      some_entries
-    in
+      { O2wGlobals.default_log_filter
+        with log_start_time = one_month_ago; filter_name = "month" }
+      entries in
 
-    Some {
-      day_stats = day_stats;
-      week_stats = week_stats;
-      month_stats = month_stats;
+    let stats = {
+      day_stats     = day_stats;
+      week_stats    = week_stats;
+      month_stats   = month_stats;
       alltime_stats = alltime_stats;
-    }
+    } in
+
+    match cache with
+    | Some (_,s) -> Some (add_statistics_set s stats)
+    | None       -> Some stats
 
 let aggregate_package_popularity pkg_stats packages =
   OpamPackage.Map.fold (fun pkg pkg_count acc ->
-    if not (OpamPackage.Set.mem pkg packages) then
+    if not (OpamPackage.Map.mem pkg packages) then
       (* This can happen when some packages are deleted *)
       acc
     else (
@@ -309,34 +302,6 @@ let top_packages ?ntop ?(reverse = true) stats packages =
   | None      -> sorted_pkg
   | Some nmax -> O2wMisc.first_n nmax sorted_pkg
 
-(* Retrieve the 'ntop' number of maintainers with the higher (or lower) number
-   of associated packages *)
-let top_maintainers ?ntop ?(reverse = true) repository =
-  let prefix, packages = OpamRepository.packages repository in
-  let packages = OpamPackage.to_map packages in
-  let all_maintainers =
-    OpamPackage.Name.Map.fold (fun name versions acc ->
-      OpamPackage.Version.Set.fold
-        (fun version acc ->
-          let pkg = OpamPackage.create name version in
-          let prefix = OpamRepository.find_prefix prefix pkg in
-          let opam_file = OpamFile.OPAM.read (OpamPath.Repository.opam repository prefix pkg) in
-          let maintainer = OpamFile.OPAM.maintainer opam_file in
-          if OpamMisc.StringMap.mem maintainer acc then
-            let count = OpamMisc.StringMap.find maintainer acc in
-            OpamMisc.StringMap.add maintainer (count+1) (OpamMisc.StringMap.remove maintainer acc)
-          else
-            OpamMisc.StringMap.add maintainer 1 acc)
-        versions acc
-    ) packages OpamMisc.StringMap.empty in
-  let compare_maintainers (_,n1) (_,n2) = n1 - n2 in
-  let sorted_maintainers =
-    List.sort compare_maintainers (OpamMisc.StringMap.bindings all_maintainers)
-  in
-  match ntop with
-  | None      -> sorted_maintainers
-  | Some nmax -> O2wMisc.first_n nmax sorted_maintainers
-
 let to_csv popularity file =
   let oc = open_out file in
   Printf.fprintf oc "Name, Version, Downloads\n";
@@ -364,4 +329,3 @@ let to_json popularity file =
   ) popularity;
   Printf.fprintf oc "\n]";
   close_out oc
-

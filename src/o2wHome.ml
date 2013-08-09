@@ -16,8 +16,7 @@
 open O2wTypes
 
 (* OPAM website homepage *)
-let to_html ~statistics ~dates ~popularity repository =
-  let packages = repository.packages in
+let to_html ~statistics ~popularity repo_info =
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
@@ -34,9 +33,11 @@ let to_html ~statistics ~dates ~popularity repository =
       >>
     in
     let dates_fn pkg =
-      try OpamPackage.Map.find pkg dates
+      try OpamPackage.Map.find pkg repo_info.pkgs_dates
       with Not_found -> 0. in
-    let last_updates = O2wStatistics.top_packages ~reverse:true ~ntop:10 dates_fn packages in
+    let last_updates =
+      O2wStatistics.top_packages ~reverse:true ~ntop:10
+        dates_fn repo_info.max_packages in
     let updated_items = List.map mk_update_li last_updates in
     <:html<
       <div class="span4">
@@ -59,46 +60,6 @@ let to_html ~statistics ~dates ~popularity repository =
     >>
   in
 
-(*  let maintainers_top10 =
-    let mk_top_li (name, npkg) =
-      let npkg_str = string_of_int npkg in
-      <:html<
-        <tr>
-          <td>$str: name$</td>
-          <td>$str: npkg_str$</td>
-        </tr>
-      >>
-    in
-    let top10_maintainers = Statistics.top_maintainers ~ntop: 10 repository in
-    (* If a name is present, keep it and remove e-mail address, e.g.
-       John Doe <john.doe@foobar.com> -> John Doe
-       john.doe@foobar.com -> john.doe@foobar.com
-     *)
-    let truncate_email (full_name, n) =
-      let blank_index =
-        try
-          String.rindex full_name ' '
-        with
-          Not_found -> String.length full_name
-      in
-      String.sub full_name 0 blank_index, n
-    in
-    let top10_names = List.map truncate_email top10_maintainers in
-    let top10_items = List.map mk_top_li top10_names in
-    <:html<
-      <div class="span3">
-        <table class="table">
-          <thead>
-            <tr><th colspan="2">Most active maintainers</th></tr>
-          </thead>
-          <tbody>
-            $list: top10_items$
-          </tbody>
-        </table>
-      </div>
-    >>
-  in
-*)
   let nb_packages, packages_top10 = match statistics with
     | None      -> 0, <:html< >>
     | Some sset ->
@@ -118,7 +79,7 @@ let to_html ~statistics ~dates ~popularity repository =
       let popularity_fn pkg =
         try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity
         with Not_found -> 0L in
-      let packages = O2wPackage.unify_versions packages in
+      let packages = repo_info.max_packages in
       let nb_packages = OpamPackage.Set.cardinal packages in
       let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
       let top10_items = List.map mk_top_li top10_pkgs in

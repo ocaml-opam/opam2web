@@ -30,6 +30,7 @@ type options = {
   mutable content_dir: string;
   mutable logfiles: string list;
   mutable operations: opam2web_operation list;
+  mutable stats_cache: string;
 }
 
 let user_options: options = {
@@ -38,6 +39,7 @@ let user_options: options = {
   content_dir = "content";
   logfiles = [];
   operations = [];
+  stats_cache = "stats.dat";
 }
 
 let set_out_dir (dir: string) =
@@ -58,6 +60,9 @@ let add_website_path (path: string) =
 let add_website_opam (repo: string) =
   user_options.operations <- Website_of_opam repo :: user_options.operations
 
+let set_cache_stats (file: string) =
+  user_options.stats_cache <- file
+
 let include_files (path: string) files_path : unit =
   let subpathes = ["doc"; "pkg"] in
   let pathes =
@@ -77,21 +82,34 @@ let include_files (path: string) files_path : unit =
       else
         (Printf.printf "Directory '%s' already exists\n%!" p))
     pathes
-  (* ; *)
-  (* Include static content *)
-  (* FIXME: broken, 'copy' function fails *)
-  (* if String.length files_path > 0 then *)
-  (*   let dir = Types.Dirname.of_string path in *)
-  (*   let files_dir = Types.Dirname.of_string files_path in *)
-  (*   Types.Dirname.copy files_dir dir *)
+
+let load_statistic_sets cache : (float * statistics_set) option =
+  if Sys.file_exists cache then
+    let ic = open_in cache in
+    let date, stats = Marshal.from_channel ic in
+    close_in ic;
+    Some (date, stats)
+  else
+    None
+
+let save_statistic_set cache (stats:statistics_set option) =
+  match stats with
+  | None   -> ()
+  | Some s ->
+    let timestamp = Unix.gettimeofday () in
+    let oc = open_out cache in
+    Marshal.to_channel oc (timestamp, stats) [Marshal.No_sharing];
+    close_out oc
 
 (* Generate a whole static website using the given repository *)
-let make_website repository =
+let make_website repo_info =
   if List.length user_options.logfiles = 0 then
     user_options.logfiles <- ["access.log"];
-  let statistics = O2wStatistics.basic_statistics_set user_options.logfiles in
-  let dates = O2wRepository.get_dated_packages repository in
-  let pages = O2wRepository.to_pages ~statistics ~dates repository in
+  let stats_cache = load_statistic_sets user_options.stats_cache in
+  let statistics =
+    O2wStatistics.basic_statistics_set stats_cache user_options.logfiles in
+  save_statistic_set user_options.stats_cache statistics;
+  let pages = O2wRepository.to_pages ~statistics repo_info in
   let menu_of_doc = O2wDocumentation.to_menu ~content_dir:user_options.content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
@@ -101,14 +119,14 @@ let make_website repository =
   let popularity =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
-    | Some s ->
-      O2wStatistics.aggregate_package_popularity s.alltime_stats.pkg_stats repository.packages in
-  let to_html = O2wRepository.to_html ~sortby_links ~dates ~popularity in
-  let criteria_links =
-    let compare_pkg = O2wPackage.compare_date ~reverse:true dates in
+    | Some s -> O2wStatistics.aggregate_package_popularity
+                  s.alltime_stats.pkg_stats repo_info.packages in
+  let to_html = O2wRepository.to_html ~sortby_links ~popularity in
+  let package_links =
+    let compare_pkg = O2wPackage.compare_date ~reverse:true repo_info.pkgs_dates in
     let date = {
       menu_link = { text="Packages"; href="pkg/index-date.html" };
-      menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg repository);
+      menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg repo_info);
     } in
     match statistics with
     | None -> [ date ]
@@ -116,7 +134,7 @@ let make_website repository =
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
         menu_link = { text="Packages"; href="pkg/index-popularity.html" };
-        menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg repository);
+        menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg repo_info);
       } in
       [ popularity; date ]
   in
@@ -132,22 +150,25 @@ let make_website repository =
       </div>
     >>
   in
+  let home_index = O2wHome.to_html ~statistics ~popularity repo_info in
+  let package_index =
+    to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repo_info in
+  let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   O2wTemplate.generate ~out_dir: user_options.out_dir
     ([
       { menu_link = { text="Home"; href="index.html" };
-        menu_item = Internal
-          (0, O2wHome.to_html ~statistics ~dates ~popularity repository ) };
+        menu_item = Internal (0, home_index) };
 
       { menu_link = { text="Packages"; href="pkg/index.html" };
-        menu_item = Internal (1, to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repository) };
+        menu_item = Internal (1, package_index) };
 
       { menu_link = { text="Documentation"; href="doc/index.html" };
-        menu_item = Submenu (menu_of_doc ~pages:O2wGlobals.documentation_pages); };
+        menu_item = Submenu doc_menu; };
 
       { menu_link = { text="About"; href="about.html" };
         menu_item = Internal (0, about_page) };
 
-     ] @ criteria_links)
+    ] @ package_links)
     pages;
   match statistics with
   | None   -> ()
@@ -155,7 +176,6 @@ let make_website repository =
     let popularity = s.alltime_stats.pkg_stats in
     O2wStatistics.to_csv popularity "stats.csv";
     O2wStatistics.to_json popularity "stats.json"
-
 
 (* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)
@@ -225,4 +245,3 @@ let () =
       | Website_of_opam r -> website_of_opam r
     in
     List.iter exec_operation user_options.operations
-

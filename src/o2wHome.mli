@@ -19,8 +19,5 @@ open OpamTypes
 open O2wTypes
 
 (** Generate the homepage *)
-val to_html:
-  statistics:statistics_set option ->
-  dates:float package_map ->
-  popularity:int64 name_map ->
-  repository -> Cow.Html.t
+val to_html: statistics:statistics_set option -> popularity:int64 name_map ->
+  repository_info -> Cow.Html.t
