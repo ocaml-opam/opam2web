@@ -79,11 +79,23 @@ let include_files (path: string) files_path : unit =
   (* Check if output directory exists, create it if it doesn't *)
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
-let load_statistic_sets cache : (float * statistics_set) option =
+type cache = C of (float * statistics_set)
+
+let load_statistic_sets cache =
   if Sys.file_exists cache then
     try
       let ic = open_in cache in
-      let date, stats = Marshal.from_channel ic in
+      let header = String.create Marshal.header_size in
+      really_input ic header 0 Marshal.header_size;
+      let expected_size = Marshal.total_size header 0 in
+      let current_size = in_channel_length ic in
+      if not (expected_size = current_size) then (
+        close_in ic;
+        OpamGlobals.error "The cache is corrupted, removing it.";
+        Unix.unlink cache;
+      );
+      seek_in ic 0;
+      let C (date, stats) = Marshal.from_channel ic in
       close_in ic;
       Some (date, stats)
     with _ -> None
@@ -94,9 +106,9 @@ let save_statistic_set cache (stats:statistics_set option) =
   match stats with
   | None   -> ()
   | Some s ->
-    let timestamp = Unix.gettimeofday () in
+    let timestamp : float = Unix.gettimeofday () in
     let oc = open_out cache in
-    Marshal.to_channel oc (timestamp, stats) [Marshal.No_sharing];
+    Marshal.to_channel oc (C (timestamp, s)) [Marshal.No_sharing];
     close_out oc
 
 (* Generate a whole static website using the given repository *)
