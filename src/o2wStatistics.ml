@@ -17,10 +17,11 @@ open O2wTypes
 
 module StringMap = Map.Make (String)
 
+let timestamp_regexp =
+  Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
+                 \\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
+
 let timestamp_of_entry e =
-  let timestamp_regexp =
-    Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
-                   \\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+" in
   let open Unix in
   let open Logentry in
   if Re_str.string_match timestamp_regexp e.date 0 then
@@ -55,9 +56,10 @@ let request_of_entry e =
   else
     Unknown_req e.request
 
+let internal_regexp =
+  Re_str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?"
+
 let referrer_of_entry e =
-  let internal_regexp =
-    Re_str.regexp "http://opam.ocamlpro.com/\\(.*\\)/?" in
   let open Logentry in
   match e.referrer with
   | "-" -> No_ref
@@ -65,12 +67,13 @@ let referrer_of_entry e =
     Internal_ref (Re_str.matched_group 1 e.referrer)
   | s -> External_ref s
 
+let browser_regexp =
+  Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
+let os_regexp =
+  Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
+                 Android\\|Linux\\|FreeBSD\\)"
+
 let client_of_entry e =
-  let browser_regexp =
-    Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)" in
-  let os_regexp =
-    Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
-                   Android\\|Linux\\|FreeBSD\\)" in
   let open Logentry in
   (* TODO: refine client string parsing (versions, more browsers...)  *)
   let match_browser =
@@ -123,7 +126,7 @@ let entries_of_logfile filter init filename =
     let c = ref 1 in
     Printf.printf "+++ %s contains %d lines.\n%!" filename n;
     let result = List.fold_left (fun acc e ->
-        Printf.printf "\rBuilding entries [%-8d/%d]%!" !c n; incr c;
+        Printf.printf "\rBuilding entries [%8d/%d]%!" !c n; incr c;
         mk_entry e :: acc
       ) init entries in
     Printf.printf "\n%!";
