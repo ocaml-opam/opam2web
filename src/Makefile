@@ -3,28 +3,33 @@
 PREFIX="/usr"
 WWWDIR="www"
 
-NATIVE=opam2web
+OCAMLBUILD=ocamlbuild -classic-display
+PACKAGES=-pkgs cow,cow.syntax,opam.client
+SYNTAX=-tags "syntax(camlp4o)"
+FLAGS=-use-ocamlfind -cflags "-bin-annot" -no-links
+INCLUDES=-I apalog
+TARGET=opam2web
+
 JS_OF_OCAML=js_of_ocaml
-OCAMLFLAGS=-package js_of_ocaml.syntax -syntax camlp4o
+JSFLAGS=-package js_of_ocaml.syntax,js_of_ocaml -syntax camlp4o
 
-all: $(NATIVE).native search
+all: $(TARGET).native search
 
-$(NATIVE).native:
-	./cmd config
-	ocamlbuild -classic-display $@
+$(TARGET).native:
+	$(OCAMLBUILD) $(INCLUDES) $(FLAGS) $(SYNTAX) $(PACKAGES) $@
 
 search: search.ml
-	ocamlfind ocamlc -linkpkg -o $@.byte $(OCAMLFLAGS) -package js_of_ocaml $<
+	ocamlfind ocamlc -linkpkg -o $@.byte $(JSFLAGS) $<
 	mv $@.cmo $@.cmi _build
 	$(JS_OF_OCAML) $@.byte
 
-run: $(NATIVE).native
+run: $(TARGET).native
 	_build/$< -c ../content -o $(WWWDIR) -l default
 
-install: $(NATIVE).native
-	install _build/$< $(PREFIX)/bin/$(NATIVE)
+install: $(TARGET).native
+	install _build/$< $(PREFIX)/bin/$(TARGET)
 
 clean:
 	ocamlbuild -clean
 	rm -rf *.cmo *.cmi *.cmt search search.js search.byte
-	rm -rf _config/ $(WWWDIR)
+	rm -rf $(WWWDIR)

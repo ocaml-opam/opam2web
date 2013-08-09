@@ -1,2 +1,0 @@
-DEPS="str unix opam cow"
-SYNTAX_DEPS="str dyntype dyntype.syntax cow.syntax"
