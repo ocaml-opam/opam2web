@@ -121,7 +121,7 @@ let entries_of_logfile filter init filename =
     let entries = Readcombinedlog.readlog filename filter in
     let n = List.length entries in
     let c = ref 1 in
-    Printf.printf "+++ %s contains %d lines.\n" filename n;
+    Printf.printf "+++ %s contains %d lines.\n%!" filename n;
     let result = List.fold_left (fun acc e ->
         Printf.printf "\rBuilding entries [%-8d/%d]%!" !c n; incr c;
         mk_entry e :: acc
