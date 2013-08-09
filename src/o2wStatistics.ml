@@ -119,10 +119,15 @@ let entries_of_logfile filter init filename =
   if Sys.file_exists filename then (
     Printf.printf "+++ Parsing the file: %s.\n%!" filename;
     let entries = Readcombinedlog.readlog filename filter in
-    Printf.printf
-      "+++ %s contains %d lines. Building the corresponding entries\n%!"
-      filename (List.length entries);
-    List.fold_left (fun acc e -> mk_entry e :: acc) init entries
+    let n = List.length entries in
+    let c = ref 1 in
+    Printf.printf "+++ %s contains %d lines.\n" filename n;
+    let result = List.fold_left (fun acc e ->
+        Printf.printf "\rBuilding entries [%-8d/%d]%!" !c n; incr c;
+        mk_entry e :: acc
+      ) init entries in
+    Printf.printf "\n%!";
+    result
   ) else (
     OpamGlobals.warning "No access.log provided.";
     init
