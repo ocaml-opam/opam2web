@@ -16,12 +16,13 @@
 open O2wTypes
 
 (* OPAM website homepage *)
-let to_html ~statistics ~popularity repo_info =
+let to_html ~href_prefix ~statistics ~popularity repo_info =
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
       let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-      let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
+      let pkg_href =
+        O2wPackage.href ~href_prefix (OpamPackage.name pkg) (OpamPackage.version pkg) in
       let pkg_date = O2wMisc.string_of_timestamp ~short:true update_tm in
       <:html<
         <tr>
@@ -49,7 +50,7 @@ let to_html ~statistics ~popularity repo_info =
             $list: updated_items$
             <tr>
               <td class="btn-more" colspan="2">
-                <a href="pkg/index-date.html">
+                <a href="$str:href_prefix$pkg/index-date.html">
                   <button class="btn btn-small">all packages</button>
                 </a>
               </td>
@@ -64,9 +65,10 @@ let to_html ~statistics ~popularity repo_info =
     | None      -> 0, <:html< >>
     | Some sset ->
       let mk_top_li (pkg, pkg_count) =
-        let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
-        let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-        let pkg_href = Printf.sprintf "pkg/%s.%s.html" pkg_name pkg_version in
+        let name = OpamPackage.name pkg in
+        let version = OpamPackage.version pkg in
+        let pkg_name = OpamPackage.Name.to_string name in
+        let pkg_href = O2wPackage.href ~href_prefix name version in
         <:html<
           <tr>
             <td>
@@ -94,7 +96,7 @@ let to_html ~statistics ~popularity repo_info =
               $list: top10_items$
               <tr>
                 <td class="btn-more" colspan="2">
-                  <a href="pkg/index-popularity.html">
+                  <a href="$str:href_prefix$pkg/index-popularity.html">
                    <button class="btn btn-small" type="button">all packages</button>
                   </a>
                 </td>
@@ -173,11 +175,11 @@ opam upgrade         # Upgrade the installed packages to their latest version
         <div class="text-right">
         <div class="btn-group">
           <a class="btn btn-large"
-              href="doc/Quick_Install.html">
+              href="$str:href_prefix$doc/Quick_Install.html">
             Download and install OPAM »
           </a>
           <a class="btn btn-large"
-              href="doc/Basic_Usage.html">
+              href="$str:href_prefix$doc/Basic_Usage.html">
             How to use OPAM »
           </a>
         </div>
@@ -212,14 +214,14 @@ opam upgrade         # Upgrade the installed packages to their latest version
 
         <div class="span2 text-right">
           <h2>Tutorials</h2>
-          <p><a href="doc/About.html" title="Getting started with OPAM">Getting started</a></p>
-          <p><a href="doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
-          <p><a href="doc/Packaging.html" title="Creating OPAM packages">Creating Packages</a></p>
+          <p><a href="$str:href_prefix$doc/About.html" title="Getting started with OPAM">Getting started</a></p>
+          <p><a href="$str:href_prefix$doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
+          <p><a href="$str:href_prefix$doc/Packaging.html" title="Creating OPAM packages">Creating Packages</a></p>
           <p><a href="https://github.com/OCamlPro/opam/raw/master/doc/dev-manual/dev-manual.pdf" title="Developer Manual for OPAM">Developer Manual</a></p>
         </div>
 <!--
         <div class="span2">
-          <img src="ext/img/camel_rider.png" alt="Camel Rider" />
+          <img src="$str:href_prefix$ext/img/camel_rider.png" alt="Camel Rider" />
         </div>
 -->
       </div>

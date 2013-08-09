@@ -45,7 +45,7 @@ let split_filename (file: string): (string * string) =
 
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_menu ~content_dir ~pages =
+let to_menu ~href_prefix ~content_dir ~pages =
 
   let wrap_li ~depth c = <:html<<li>$c$</li>&>> in
 
@@ -70,27 +70,27 @@ let to_menu ~content_dir ~pages =
     match kind with
     | "html" -> Cow.Html.of_string content
     | "md" ->
-        let md_content = Cow.Markdown_github.of_string content in
-        let html_toc =
-          Cow.Markdown.to_html_toc
-              ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
-        in
-        <:html<
-          <div class="row">
-            <div class="span3">
-            <span> </span>
-            <div class="bs-docs-menu"
-                data-spy="affix"
-                data-offset-top="0" data-offset-bottom="140">
-              $doc_menu$
-              $html_toc$
-            </div>
-            </div>
-            <div class="span9">
-            $Cow.Markdown.to_html md_content$
-            </div>
+      let md_content = Cow.Markdown_github.of_string content in
+      let html_toc =
+        Cow.Markdown.to_html_toc
+          ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
+      in
+      <:html<
+        <div class="row">
+          <div class="span3">
+          <span> </span>
+          <div class="bs-docs-menu"
+              data-spy="affix"
+              data-offset-top="0" data-offset-bottom="140">
+            $doc_menu$
+            $html_toc$
           </div>
-        >>
+          </div>
+          <div class="span9">
+          $Cow.Markdown.to_html md_content$
+          </div>
+        </div>
+      >>
     | _ -> <:html< >>
   in
 
@@ -109,9 +109,9 @@ let to_menu ~content_dir ~pages =
         Printf.sprintf "%s/doc/%s.%s" content_dir title extension
       in
       let source_filename = OpamFilename.of_string source_file in
-      let dest_file = Printf.sprintf "%s.html" title in
+      let dest_file = Printf.sprintf "%sdoc/%s.html" href_prefix title in
       (source_filename, extension,
-          { text=human_title; href=dest_file }, Internal (1, Cow.Html.nil))
+       { text=human_title; href=dest_file }, Internal (1, Cow.Html.nil))
   in
 
   let menu_pages = List.map aux_menu pages in
@@ -159,4 +159,3 @@ let to_menu ~content_dir ~pages =
   in
 
   List.map aux_page menu_pages
-

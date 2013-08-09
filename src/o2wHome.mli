@@ -19,5 +19,6 @@ open OpamTypes
 open O2wTypes
 
 (** Generate the homepage *)
-val to_html: statistics:statistics_set option -> popularity:int64 name_map ->
+val to_html: href_prefix:string ->
+  statistics:statistics_set option -> popularity:int64 name_map ->
   repository_info -> Cow.Html.t

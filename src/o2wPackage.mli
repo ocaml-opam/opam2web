@@ -34,5 +34,8 @@ val get_info: href_prefix:string -> dates:float package_map ->
   repository -> string option -> package -> package_info option
 
 (** Returns a HTML description of the given package info *)
-val to_html: statistics:statistics_set option ->
+val to_html: href_prefix:string -> statistics:statistics_set option ->
   repository_info -> package_info -> Cow.Html.t
+
+(** Return the hyper link for a given package *)
+val href: href_prefix:string -> name -> version -> string

@@ -115,7 +115,7 @@ let of_path ~href_prefix root =
   let repo = OpamRepository.local root in
   mk_repo_info ~href_prefix repo
 
-let to_page ~statistics repo_info pkg pkg_info acc =
+let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
   match pkg_info with
   | None  ->
     Printf.printf "Skipping %s\n%!" (OpamPackage.to_string pkg);
@@ -124,20 +124,21 @@ let to_page ~statistics repo_info pkg pkg_info acc =
     let page = {
       page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
       page_depth    = 1;
-      page_contents = O2wPackage.to_html ~statistics repo_info pkg_info
+      page_contents = O2wPackage.to_html ~href_prefix~statistics repo_info pkg_info
     } in
     page :: acc
 
 (* Create a list of package pages to generate for a repository *)
-let to_pages ~statistics repo_info =
-  OpamPackage.Map.fold (to_page ~statistics repo_info) repo_info.pkgs_infos []
+let to_pages ~href_prefix ~statistics repo_info =
+  OpamPackage.Map.fold
+    (to_page ~href_prefix ~statistics repo_info) repo_info.pkgs_infos []
 
-let sortby_links ~links ~default ~active =
+let sortby_links ~href_prefix ~links ~default ~active =
   let mk_item title =
     let href_str =
       if title = default
-      then "index.html"
-      else Printf.sprintf "index-%s.html" (String.lowercase title)
+      then Printf.sprintf "%spkg/index.html" href_prefix
+      else Printf.sprintf "%spkg/index-%s.html" href_prefix (String.lowercase title)
     in
     let ahref =
       <:html< <a href="$str: href_str$">sort by $str: title$</a> >>

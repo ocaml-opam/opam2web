@@ -43,11 +43,15 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
     compare d1 d2
   | _ -> compare_alphanum p1 p2
 
+let href ~href_prefix name version =
+  Printf.sprintf "%spkg/%s.%s.html" href_prefix
+    (OpamPackage.Name.to_string name) (OpamPackage.Version.to_string version)
+
 (* Build a record representing information about a package *)
 let get_info ~href_prefix ~dates repo prefix pkg =
   let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
   let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-  let pkg_href = Printf.sprintf "%s/pkg/%s.%s.html" href_prefix pkg_name pkg_version in
+  let pkg_href = href ~href_prefix (OpamPackage.name pkg) (OpamPackage.version pkg) in
   let descr = OpamFile.Descr.safe_read (OpamPath.Repository.descr repo prefix pkg) in
   let pkg_synopsis = OpamFile.Descr.synopsis descr in
   let pkg_descr_markdown = OpamFile.Descr.full descr in
@@ -88,7 +92,7 @@ let get_info ~href_prefix ~dates repo prefix pkg =
     None
 
 (* Returns a HTML description of the given package *)
-let to_html ~statistics repo_info pkg_info =
+let to_html ~href_prefix ~statistics repo_info pkg_info =
   let name = OpamPackage.Name.of_string pkg_info.pkg_name in
   let version = OpamPackage.Version.of_string pkg_info.pkg_version in
   let pkg = OpamPackage.create name version in
@@ -99,16 +103,16 @@ let to_html ~statistics repo_info pkg_info =
       with Not_found -> [version] in
     List.map
       (fun version ->
-        let version = OpamPackage.Version.to_string version in
-        let href = Printf.sprintf "%s.%s.html" pkg_info.pkg_name version in
-        if pkg_info.pkg_version = version then
-          <:html<
-            <li class="active">
-              <a href="#">version $str: version$</a>
-            </li>
-          >>
-        else
-          <:html< <li><a href="$str: href$">$str: version$</a></li> >>)
+         let href = href ~href_prefix name version in
+         let version = OpamPackage.Version.to_string version in
+         if pkg_info.pkg_version = version then
+           <:html<
+             <li class="active">
+               <a href="#">version $str: version$</a>
+             </li>
+           >>
+         else
+           <:html< <li><a href="$str: href$">$str: version$</a></li> >>)
       versions in
   let pkg_url = match pkg_info.pkg_url with
     | None          -> <:html< >>
@@ -121,13 +125,13 @@ let to_html ~statistics repo_info pkg_info =
         | None -> <:html< >> in
       let url = string_of_address (OpamFile.URL.url url_file) in
       <:html<
-      <tr>
+        <tr>
         <th>Source $kind$</th>
         <td>
           <a href="$str: url$" title="Download source">$str: url$</a><br />
           $checksum$
         </td>
-      </tr>
+        </tr>
       >> in
   let pkg_maintainer = OpamFile.OPAM.maintainer pkg_info.pkg_opam in
   let pkg_authors =
@@ -164,16 +168,15 @@ let to_html ~statistics repo_info pkg_info =
         let href = match latest_version with
           | None -> <:html< $str: name$ >>
           | Some v ->
-              let href_str =
-                Printf.sprintf "%s.%s.html" name (OpamPackage.Version.to_string v) in
-              <:html< <a href="$str: href_str$">$str: name$</a> >>
+            let href_str =href ~href_prefix pkg_name v in
+            <:html< <a href="$str: href_str$">$str: name$</a> >>
         in
         let version = match constr_opt with
           | None -> ""
           | Some (r, v) ->
-              Printf.sprintf "( %s %s )"
-                (OpamFormula.string_of_relop r)
-                (OpamPackage.Version.to_string v)
+            Printf.sprintf "( %s %s )"
+              (OpamFormula.string_of_relop r)
+              (OpamPackage.Version.to_string v)
         in
         <:html<
           <tr>
@@ -183,15 +186,15 @@ let to_html ~statistics repo_info pkg_info =
             </td>
           </tr>
         >>)
-      dependencies
+        dependencies
     in
     match deps with
     | [] -> []
     | _ -> <:html<
-        <tr class="well">
-          <th>$str: title$</th>
-        </tr>
-      >> :: deps
+             <tr class="well">
+             <th>$str: title$</th>
+             </tr>
+           >> :: deps
   in
   (* Keep only atomic formulas in dependency requirements
      TODO: handle any type of formula *)
@@ -219,9 +222,9 @@ let to_html ~statistics repo_info pkg_info =
       let pkg_count_html = match pkg_count with
         | c when c = Int64.zero -> <:html< Never installed. >>
         | c when c = Int64.one ->
-            <:html< Installed <strong>once</strong>. >>
+          <:html< Installed <strong>once</strong>. >>
         | c ->
-            <:html< Installed <strong>$str: Int64.to_string c$</strong> times. >>
+          <:html< Installed <strong>$str: Int64.to_string c$</strong> times. >>
       in
       <:html<
         <tr>

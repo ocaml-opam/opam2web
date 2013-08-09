@@ -114,13 +114,17 @@ let make_website repo_info =
   let statistics =
     O2wStatistics.basic_statistics_set stats_cache user_options.logfiles in
   save_statistic_set user_options.stats_cache statistics;
-  let pages = O2wRepository.to_pages ~statistics repo_info in
-  let menu_of_doc = O2wDocumentation.to_menu ~content_dir:user_options.content_dir in
+  let href_prefix = user_options.href_prefix in
+  let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
+  let menu_of_doc =
+    O2wDocumentation.to_menu ~href_prefix ~content_dir:user_options.content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
-    | None   -> O2wRepository.sortby_links ~links:criteria_nostats ~default:"name"
-    | Some _ -> O2wRepository.sortby_links ~links:criteria ~default:"name" in
+    | None   ->
+      O2wRepository.sortby_links ~href_prefix ~links:criteria_nostats ~default:"name"
+    | Some _ ->
+      O2wRepository.sortby_links ~href_prefix ~links:criteria ~default:"name" in
   let popularity =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
@@ -130,7 +134,7 @@ let make_website repo_info =
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true repo_info.pkgs_dates in
     let date = {
-      menu_link = { text="Packages"; href="pkg/index-date.html" };
+      menu_link = { text="Packages"; href=href_prefix^"pkg/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg repo_info);
     } in
     match statistics with
@@ -138,7 +142,7 @@ let make_website repo_info =
     | Some s ->
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
-        menu_link = { text="Packages"; href="pkg/index-popularity.html" };
+        menu_link = { text="Packages"; href=href_prefix^"pkg/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg repo_info);
       } in
       [ popularity; date ]
@@ -155,22 +159,22 @@ let make_website repo_info =
       </div>
     >>
   in
-  let home_index = O2wHome.to_html ~statistics ~popularity repo_info in
+  let home_index = O2wHome.to_html ~href_prefix ~statistics ~popularity repo_info in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repo_info in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   O2wTemplate.generate ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="index.html" };
+      { menu_link = { text="Home"; href=href_prefix^"index.html" };
         menu_item = Internal (0, home_index) };
 
-      { menu_link = { text="Packages"; href="pkg/index.html" };
+      { menu_link = { text="Packages"; href=href_prefix^"pkg/index.html" };
         menu_item = Internal (1, package_index) };
 
-      { menu_link = { text="Documentation"; href="doc/index.html" };
+      { menu_link = { text="Documentation"; href=href_prefix^"doc/index.html" };
         menu_item = Submenu doc_menu; };
 
-      { menu_link = { text="About"; href="about.html" };
+      { menu_link = { text="About"; href=href_prefix^"about.html" };
         menu_item = Internal (0, about_page) };
 
     ] @ package_links)
