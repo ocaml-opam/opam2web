@@ -15,6 +15,20 @@
 
 open O2wTypes
 
+let empty_stats = {
+  pkg_stats    = OpamPackage.Map.empty;
+  global_stats = Int64.zero;
+  update_stats = Int64.zero;
+  users_stats  = Int64.zero;
+}
+
+let empty_stats_set = {
+  alltime_stats = empty_stats;
+  day_stats     = empty_stats;
+  week_stats    = empty_stats;
+  month_stats   = empty_stats;
+}
+
 module StringMap = Map.Make (String)
 
 let timestamp_regexp =
@@ -130,7 +144,7 @@ let lines_of_file filter filename =
 
 let lines_of_files filter filenames =
   List.fold_left (fun acc filename ->
-      lines_of_file filter filename @ acc
+      lines_of_file filter filename :: acc
     ) [] filenames
 
 let get_chunk n l =
@@ -265,6 +279,10 @@ let stats_of_lines c n lines =
   let stats = stats_set_of_entries entries in
   stats
 
+let stats_of_lines_l c n lines_l =
+  List.fold_left (fun acc lines ->
+      stats_of_lines c n lines
+    ) empty_stats_set lines_l
 
 let add_stats s1 s2 = {
   pkg_stats    = OpamPackage.Map.union Int64.add s1.pkg_stats s2.pkg_stats;
@@ -280,20 +298,6 @@ let add_stats_set s1 s2 = {
   month_stats   = add_stats s1.month_stats s2.month_stats;
 }
 
-let empty_stats = {
-  pkg_stats    = OpamPackage.Map.empty;
-  global_stats = Int64.zero;
-  update_stats = Int64.zero;
-  users_stats  = Int64.zero;
-}
-
-let empty_stats_set = {
-  alltime_stats = empty_stats;
-  day_stats     = empty_stats;
-  week_stats    = empty_stats;
-  month_stats   = empty_stats;
-}
-
 let statistics_set cache files =
   let filter e = match cache with
     | None       -> true
@@ -304,7 +308,7 @@ let statistics_set cache files =
   let lines = lines_of_files filter files in
   let n = List.length lines in
   let c = ref 1 in
-  let f stats lines = add_stats_set stats (stats_of_lines c n lines) in
+  let f stats lines = add_stats_set stats (stats_of_lines_l c n lines) in
   let stats = apply_by_chunk f 10_000 stats lines in
   Printf.printf "\n%!";
   Some stats
