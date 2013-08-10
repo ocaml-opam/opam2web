@@ -16,6 +16,7 @@
 open Cow
 open Cow.Html
 open O2wTypes
+open OpamTypes
 
 exception Unknown_repository of string
 
@@ -28,7 +29,7 @@ type options = {
   mutable out_dir: string;
   mutable files_dir: string;
   mutable content_dir: string;
-  mutable logfiles: string list;
+  mutable logfiles: filename list;
   mutable operations: opam2web_operation list;
   mutable stats_cache: string;
   mutable href_prefix: string;
@@ -54,7 +55,7 @@ let set_content_dir (dir: string) =
   user_options.content_dir <- dir
 
 let add_logfile (filename: string) =
-  user_options.logfiles <- filename :: user_options.logfiles
+  user_options.logfiles <- (OpamFilename.of_string filename) :: user_options.logfiles
 
 let add_website_path (path: string) =
   user_options.operations <- Website_of_path path :: user_options.operations
@@ -95,6 +96,7 @@ let load_statistic_sets cache =
         Unix.unlink cache;
       );
       seek_in ic 0;
+      Printf.printf "++ Loading the previous stats (%s).\n%!" cache;
       let C (date, stats) = Marshal.from_channel ic in
       close_in ic;
       Some (date, stats)
@@ -114,9 +116,8 @@ let save_statistic_set cache (stats:statistics_set option) =
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
   let stats_cache = load_statistic_sets user_options.stats_cache in
-  Printf.printf "++ Building the statistics.\n%!";
-  let statistics =
-    O2wStatistics.basic_statistics_set stats_cache user_options.logfiles in
+  Printf.printf "++ Building the new stats.\n%!";
+  let statistics = O2wStatistics.statistics_set stats_cache user_options.logfiles in
   save_statistic_set user_options.stats_cache statistics;
   let href_prefix = user_options.href_prefix in
   Printf.printf "++ Building the package pages.\n%!";
@@ -262,7 +263,7 @@ let () =
     (Printf.sprintf "%s [options]* [repository_name]*" Sys.argv.(0));
 
   if List.length user_options.logfiles = 0 then
-    user_options.logfiles <- ["access.log"];
+    user_options.logfiles <- [OpamFilename.of_string "access.log"];
   if user_options.out_dir = "" then
     user_options.out_dir <- Sys.getcwd ();
   if user_options.href_prefix = "" then

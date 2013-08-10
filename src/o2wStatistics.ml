@@ -118,26 +118,36 @@ let mk_entry e = {
 }
 
 (* Retrieve log entries of an apache access.log file *)
-let entries_of_logfile filter init filename =
+let lines_of_file filter filename =
+  let filename = OpamFilename.to_string filename in
   if Sys.file_exists filename then (
     Printf.printf "+++ Parsing the file: %s.\n%!" filename;
     let entries = Readcombinedlog.readlog filename filter in
-    let n = List.length entries in
-    let c = ref 1 in
-    Printf.printf "+++ %s contains %d lines.\n%!" filename n;
-    let result = List.fold_left (fun acc e ->
-        Printf.printf "\rBuilding entries [%8d/%d]%!" !c n; incr c;
-        mk_entry e :: acc
-      ) init entries in
-    Printf.printf "\n%!";
-    result
-  ) else (
-    OpamGlobals.warning "No access.log provided.";
-    init
-  )
+    Printf.printf "+++ %s contains %d new lines.\n%!" filename (List.length entries);
+    entries;
+  ) else
+    []
 
-let entries_of_logfiles filter logfiles =
-  List.fold_left (entries_of_logfile filter) [] logfiles
+let lines_of_files filter filenames =
+  List.fold_left (fun acc filename ->
+      lines_of_file filter filename @ acc
+    ) [] filenames
+
+let get_chunk n l =
+  let rec aux n acc l =
+    if n <= 0 then (List.rev acc, l)
+    else match l with
+      | []   -> (List.rev acc, [])
+      | h::t -> aux (n-1) (h::acc) t in
+  aux n [] l
+
+let apply_by_chunk f size init lines =
+  let rec loop acc = function
+    | []    -> acc
+    | lines ->
+      let chunk, lines = get_chunk size lines in
+      loop (f acc chunk) lines in
+  loop init lines
 
 (* Sum the values of a (int64 StringMap), possibly reducing the value to one
    unique count per string key if the 'unique' optional argument is true *)
@@ -201,13 +211,12 @@ let count_users entries =
   in
   StringMap.fold (fun _ _ n -> Int64.succ n) users 0L
 
+
 (* Generate basic statistics on log entries *)
-let basic_stats_of_entries log_filter entries =
+let stats_of_entries log_filter entries =
   (* TODO: factorize filtering of entries in count_updates and count_archive
      downloads *)
-  Printf.printf "Basic statistics (%s): %!" log_filter.filter_name;
   let entries = apply_log_filter log_filter entries in
-  Printf.printf "%d entries\n%!" (List.length entries);
   let pkg_stats = count_archive_downloads log_filter entries in
   let global_stats =
     OpamPackage.Map.fold (fun _ n acc -> Int64.add n acc) pkg_stats Int64.zero in
@@ -220,65 +229,85 @@ let basic_stats_of_entries log_filter entries =
     users_stats;
   }
 
-let add_statistics s1 s2 = {
+let stats_set_of_entries entries =
+  let now = O2wGlobals.default_log_filter.log_end_time in
+  let one_day = 3600. *. 24. in
+  let one_day_ago = now -. one_day in
+  let one_week_ago = now -. (one_day *. 7.) in
+  let one_month_ago = now -. (one_day *. 30.) in
+  let alltime_stats = stats_of_entries
+      { O2wGlobals.default_log_filter with filter_name = "alltime" }
+      entries in
+  let day_stats = stats_of_entries
+      { O2wGlobals.default_log_filter
+        with log_start_time = one_day_ago; filter_name = "day" }
+      entries in
+  let week_stats = stats_of_entries
+      { O2wGlobals.default_log_filter
+        with log_start_time = one_week_ago; filter_name = "week" }
+      entries in
+  let month_stats = stats_of_entries
+      { O2wGlobals.default_log_filter
+        with log_start_time = one_month_ago; filter_name = "month" }
+      entries in
+  {
+    day_stats     = day_stats;
+    week_stats    = week_stats;
+    month_stats   = month_stats;
+    alltime_stats = alltime_stats;
+  }
+
+let stats_of_lines c n lines =
+  let entries = List.fold_left (fun acc e ->
+      Printf.printf "\rBuilding entries: %8d/%d%!" !c n; incr c;
+      mk_entry e :: acc
+    ) [] lines in
+  let stats = stats_set_of_entries entries in
+  stats
+
+
+let add_stats s1 s2 = {
   pkg_stats    = OpamPackage.Map.union Int64.add s1.pkg_stats s2.pkg_stats;
   global_stats = Int64.add s1.global_stats s2.global_stats;
   update_stats = Int64.add s1.update_stats s2.update_stats;
   users_stats  = Int64.add s1.users_stats s2.users_stats;
 }
 
-let add_statistics_set s1 s2 = {
-  alltime_stats = add_statistics s1.alltime_stats s2.alltime_stats;
-  day_stats     = add_statistics s1.day_stats s2.day_stats;
-  week_stats    = add_statistics s1.week_stats s2.week_stats;
-  month_stats   = add_statistics s1.month_stats s2.month_stats;
+let add_stats_set s1 s2 = {
+  alltime_stats = add_stats s1.alltime_stats s2.alltime_stats;
+  day_stats     = add_stats s1.day_stats s2.day_stats;
+  week_stats    = add_stats s1.week_stats s2.week_stats;
+  month_stats   = add_stats s1.month_stats s2.month_stats;
 }
 
-let basic_statistics_set cache logfiles =
-  let filter e =
-    match cache with
+let empty_stats = {
+  pkg_stats    = OpamPackage.Map.empty;
+  global_stats = Int64.zero;
+  update_stats = Int64.zero;
+  users_stats  = Int64.zero;
+}
+
+let empty_stats_set = {
+  alltime_stats = empty_stats;
+  day_stats     = empty_stats;
+  week_stats    = empty_stats;
+  month_stats   = empty_stats;
+}
+
+let statistics_set cache files =
+  let filter e = match cache with
     | None       -> true
     | Some (t,_) -> timestamp_of_entry e > t in
-  match entries_of_logfiles filter logfiles with
-  | []           ->
-    begin match cache with
-      | None       -> None
-      | Some (_,s) -> Some s
-    end
-  | entries ->
-    let now = O2wGlobals.default_log_filter.log_end_time in
-    let one_day = 3600. *. 24. in
-    let one_day_ago = now -. one_day in
-    let one_week_ago = now -. (one_day *. 7.) in
-    let one_month_ago = now -. (one_day *. 30.) in
-
-    let alltime_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter
-        with filter_name = "alltime" }
-      entries in
-    let day_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter
-        with log_start_time = one_day_ago; filter_name = "day" }
-      entries in
-    let week_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter
-        with log_start_time = one_week_ago; filter_name = "week" }
-      entries in
-    let month_stats = basic_stats_of_entries
-      { O2wGlobals.default_log_filter
-        with log_start_time = one_month_ago; filter_name = "month" }
-      entries in
-
-    let stats = {
-      day_stats     = day_stats;
-      week_stats    = week_stats;
-      month_stats   = month_stats;
-      alltime_stats = alltime_stats;
-    } in
-
-    match cache with
-    | Some (_,s) -> Some (add_statistics_set s stats)
-    | None       -> Some stats
+  let stats = match cache with
+    | None       -> empty_stats_set
+    | Some (_,s) -> s in
+  let lines = lines_of_files filter files in
+  let n = List.length lines in
+  let c = ref 1 in
+  let f stats lines = add_stats_set stats (stats_of_lines c n lines) in
+  let stats = apply_by_chunk f 10_000 stats lines in
+  Printf.printf "\n%!";
+  Some stats
 
 let aggregate_package_popularity pkg_stats packages =
   OpamPackage.Map.fold (fun pkg pkg_count acc ->
