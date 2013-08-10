@@ -273,9 +273,12 @@ let stats_set_of_entries entries =
 
 let stats_of_lines c n lines =
   let entries = List.fold_left (fun acc e ->
-      Printf.printf "\rBuilding entries: %8d/%d%!" !c n; incr c;
+      if n mod 1000 = 0 then
+        Printf.printf "\rBuilding entries: %8d/%d%!" !c n;
+      incr c;
       mk_entry e :: acc
     ) [] lines in
+  Printf.printf "\rBuilding entries: %8d/%d%!" !c n;
   let stats = stats_set_of_entries entries in
   stats
 
