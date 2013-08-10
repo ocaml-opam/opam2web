@@ -306,7 +306,7 @@ let statistics_set cache files =
     | None       -> empty_stats_set
     | Some (_,s) -> s in
   let lines = lines_of_files filter files in
-  let n = List.length lines in
+  let n = List.fold_left (fun n l -> n + List.length l) 0 lines in
   let c = ref 1 in
   let f stats lines = add_stats_set stats (stats_of_lines_l c n lines) in
   let stats = apply_by_chunk f 10_000 stats lines in
