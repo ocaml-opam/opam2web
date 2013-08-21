@@ -25,7 +25,7 @@ type entry_type_t = Host | Lname | User | Date | Cmd | Retcode | Size | Referrer
 
 (** This function creates a record from all entrities. *)
 let create ~host:h ~lname:l ~user:u ~date:d ~request:request ~status:rc ~size:s ~referrer:rf ~client:cl =
-      { host = h; lname = l; user = u; date = d; request = request; status = rc; size = s; referrer = rf; client = cl }
+  { host = h; lname = l; user = u; date = d; request = request; status = rc; size = s; referrer = rf; client = cl }
 
 
 (* functions to get the contents of the record by the name of it's elements *)
@@ -58,38 +58,38 @@ let name_of_entrytype t =
 
 
 (** According to the list of querytypes (from the query-parser) here all
-  necessary results are gathered from the record.
-  This is collecting the data from the datastructure, preparing them for the printout.
+    necessary results are gathered from the record.
+    This is collecting the data from the datastructure, preparing them for the printout.
 *)
 let getval_by_typelist r query_tl =
   let rec aux eatup sample =
     match eatup with
       []     -> List.rev sample
     | hd::tl -> begin
-                  match hd with
-                    Host     -> aux tl (host r :: sample)
-                  | Lname    -> aux tl (lname r :: sample)
-                  | User     -> aux tl (user r :: sample)
-                  | Date     -> aux tl (date r :: sample)
-                  | Cmd      -> aux tl (request r :: sample)
-                  | Retcode  -> aux tl (status r :: sample)
-                  | Size     -> aux tl (size r :: sample)
-                  | Referrer -> aux tl (referrer r :: sample)
-                  | Client   -> aux tl (client r :: sample)
-                  | All      -> aux tl ( host r ::
-                                         lname r ::
-                                         user r ::
-                                         date r ::
-                                         request r ::
-                                         status r ::
-                                         size r ::
-                                         referrer r ::
-                                         client r ::
-                                         sample
-                                       )
-                end
+        match hd with
+          Host     -> aux tl (host r :: sample)
+        | Lname    -> aux tl (lname r :: sample)
+        | User     -> aux tl (user r :: sample)
+        | Date     -> aux tl (date r :: sample)
+        | Cmd      -> aux tl (request r :: sample)
+        | Retcode  -> aux tl (status r :: sample)
+        | Size     -> aux tl (size r :: sample)
+        | Referrer -> aux tl (referrer r :: sample)
+        | Client   -> aux tl (client r :: sample)
+        | All      -> aux tl ( host r ::
+                                 lname r ::
+                                 user r ::
+                                 date r ::
+                                 request r ::
+                                 status r ::
+                                 size r ::
+                                 referrer r ::
+                                 client r ::
+                                 sample
+                             )
+      end
   in
-    List.rev (aux query_tl [])
+  List.rev (aux query_tl [])
 
 
 
@@ -99,27 +99,27 @@ let get_lengths_by_typelist r query_tl =
     match eatup with
       []     -> List.rev sample
     | hd::tl -> begin
-                  match hd with
-                    Host     -> aux tl (sl(host r) :: sample)
-                  | Lname    -> aux tl (sl(lname r) :: sample)
-                  | User     -> aux tl (sl(user r) :: sample)
-                  | Date     -> aux tl (sl(date r) :: sample)
-                  | Cmd      -> aux tl (sl(request r) :: sample)
-                  | Retcode  -> aux tl (sl(status r) :: sample)
-                  | Size     -> aux tl (sl(size r) :: sample)
-                  | Referrer -> aux tl (sl(referrer r) :: sample)
-                  | Client   -> aux tl (sl(client r) :: sample)
-                  | All      -> aux tl (sl( host r) ::
-                                        sl( lname r) ::
-                                        sl( user r) ::
-                                        sl( date r) ::
-                                        sl( request r) ::
-                                        sl( status r) ::
-                                        sl( size r) ::
-                                        sl( referrer r) ::
-                                        sl( client r) ::
-                                           sample
-                                       )
-                end
+        match hd with
+          Host     -> aux tl (sl(host r) :: sample)
+        | Lname    -> aux tl (sl(lname r) :: sample)
+        | User     -> aux tl (sl(user r) :: sample)
+        | Date     -> aux tl (sl(date r) :: sample)
+        | Cmd      -> aux tl (sl(request r) :: sample)
+        | Retcode  -> aux tl (sl(status r) :: sample)
+        | Size     -> aux tl (sl(size r) :: sample)
+        | Referrer -> aux tl (sl(referrer r) :: sample)
+        | Client   -> aux tl (sl(client r) :: sample)
+        | All      -> aux tl (sl( host r) ::
+                                sl( lname r) ::
+                                sl( user r) ::
+                                sl( date r) ::
+                                sl( request r) ::
+                                sl( status r) ::
+                                sl( size r) ::
+                                sl( referrer r) ::
+                                sl( client r) ::
+                                sample
+                             )
+      end
   in
-    List.rev (aux query_tl [])
+  List.rev (aux query_tl [])
