@@ -5,7 +5,7 @@ all: build
 build:
 	cd src && $(MAKE)
 
-install: build
+install:
 	cd src && $(MAKE) install
 
 clean:

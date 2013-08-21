@@ -26,8 +26,8 @@ search: search.ml
 run: $(TARGET).native
 	_build/$< -c ../content -o $(WWWDIR) -l default
 
-install: $(TARGET).native
-	install _build/$< $(PREFIX)/bin/$(TARGET)
+install:
+	install _build/opam2web.native $(PREFIX)/bin/$(TARGET)
 
 clean:
 	ocamlbuild -clean
