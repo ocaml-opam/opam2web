@@ -19,8 +19,7 @@ open OpamTypes
 open O2wTypes
 
 (** Generate statistics on log entries *)
-val statistics_set:
-  (float * statistics_set) option -> filename list -> statistics_set option
+val statistics_set: filename list -> statistics_set option
 
 (** Aggregate all the package popularity per version. The second
     argument is the list of available version. *)

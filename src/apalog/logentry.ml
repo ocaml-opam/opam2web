@@ -16,16 +16,18 @@
 
 
 (** This record stores the data from the logfile *)
-type entry_t = { host: string; lname: string; user: string; date: string; request: string;
-                 status: string; size: string; referrer: string; client: string }
+type t = {
+  host: string; lname: string; user: string; date: string; request: string;
+  status: string; size: string; referrer: string; client: string;
+  linesize: int}
 
 (** This type classifies the selected entity (of the query) *)
 type entry_type_t = Host | Lname | User | Date | Cmd | Retcode | Size | Referrer | Client | All
 
 
 (** This function creates a record from all entrities. *)
-let create ~host:h ~lname:l ~user:u ~date:d ~request:request ~status:rc ~size:s ~referrer:rf ~client:cl =
-  { host = h; lname = l; user = u; date = d; request = request; status = rc; size = s; referrer = rf; client = cl }
+let create ~host:h ~lname:l ~user:u ~date:d ~request:request ~status:rc ~size:s ~referrer:rf ~client:cl ~linesize =
+  { host = h; lname = l; user = u; date = d; request = request; status = rc; size = s; referrer = rf; client = cl; linesize }
 
 
 (* functions to get the contents of the record by the name of it's elements *)
@@ -34,16 +36,16 @@ let lname r = r.lname
 let user r = r.user
 let date r = r.date
 let request  r = r.request
-let status  r = r.status 
-let size  r = r.size 
-let referrer r = r.referrer 
-let client   r = r.client 
-
+let status  r = r.status
+let size  r = r.size
+let referrer r = r.referrer
+let client   r = r.client
+let line_size r = r.linesize
 
 
 (** the string-aequivalent for the entity type *)
 let name_of_entrytype t =
-  match t with 
+  match t with
     Host     -> "host"
   | Lname    -> "lname"
   | User     -> "user"

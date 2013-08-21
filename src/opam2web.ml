@@ -115,9 +115,8 @@ let save_statistic_set cache (stats:statistics_set option) =
 
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
-  let stats_cache = load_statistic_sets user_options.stats_cache in
   Printf.printf "++ Building the new stats.\n%!";
-  let statistics = O2wStatistics.statistics_set stats_cache user_options.logfiles in
+  let statistics = O2wStatistics.statistics_set user_options.logfiles in
   save_statistic_set user_options.stats_cache statistics;
   let href_prefix = user_options.href_prefix in
   Printf.printf "++ Building the package pages.\n%!";
