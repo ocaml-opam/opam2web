@@ -91,7 +91,7 @@ let to_html ~href_prefix ~statistics ~popularity repo_info =
         <div class="span4">
           <table class="table table-striped">
             <thead>
-              <tr><th colspan="2">Most Downloaded Packages</th></tr>
+              <tr><th colspan="2">Most Downloaded Packages (this month)</th></tr>
             </thead>
             <tbody>
               $list: top10_items$

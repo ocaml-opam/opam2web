@@ -197,8 +197,6 @@ let count_users entries =
 
 (* Generate basic statistics on log entries *)
 let stats_of_entries log_filter entries =
-  (* TODO: factorize filtering of entries in count_updates and count_archive
-     downloads *)
   let entries = apply_log_filters log_filter entries in
   let pkg_stats = count_archive_downloads log_filter entries in
   let global_stats =

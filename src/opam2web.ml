@@ -95,7 +95,7 @@ let make_website repo_info =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
     | Some s -> O2wStatistics.aggregate_package_popularity
-                  s.alltime_stats.pkg_stats repo_info.packages in
+                  s.month_stats.pkg_stats repo_info.packages in
   let to_html = O2wRepository.to_html ~href_prefix ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
