@@ -31,7 +31,6 @@ type options = {
   mutable content_dir: string;
   mutable logfiles: filename list;
   mutable operations: opam2web_operation list;
-  mutable stats_cache: string;
   mutable href_prefix: string;
 }
 
@@ -41,7 +40,6 @@ let user_options: options = {
   content_dir = "content";
   logfiles = [];
   operations = [];
-  stats_cache = "stats.dat";
   href_prefix = "";
 }
 
@@ -63,9 +61,6 @@ let add_website_path (path: string) =
 let add_website_opam (repo: string) =
   user_options.operations <- Website_of_opam repo :: user_options.operations
 
-let set_cache_stats (file: string) =
-  user_options.stats_cache <- file
-
 let set_href_prefix name =
   user_options.href_prefix <- name
 
@@ -80,44 +75,10 @@ let include_files (path: string) files_path : unit =
   (* Check if output directory exists, create it if it doesn't *)
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
-type cache = C of (float * statistics_set)
-
-let load_statistic_sets cache =
-  if Sys.file_exists cache then
-    try
-      let ic = open_in cache in
-      let header = String.create Marshal.header_size in
-      really_input ic header 0 Marshal.header_size;
-      let expected_size = Marshal.total_size header 0 in
-      let current_size = in_channel_length ic in
-      if not (expected_size = current_size) then (
-        close_in ic;
-        OpamGlobals.error "The cache is corrupted, removing it.";
-        Unix.unlink cache;
-      );
-      seek_in ic 0;
-      Printf.printf "++ Loading the previous stats (%s).\n%!" cache;
-      let C (date, stats) = Marshal.from_channel ic in
-      close_in ic;
-      Some (date, stats)
-    with _ -> None
-  else
-    None
-
-let save_statistic_set cache (stats:statistics_set option) =
-  match stats with
-  | None   -> ()
-  | Some s ->
-    let timestamp : float = Unix.gettimeofday () in
-    let oc = open_out cache in
-    Marshal.to_channel oc (C (timestamp, s)) [Marshal.No_sharing];
-    close_out oc
-
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
   Printf.printf "++ Building the new stats.\n%!";
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
-  save_statistic_set user_options.stats_cache statistics;
   let href_prefix = user_options.href_prefix in
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
