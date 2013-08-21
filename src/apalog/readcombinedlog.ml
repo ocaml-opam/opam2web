@@ -18,6 +18,9 @@ type t = {
   ic    : in_channel;
   filter: Logentry.t -> bool;
   close : unit -> unit;
+  mutable reads: int;
+  mutable empty: bool;
+  size  : int;
 }
 
 let create filter filename =
@@ -31,17 +34,23 @@ let create filter filename =
   { name = filename;
     ic;
     filter;
+    empty = false;
+    reads = 0;
+    size  = in_channel_length ic;
     close = fun () -> closer ic }
 
 let size t =
-  in_channel_length t.ic
+  t.size
+
+
+let is_empty t =
+  t.empty
 
 let read t chunk_size =
   let results = ref [] in
   try
     for _i = 1 to chunk_size do
       let line = input_line t.ic in
-      let line_size = String.length line in
       let lexbuf = Lexing.from_string line in
       let host     = Lexcombinedlog.host lexbuf in
       let lname    = Lexcombinedlog.token lexbuf in
@@ -57,14 +66,13 @@ let read t chunk_size =
       let referrer = Lexcombinedlog.token lexbuf in
       let client   = Lexcombinedlog.token lexbuf in
       let entry =
-        Logentry.create host lname user date request status size referrer client
-          line_size in
+        Logentry.create host lname user date request status size referrer client in
+      t.reads <- t.reads + String.length line;
       if t.filter entry then
         results := entry :: !results
     done;
     List.rev !results
   with End_of_file ->
+    t.empty <- true;
+    t.close ();
     List.rev !results
-
-let close t =
-  t.close ()
