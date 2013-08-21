@@ -29,7 +29,15 @@ let empty_stats_set = {
   month_stats   = empty_stats;
 }
 
-module StringMap = Map.Make (String)
+module StringMap = struct
+  include Map.Make (String)
+  let fold f t acc =
+    let acc = ref acc in
+    iter (fun k v ->
+      acc := f k v !acc
+    ) t;
+    !acc
+end
 
 let timestamp_regexp =
   Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
@@ -326,7 +334,7 @@ let top_packages ?ntop ?(reverse = true) stats packages =
     else compare n1 n2
   in
   let pkgs = OpamPackage.Set.elements packages in
-  let pkg_stats = List.map (fun pkg -> pkg, stats pkg) pkgs in
+  let pkg_stats = List.rev_map (fun pkg -> pkg, stats pkg) pkgs in
   let sorted_pkg = List.sort compare_pkg pkg_stats in
   match ntop with
   | None      -> sorted_pkg
