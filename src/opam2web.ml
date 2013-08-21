@@ -77,7 +77,8 @@ let include_files (path: string) files_path : unit =
 
 (* Generate a whole static website using the given repository *)
 let make_website repo_info =
-  Printf.printf "++ Building the new stats.\n%!";
+  Printf.printf "++ Building the new stats from %s.\n%!" 
+    (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let href_prefix = user_options.href_prefix in
   Printf.printf "++ Building the package pages.\n%!";

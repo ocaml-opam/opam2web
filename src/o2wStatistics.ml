@@ -29,7 +29,15 @@ let empty_stats_set = {
   month_stats   = empty_stats;
 }
 
-module StringMap = Map.Make (String)
+module StringMap = struct
+  include Map.Make (String)
+  let fold f t acc =
+    let acc = ref acc in
+    iter (fun k v ->
+      acc := f k v !acc
+    ) t;
+    !acc
+end
 
 let timestamp_regexp =
   Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
@@ -245,10 +253,7 @@ let stats_set_of_entries entries =
 
 let stats_of_lines current_size total_size lines =
   let entries = List.fold_left (fun acc e ->
-      let percent = (100 * total_size) / !current_size in
-      current_size := !current_size + Logentry.line_size e;
-      Printf.printf "\rBuilding entries: %3d%%%!" percent;
-      mk_entry e :: acc
+    mk_entry e :: acc
     ) [] lines in
   let stats = stats_set_of_entries entries in
   stats
@@ -275,8 +280,8 @@ let add_stats_set s1 s2 = {
 let statistics_set files =
   let logs =
     let filter e =
-      timestamp_of_entry e > month_filter.log_end_time in
-    List.map (fun f ->
+      timestamp_of_entry e > month_filter.log_start_time in
+    List.rev_map (fun f ->
         Readcombinedlog.create filter (OpamFilename.to_string f)
       ) files in
   let total_size =
@@ -285,11 +290,17 @@ let statistics_set files =
   let chunk_size = 10_000 in
   let stats = ref empty_stats_set in
   let rec read l =
-    match Readcombinedlog.read l chunk_size with
-    | []    -> Readcombinedlog.close l
-    | lines ->
-      let new_stats = stats_of_lines current_size total_size lines in
-      stats := add_stats_set !stats new_stats;
+    let percent = 100 * l.reads / l.size in
+    Printf.printf "\rBuilding entries: %3d%% (%s)%!" percent l.name;
+    begin match Readcombinedlog.read l chunk_size with
+      | []    -> ()
+      | lines ->
+	let new_stats = stats_of_lines current_size total_size lines in
+	stats := add_stats_set !stats new_stats
+    end;
+    if Readcombinedlog.is_empty l then
+      Printf.printf "\rBuilding entries: %3d%% (%s)\n%!" 100 l.name
+    else
       read l in
   List.iter read logs;
   Some !stats
@@ -321,7 +332,7 @@ let top_packages ?ntop ?(reverse = true) stats packages =
     else compare n1 n2
   in
   let pkgs = OpamPackage.Set.elements packages in
-  let pkg_stats = List.map (fun pkg -> pkg, stats pkg) pkgs in
+  let pkg_stats = List.rev_map (fun pkg -> pkg, stats pkg) pkgs in
   let sorted_pkg = List.sort compare_pkg pkg_stats in
   match ntop with
   | None      -> sorted_pkg
