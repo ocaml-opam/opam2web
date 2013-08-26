@@ -217,17 +217,17 @@ let to_html ~href_prefix ~statistics repo_info pkg_info =
   let pkg_stats = match statistics with
     | None -> <:html< >>
     | Some sset ->
-      let s = sset.alltime_stats in
+      let s = sset.month_stats in
       let pkg_count =
         try OpamPackage.Map.find pkg s.pkg_stats
         with Not_found -> Int64.zero
       in
       let pkg_count_html = match pkg_count with
-        | c when c = Int64.zero -> <:html< Never installed. >>
+        | c when c = Int64.zero -> <:html< Not installed in the last month. >>
         | c when c = Int64.one ->
-          <:html< Installed <strong>once</strong>. >>
+          <:html< Installed <strong>once</strong> in last month. >>
         | c ->
-          <:html< Installed <strong>$str: Int64.to_string c$</strong> times. >>
+          <:html< Installed <strong>$str: Int64.to_string c$</strong> times in last month. >>
       in
       <:html<
         <tr>
