@@ -14,7 +14,7 @@ included as well.
 
 If you have opam installed:
 ```bash
-opam install opam cow
+opam install cow
 ```
 
 ### Build
