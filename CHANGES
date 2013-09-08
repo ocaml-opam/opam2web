@@ -1,0 +1,9 @@
+1.3.0 (trunk):
+* Use cmdliner for CLI
+* -l and --local opam repo options are now --remote
+* -p and --prefix HREF prefix options are now --prefix
+* HREF prefix now defaults to "/"
+* Providing a web server access log is now optional
+
+1.2.0 (2013-01-15):
+* Last release before change tracking
