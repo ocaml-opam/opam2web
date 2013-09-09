@@ -131,7 +131,7 @@ let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
   | Some pkg_info ->
     let page = {
       page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
-      page_depth    = 1;
+      page_depth    = 3;
       page_contents = O2wPackage.to_html ~href_prefix~statistics repo_info pkg_info
     } in
     page :: acc
@@ -145,7 +145,7 @@ let sortby_links ~href_prefix ~links ~default ~active =
   let mk_item title =
     let href_str =
       if title = default
-      then Printf.sprintf "%spkg/index.html" href_prefix
+      then Printf.sprintf "%spkg/" href_prefix
       else Printf.sprintf "%spkg/index-%s.html" href_prefix (String.lowercase title)
     in
     let ahref =

@@ -44,7 +44,7 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
   | _ -> compare_alphanum p1 p2
 
 let href ?href_prefix name version =
-  let base = Printf.sprintf "pkg/%s.%s.html"
+  let base = Printf.sprintf "pkg/%s/%s/"
       (OpamPackage.Name.to_string name) (OpamPackage.Version.to_string version) in
   match href_prefix with
   | None   -> base

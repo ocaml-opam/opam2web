@@ -4,6 +4,7 @@
 * -p and --prefix HREF prefix options are now --prefix
 * HREF prefix now defaults to "/"
 * Providing a web server access log is now optional
+* Packages and their versions have been moved into a path hierarchy
 
 1.2.0 (2013-01-15):
 * Last release before change tracking

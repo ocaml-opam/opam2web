@@ -226,11 +226,22 @@ let generate ~out_dir menu pages =
   in
   let c = ref 1 in
   let n = List.length pages + List.length menu_pages in
+  let is_dir href =
+    let len = String.length href in
+    len = 0 || href.[len - 1] = '/'
+  in
   let aux page =
     Printf.printf "\r[%-5d/%d] %s %40s%!" !c n page.page_link.href ""; incr c;
     let header = make_nav (page.page_link, page.page_depth) menu in
     let footer = make_footer page.page_depth in
-    let path = Printf.sprintf "%s%s" out_dir page.page_link.href in
+    let suffix =
+      if is_dir page.page_link.href
+      then (OpamFilename.(mkdir (Dir.of_string
+                                   (out_dir ^ page.page_link.href)));
+            "index.html")
+      else ""
+    in
+    let path = Printf.sprintf "%s%s%s" out_dir page.page_link.href suffix in
     let chan = open_out path in
     let page =
       create
