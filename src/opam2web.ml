@@ -110,7 +110,7 @@ let make_website user_options repo_info =
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   O2wTemplate.generate ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="" };
+      { menu_link = { text="Home"; href="/" };
         menu_item = Internal (0, home_index) };
 
       { menu_link = { text="Packages"; href="pkg/" };

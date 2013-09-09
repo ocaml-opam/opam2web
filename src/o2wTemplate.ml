@@ -23,14 +23,11 @@ let string_of_time () =
       (t.Unix.tm_year + 1900)
 
 let prepend_root (depth: int) (src: string): string =
-  let path_of_depth =
-    let rec aux acc = function
-      | 0 -> acc
-      | n -> aux ("../" ^ acc) (n-1)
-    in
-    aux "" depth
+  let rec aux acc = function
+    | 0 -> acc
+    | n -> aux ("../" ^ acc) (n-1)
   in
-  path_of_depth ^ src
+  if src <> "" && src.[0] = '/' then src else aux src depth
 
 let create ~title ~header ~body ~footer ~depth =
   let css_files = [
