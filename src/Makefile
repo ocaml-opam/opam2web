@@ -1,6 +1,8 @@
-.PHONY: all run install clean
+.PHONY: all run install clean .FORCE
 
-VERSION=1.3.0
+COMMIT=$(shell git rev-parse HEAD)
+GIT_DESCR=$(shell git describe)
+DIRTY=$(shell git diff-index --quiet HEAD; echo $$?)
 
 PREFIX=/usr/local
 WWWDIR=www
@@ -17,8 +19,10 @@ JSFLAGS=-package js_of_ocaml.syntax,js_of_ocaml -syntax camlp4o
 
 all: $(TARGET).native search.js
 
-version.ml: version.ml.in
-	sed s/%%VERSION%%/$(VERSION)/ < version.ml.in > version.ml
+version.ml: version.ml.in .FORCE
+	sed s/%%COMMIT%%/$(COMMIT)/ < version.ml.in \
+	| sed s/%%GIT_DESCR%%/$(GIT_DESCR)/ \
+	| sed s/%%DIRTY%%/$(DIRTY)/ > version.ml
 
 $(TARGET).native: version.ml
 	$(OCAMLBUILD) $(INCLUDES) $(FLAGS) $(SYNTAX) $(PACKAGES) $@
