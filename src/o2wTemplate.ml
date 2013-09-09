@@ -63,6 +63,7 @@ let create ~title ~header ~body ~footer ~depth =
     <meta name="description"
         content="The homepage of OPAM, a package manager for OCaml" />
     <meta name="author" content="OCamlPro" />
+    <meta name="generator" content=$str: "opam2web " ^ Version.string$ />
 
     <!-- Le styles -->
     $list: css_html$

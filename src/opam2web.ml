@@ -13,6 +13,7 @@
 (*                                                                     *)
 (***********************************************************************)
 
+open Cmdliner
 open Cow
 open Cow.Html
 open O2wTypes
@@ -26,43 +27,15 @@ type opam2web_operation =
 
 (* Options *)
 type options = {
-  mutable out_dir: string;
-  mutable files_dir: string;
-  mutable content_dir: string;
-  mutable logfiles: filename list;
-  mutable operations: opam2web_operation list;
-  mutable href_prefix: string;
+  out_dir: string;
+  files_dir: string;
+  content_dir: string;
+  logfiles: filename list;
+  operations: opam2web_operation list;
+  href_prefix: string;
 }
 
-let user_options: options = {
-  out_dir = "";
-  files_dir = "";
-  content_dir = "content";
-  logfiles = [];
-  operations = [];
-  href_prefix = "";
-}
-
-let set_out_dir (dir: string) =
-  user_options.out_dir <- dir
-
-let set_files_dir (dir: string) =
-  user_options.files_dir <- dir
-
-let set_content_dir (dir: string) =
-  user_options.content_dir <- dir
-
-let add_logfile (filename: string) =
-  user_options.logfiles <- (OpamFilename.of_string filename) :: user_options.logfiles
-
-let add_website_path (path: string) =
-  user_options.operations <- Website_of_path path :: user_options.operations
-
-let add_website_opam (repo: string) =
-  user_options.operations <- Website_of_opam repo :: user_options.operations
-
-let set_href_prefix name =
-  user_options.href_prefix <- name
+let version = Version.string
 
 let include_files (path: string) files_path : unit =
   let subpathes = ["doc"; "pkg"] in
@@ -76,7 +49,7 @@ let include_files (path: string) files_path : unit =
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
 (* Generate a whole static website using the given repository *)
-let make_website repo_info =
+let make_website user_options repo_info =
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
@@ -160,86 +133,111 @@ let make_website repo_info =
 
 (* Generate a website from the current working directory, assuming that it's an
    OPAM repository *)
-let website_of_cwd () =
+let website_of_cwd user_options =
   Printf.printf "=== Repository: current working directory ===\n%!";
-  make_website (O2wRepository.of_path (OpamFilename.cwd ()))
+  make_website user_options (O2wRepository.of_path (OpamFilename.cwd ()))
 
 (* Generate a website from the given directory, assuming that it's an OPAM
    repository *)
-let website_of_path dirname =
+let website_of_path user_options dirname =
   let dirname = OpamFilename.Dir.of_string dirname in
   Printf.printf "=== Repository: %s ===\n%!" (OpamFilename.Dir.to_string dirname);
-  make_website (O2wRepository.of_path dirname)
+  make_website user_options (O2wRepository.of_path dirname)
 
 (* Generate a website from the given repository name, trying to find it in local
    OPAM installation *)
-let website_of_opam repo_name =
+let website_of_opam user_options repo_name =
   Printf.printf "=== Repository: %s [opam] ===\n%!" repo_name;
   let load_repo r =
     try O2wRepository.of_opam (OpamRepositoryName.of_string r)
     with Not_found -> raise (Unknown_repository r)
   in
-  try make_website (load_repo repo_name)
+  try make_website user_options (load_repo repo_name)
   with Unknown_repository repo_name ->
     OpamGlobals.error "Opam repository '%s' not found!" repo_name
 
-(* Command-line arguments *)
-let specs = [
-  ("-s", Arg.String add_logfile, "");
-  ("--statistics", Arg.String add_logfile,
-    "An Apache server log file containing download statistics of packages");
-
-  ("-o", Arg.String set_out_dir, "");
-  ("--output", Arg.String set_out_dir,
-    "The directory where to write the generated HTML files");
-
-  ("-c", Arg.String set_content_dir, "");
-  ("--content", Arg.String set_content_dir,
-    "The directory where to find OPAM documentation to include");
-
-  ("-d", Arg.String add_website_path, "");
-  ("--directory", Arg.String add_website_path,
-    "Generate a website from the opam repository in 'directory'");
-
-  ("-l", Arg.String add_website_opam, "");
-  ("--local", Arg.String add_website_opam,
-    "Generate a website from an opam repository in the local opam installation");
-
-  ("-p", Arg.String set_href_prefix, "");
-  ("--prefix", Arg.String set_href_prefix,
-   "Specify the prefix hyper-link (default is the contents of [--output])");
-]
-
 let normalize d =
-  if d.[String.length d - 1] <> '/' then
+  let len = String.length d in
+  if len <> 0 && d.[len - 1] <> '/' then
     d ^ "/"
   else
     d
 
-(* Main *)
-let () =
-  (* Anonymous arguments are interpreted as directories where to find
-     repositories *)
-  Arg.parse specs add_website_path
-    (Printf.sprintf "%s [options]* [repository_name]*" Sys.argv.(0));
+let log_files = Arg.(
+  value & opt_all string [] & info ["s"; "statistics"]
+    ~docv:"LOG_FILE"
+    ~doc:"An Apache server log file containing download statistics of packages")
 
-  if List.length user_options.logfiles = 0 then
-    user_options.logfiles <- [OpamFilename.of_string "access.log"];
-  if user_options.out_dir = "" then
-    user_options.out_dir <- Sys.getcwd ();
-  if user_options.href_prefix = "" then
-    user_options.href_prefix <- user_options.out_dir;
+let out_dir = Arg.(
+  value & opt string (Sys.getcwd ()) & info ["o"; "output"]
+    ~docv:"OUT_DIR"
+    ~doc:"The directory where to write the generated HTML files")
 
-  user_options.href_prefix <- normalize user_options.href_prefix;
-  user_options.out_dir <- normalize user_options.out_dir;
+let content_dir = Arg.(
+  value & opt string "content" & info ["c"; "content"]
+    ~docv:"CONTENT_DIR"
+    ~doc:"The directory where to find OPAM documentation to include")
 
+let opam_path = Arg.(
+  value & opt_all string [] & info ["d"; "directory"]
+    ~docv:"OPAM_REPO_PATH"
+    ~doc:"Generate a website from the opam repository in 'OPAM_REPO_PATH'")
+
+let opam_remote = Arg.(
+  value & opt_all string [] & info ["remote"]
+    ~docv:"OPAM_REPO_REMOTE"
+    ~doc:"Generate a website from an opam remote in the local opam installation")
+
+let href_prefix = Arg.(
+  value & opt string "/" & info ["prefix"]
+    ~docv:"HREF_PREFIX"
+    ~doc:"The hyperlink prefix")
+
+let more = Arg.(
+  value & pos_all string [] & info []
+    ~docv:"OPAM_REPO_PATH"
+    ~doc:"Generate a website from the opam repository in 'OPAM_REPO_PATH'"
+)
+
+let build logfiles out_dir content_dir opam_path opam_remote href_prefix =
+  let href_prefix = normalize href_prefix in
+  let out_dir = normalize out_dir in
+  let logfiles = List.map OpamFilename.of_string logfiles in
+  let user_options = {
+    out_dir;
+    files_dir = "";
+    content_dir;
+    logfiles;
+    operations = List.rev_append
+      (List.rev_map (fun o -> Website_of_path o) opam_path)
+      (List.rev_map (fun o -> Website_of_opam o) opam_remote);
+    href_prefix;
+  } in
   if List.length user_options.operations = 0 then
     (* If the arguments didn't trigger any operation, try to interpret the
        current directory as a repository and make the website out of it *)
-    website_of_cwd ()
+    website_of_cwd user_options
   else
     let exec_operation = function
-      | Website_of_path p -> website_of_path p
-      | Website_of_opam r -> website_of_opam r
+      | Website_of_path p -> website_of_path user_options p
+      | Website_of_opam r -> website_of_opam user_options r
     in
     List.iter exec_operation user_options.operations
+
+let default_cmd =
+  let doc = "generate a web site from an opam repository and extensions" in
+  let man = [
+    `S "DESCRIPTION";
+    `P "$(b,opam2web) generates a web site from an opam repository and repository extensions.";
+    `S "BUGS";
+    `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
+  ] in
+  Term.(pure build $ log_files $ out_dir $ content_dir
+          $ opam_path $ opam_remote $ href_prefix),
+  Term.info "opam2web" ~version ~doc ~man
+
+;;
+
+match Term.eval default_cmd with
+| `Error _ -> exit 1
+| _ -> exit 0
