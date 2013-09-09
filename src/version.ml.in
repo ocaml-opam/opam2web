@@ -1,0 +1,5 @@
+let commit = "%%COMMIT%%"
+let git_descr = "%%GIT_DESCR%%"
+let dirty = %%DIRTY%% <> 0
+
+let string = git_descr ^ (if dirty then " (dirty)" else "")

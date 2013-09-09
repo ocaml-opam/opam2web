@@ -1,4 +1,4 @@
-.PHONY: all build clean
+.PHONY: all build install clean
 
 all: build
 
