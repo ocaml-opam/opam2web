@@ -158,11 +158,17 @@ let sortby_links ~href_prefix ~links ~default ~active =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html ~href_prefix ~sortby_links ~popularity ~active ~compare_pkg repo_info =
+let to_html ~href_prefix ~sortby_links ~preds ~popularity ~active ~compare_pkg
+    repo_info =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
-    let packages = OpamPackage.Set.elements repo_info.max_packages in
-    List.sort compare_pkg packages in
+    let pkg_set = repo_info.max_packages in
+    let pkg_set = OpamPackage.Set.filter
+      (O2wPackage.are_preds_satisfied repo_info preds) pkg_set
+    in
+    let packages = OpamPackage.Set.elements pkg_set in
+    List.sort compare_pkg packages
+  in
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
@@ -173,7 +179,8 @@ let to_html ~href_prefix ~sortby_links ~popularity ~active ~compare_pkg repo_inf
         | Some pkg_info ->
           let pkg_download =
             try
-              let d = OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity in
+              let d = OpamPackage.Name.Map.find (OpamPackage.name pkg)
+                popularity in
               Printf.sprintf "Downloads: %Ld | Last update: %s"
                 d (O2wMisc.string_of_timestamp pkg_info.pkg_update)
             with Not_found ->
@@ -196,12 +203,12 @@ let to_html ~href_prefix ~sortby_links ~popularity ~active ~compare_pkg repo_inf
   in
   <:html<
     <div class="row">
-      <div class="span9">
+      <div class="span8">
         <ul class="nav nav-pills">
           $list: sortby_links_html$
         </ul>
       </div>
-      <form class="span3 form-search">
+      <form class="span4 form-search">
         <div class="input-append">
           <input id="search" class="search-query" type="text" placeholder="Search packages" />
           <button id="search-button" class="btn add-on">

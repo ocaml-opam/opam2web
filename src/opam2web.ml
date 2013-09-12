@@ -33,6 +33,7 @@ type options = {
   logfiles: filename list;
   operations: opam2web_operation list;
   href_prefix: string;
+  preds: pred list list;
 }
 
 let version = Version.string
@@ -54,6 +55,7 @@ let make_website user_options repo_info =
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let href_prefix = user_options.href_prefix in
+  let preds = user_options.preds in
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
   Printf.printf "++ Building the documentation pages.\n%!";
@@ -70,7 +72,8 @@ let make_website user_options repo_info =
     | None   -> OpamPackage.Name.Map.empty
     | Some s -> O2wStatistics.aggregate_package_popularity
                   s.month_stats.pkg_stats repo_info.packages in
-  let to_html = O2wRepository.to_html ~href_prefix ~sortby_links ~popularity in
+  let to_html = O2wRepository.to_html
+    ~href_prefix ~sortby_links ~preds ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true repo_info.pkgs_dates in
@@ -104,7 +107,8 @@ let make_website user_options repo_info =
     with _ ->
       OpamGlobals.warning "%s is not available." filename;
       <:html< >> in
-  let home_index = O2wHome.to_html ~href_prefix ~statistics ~popularity repo_info in
+  let home_index = O2wHome.to_html
+    ~href_prefix ~statistics ~preds ~popularity repo_info in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repo_info in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
@@ -193,13 +197,20 @@ let href_prefix = Arg.(
     ~docv:"HREF_PREFIX"
     ~doc:"The hyperlink prefix")
 
-let more = Arg.(
-  value & pos_all string [] & info []
-    ~docv:"OPAM_REPO_PATH"
-    ~doc:"Generate a website from the opam repository in 'OPAM_REPO_PATH'"
-)
+let pred = Arg.(
+  value & opt_all string [] & info ["pred"]
+    ~docv:"PRED_OR"
+    ~doc:"Satisfaction of all of the predicates in any comma-separated list implies inclusion")
 
-let build logfiles out_dir content_dir opam_path opam_remote href_prefix =
+let build logfiles out_dir content_dir opam_path opam_remote href_prefix preds =
+  let preds = List.rev_map (fun pred ->
+    List.rev_map (fun pred ->
+      match Re_str.(bounded_split (regexp_string ":") pred 2) with
+      | ["tag";tag] -> Tag tag
+      | [] -> failwith "filter predicate empty"
+      | p::_ -> failwith ("unknown predicate "^p)
+    ) Re_str.(split (regexp_string ",") pred)
+  ) preds in
   let href_prefix = normalize href_prefix in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
@@ -212,6 +223,7 @@ let build logfiles out_dir content_dir opam_path opam_remote href_prefix =
       (List.rev_map (fun o -> Website_of_path o) opam_path)
       (List.rev_map (fun o -> Website_of_opam o) opam_remote);
     href_prefix;
+    preds;
   } in
   if List.length user_options.operations = 0 then
     (* If the arguments didn't trigger any operation, try to interpret the
@@ -233,7 +245,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ opam_path $ opam_remote $ href_prefix),
+          $ opam_path $ opam_remote $ href_prefix $ pred),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;

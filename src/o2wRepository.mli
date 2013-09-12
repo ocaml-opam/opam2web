@@ -34,6 +34,7 @@ val sortby_links:
 val to_html:
   href_prefix:string ->
   sortby_links:(active:string -> Cow.Html.t list) ->
+  preds:pred list list ->
   popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
