@@ -39,3 +39,6 @@ val to_html: href_prefix:string -> statistics:statistics_set option ->
 
 (** Return the hyper link for a given package *)
 val href: ?href_prefix:string -> name -> version -> string
+
+(** Predicate to determine if DNF predicates are satisfied *)
+val are_preds_satisfied: repository_info -> pred list list -> package -> bool

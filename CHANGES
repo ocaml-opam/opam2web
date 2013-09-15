@@ -6,6 +6,10 @@
 * Providing a web server access log is now optional
 * opam2web version/revision and dirty flag are now exposed in meta generator
 * Packages and their versions have been moved into a path hierarchy
+* Anonymous command-line arguments no longer supported/interpreted as repo dirs
+* --pred disjunctively filters the opam repo by a conjunction of
+comma-separated predicates
+* Added "tag:*" predicate
 
 1.2.0 (2013-01-15):
 * Last release before change tracking

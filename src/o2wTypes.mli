@@ -47,6 +47,8 @@ type package_info = {
   pkg_url      : OpamFile.URL.t option;
 }
 
+type pred = Tag of string
+
 type statistics = {
   (** Individual package download count *)
   pkg_stats: int64 package_map;

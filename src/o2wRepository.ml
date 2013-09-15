@@ -159,12 +159,17 @@ let sortby_links ~href_prefix ~links ~default ~active =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html ~href_prefix ~content_dir ~sortby_links
+let to_html ~href_prefix ~content_dir ~sortby_links ~preds
     ~popularity ~active ~compare_pkg repo_info =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
-    let packages = OpamPackage.Set.elements repo_info.max_packages in
-    List.sort compare_pkg packages in
+    let pkg_set = repo_info.max_packages in
+    let pkg_set = OpamPackage.Set.filter
+      (O2wPackage.are_preds_satisfied repo_info preds) pkg_set
+    in
+    let packages = OpamPackage.Set.elements pkg_set in
+    List.sort compare_pkg packages
+  in
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
@@ -175,7 +180,8 @@ let to_html ~href_prefix ~content_dir ~sortby_links
         | Some pkg_info ->
           let pkg_download =
             try
-              let d = OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity in
+              let d = OpamPackage.Name.Map.find (OpamPackage.name pkg)
+                popularity in
               Printf.sprintf "Downloads: %Ld | Last update: %s"
                 d (O2wMisc.string_of_timestamp pkg_info.pkg_update)
             with Not_found ->
