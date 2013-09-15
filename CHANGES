@@ -10,6 +10,8 @@
 * --where disjunctively filters the opam repo by a conjunction of
 comma-separated predicates
 * Added "tag:*" predicate
+* Factor common page template into content/template.xhtml
+* Factor repository index into content/repo.xhtml
 
 1.2.0 (2013-01-15):
 * Last release before change tracking
