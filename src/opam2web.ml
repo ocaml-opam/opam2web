@@ -54,10 +54,11 @@ let make_website user_options repo_info =
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let href_prefix = user_options.href_prefix in
+  let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
   Printf.printf "++ Building the documentation pages.\n%!";
-  let menu_of_doc = O2wDocumentation.to_menu ~content_dir:user_options.content_dir in
+  let menu_of_doc = O2wDocumentation.to_menu ~content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
@@ -70,7 +71,8 @@ let make_website user_options repo_info =
     | None   -> OpamPackage.Name.Map.empty
     | Some s -> O2wStatistics.aggregate_package_popularity
                   s.month_stats.pkg_stats repo_info.packages in
-  let to_html = O2wRepository.to_html ~href_prefix ~sortby_links ~popularity in
+  let to_html = O2wRepository.to_html
+    ~href_prefix ~content_dir ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true repo_info.pkgs_dates in
@@ -90,7 +92,7 @@ let make_website user_options repo_info =
   in
   include_files user_options.out_dir user_options.files_dir;
   let about_page =
-    let filename = Printf.sprintf "%s/doc/About.md" user_options.content_dir in
+    let filename = Printf.sprintf "%s/doc/About.md" content_dir in
     try
       let filename = OpamFilename.of_string filename in
       let contents = OpamFilename.read filename in
@@ -108,10 +110,11 @@ let make_website user_options repo_info =
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum repo_info in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
-  O2wTemplate.generate ~out_dir:user_options.out_dir
+  O2wTemplate.generate
+    ~content_dir ~out_dir:user_options.out_dir
     ([
       { menu_link = { text="Home"; href="/" };
-        menu_item = Internal (0, home_index) };
+        menu_item = Internal (0, Template.serialize home_index) };
 
       { menu_link = { text="Packages"; href="pkg/" };
         menu_item = Internal (1, package_index) };
@@ -120,7 +123,7 @@ let make_website user_options repo_info =
         menu_item = Submenu doc_menu; };
 
       { menu_link = { text="About"; href="about.html" };
-        menu_item = Internal (0, about_page) };
+        menu_item = Internal (0, Template.serialize about_page) };
 
     ] @ package_links)
     pages;

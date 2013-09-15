@@ -30,6 +30,7 @@ let prepend_root (depth: int) (src: string): string =
   if src <> "" && src.[0] = '/' then src else aux src depth
 
 let create ~title ~header ~body ~footer ~depth =
+  let title = <:html< OPAM - $str:title$ >> in
   let css_files = [
     "ext/css/bootstrap.css";
     "ext/css/bootstrap-responsive.css";
@@ -45,84 +46,37 @@ let create ~title ~header ~body ~footer ~depth =
     "ext/js/search.js";
   ] in
   let prepend_root = prepend_root depth in
-  let css_html = List.map (fun f ->
-      <:html< <link href="$str: prepend_root f$" rel="stylesheet" /> >>) css_files
+  let head_html =
+    <:html<
+      <meta name="generator" content=$str: "opam2web " ^ Version.string$ />
+    >>@(List.flatten (List.map (fun f ->
+      <:html< <link href="$str: prepend_root f$" rel="stylesheet" /> >>
+    ) css_files))
   in
-  let js_html = List.map (fun f ->
-      <:html< <script src="$str: prepend_root f$"> </script> >>) js_files
-  in
-  <:html<
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>OPAM - $str: title$</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description"
-        content="The homepage of OPAM, a package manager for OCaml" />
-    <meta name="author" content="OCamlPro" />
-    <meta name="generator" content=$str: "opam2web " ^ Version.string$ />
-
-    <!-- Le styles -->
-    $list: css_html$
-
-    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
-    <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-
-  </head>
-
-  <body>
-
-    <div class="navbar navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <a class="btn btn-navbar" data-toggle="collapse"
-              data-target=".nav-collapse">
-            <span class="icon-bar"> </span>
-            <span class="icon-bar"> </span>
-            <span class="icon-bar"> </span>
-          </a>
-          <a class="brand" href="https://github.com/OCamlPro/opam">OPAM on Github</a>
-          <div class="nav-collapse collapse">
-            $header$
-<!--
-            <form class="navbar-form pull-right">
-              <input id="search" class="span2" type="text" placeholder="Search packages" />
-            </form>
--->
-          </div><!--/.nav-collapse -->
-        </div>
-      </div>
-    </div>
-
-    <div id="wrap">
-    <div id="main" class="container clear-top">
-
-      $body$
-
-    </div> <!-- /container -->
-    </div> <!-- /wrap -->
-
-    <div class="footer">$footer$</div>
-
-    <!-- Le javascript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    $list: js_html$
-    <script type="text/javascript">
+  let js_html =
+    <:html<
+      <script type="text/javascript">
       var _gaq = _gaq || []; _gaq.push(['_setAccount', 'UA-22552764-5']); _gaq.push(['_trackPageview']);
     (function() {
       var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
       ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
       var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
     })();
-    </script>
-  </body>
-</html>
-  >>
+      </script>
+    >>@(List.flatten (List.rev_map (fun f ->
+      <:html< <script src="$str: prepend_root f$"> </script> >>
+    ) js_files))
+  in
+  let js_html = List.rev js_html in [
+    "title", Template.serialize title;
+    "head",  Template.serialize head_html;
+    "header",header;
+    "body",  body;
+    "footer",footer;
+    "js",    Template.serialize js_html;
+  ]
 
-let make_nav (active, depth) pages: Cow.Html.t =
+let make_nav (active, depth) pages =
   let category_of_href href =
     try Some (String.sub href 0 (String.index href '/'))
     with Not_found -> None in
@@ -169,7 +123,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
         </li>
       >>
   in
-  <:html<
+  Template.serialize <:html<
     <ul class="nav">
       $list: List.map make_item pages$
     </ul>
@@ -177,7 +131,7 @@ let make_nav (active, depth) pages: Cow.Html.t =
 
 let make_footer depth =
   let icon file = prepend_root depth ("ext/img/" ^ file) in
-  <:html<
+  Template.serialize <:html<
     <div class="icons">
     <div class="icon">
       <a href="https://github.com/OCamlPro/opam2web">
@@ -201,9 +155,9 @@ let make_footer depth =
       <a href="mailto:contact@ocamlpro.com">Contact an administrator</a>.
       </small>
     </div>
->>
+  >>
 
-let generate ~out_dir menu pages =
+let generate ~content_dir ~out_dir menu pages =
   Printf.printf "++ Generating html files:\n%!";
   (* Filter out external links from the menu pages to generate *)
   let menu_pages =
@@ -240,15 +194,25 @@ let generate ~out_dir menu pages =
       else ""
     in
     let path = Printf.sprintf "%s%s%s" out_dir page.page_link.href suffix in
+    let template = Template.({ path="template.xhtml"; fields=[
+      "title", (default <:html< OPAM >>, Optional);
+      "head",  (default <:html< >>,      Optional);
+      "header",(default <:html< >>,      Optional);
+      "body",  (mandatory (),            Required);
+      "footer",(default <:html< >>,      Optional);
+      "js",    (default <:html< >>,      Optional);
+    ]}) in
     let chan = open_out path in
-    let page =
-      create
-        ~header ~footer
-        ~title:page.page_link.text
-        ~body:page.page_contents
-        ~depth:page.page_depth in
-    output_string chan (Html.to_string page);
-    close_out chan;
+    let xml_out = Cow.Xml.make_output ~decl:false (`Channel chan) in
+    Cow.Xml.output xml_out (`Dtd None);
+    List.iter (Cow.Xml.output xml_out)
+      (Template.generate content_dir template
+         (create
+            ~header ~footer
+            ~title:page.page_link.text
+            ~body:page.page_contents
+            ~depth:page.page_depth));
+    close_out chan
   in
   List.iter aux menu_pages;
   List.iter aux pages;

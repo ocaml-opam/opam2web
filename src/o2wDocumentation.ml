@@ -115,7 +115,8 @@ let to_menu ~content_dir ~pages =
       let source_filename = OpamFilename.of_string source_file in
       let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
-       { text=human_title; href=dest_file }, Internal (1, Cow.Html.nil))
+       { text=human_title; href=dest_file },
+       Internal (1, Template.serialize Cow.Html.nil))
   in
 
   let menu_pages = List.map aux_menu pages in
@@ -158,7 +159,7 @@ let to_menu ~content_dir ~pages =
         let html_page = to_html doc_menu extension source_filename in
         {
           menu_link = { lnk with href = "doc/" ^ lnk.href };
-          menu_item = Internal (level, html_page);
+          menu_item = Internal (level, Template.serialize html_page);
         }
   in
 

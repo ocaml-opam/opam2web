@@ -132,7 +132,8 @@ let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
     let page = {
       page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
       page_depth    = 3;
-      page_contents = O2wPackage.to_html ~href_prefix~statistics repo_info pkg_info
+      page_contents = Template.serialize
+        (O2wPackage.to_html ~href_prefix ~statistics repo_info pkg_info)
     } in
     page :: acc
 
@@ -158,7 +159,8 @@ let sortby_links ~href_prefix ~links ~default ~active =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given repository *)
-let to_html ~href_prefix ~sortby_links ~popularity ~active ~compare_pkg repo_info =
+let to_html ~href_prefix ~content_dir ~sortby_links
+    ~popularity ~active ~compare_pkg repo_info =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
     let packages = OpamPackage.Set.elements repo_info.max_packages in
@@ -194,32 +196,11 @@ let to_html ~href_prefix ~sortby_links ~popularity ~active ~compare_pkg repo_inf
       []
       (List.rev sorted_packages)
   in
-  <:html<
-    <div class="row">
-      <div class="span9">
-        <ul class="nav nav-pills">
-          $list: sortby_links_html$
-        </ul>
-      </div>
-      <form class="span3 form-search">
-        <div class="input-append">
-          <input id="search" class="search-query" type="text" placeholder="Search packages" />
-          <button id="search-button" class="btn add-on">
-            <i class="icon-search"> </i>
-          </button>
-        </div>
-      </form>
-    </div>
-    <table class="table table-hover"  id="packages">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Version</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        $list: packages_html$
-      </tbody>
-    </table>
-  >>
+  let template = Template.({ path="repo.xhtml"; fields=[
+    "nav",   (default <:html< >>, Optional);
+    "pkgs",  (mandatory (),       Required);
+  ]}) in
+  Template.(generate content_dir template [
+    "nav", serialize <:html< $list: sortby_links_html$ >>;
+    "pkgs", serialize <:html< <tbody> $list: packages_html$ </tbody> >>;
+  ])
