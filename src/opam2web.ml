@@ -200,8 +200,8 @@ let href_prefix = Arg.(
     ~doc:"The hyperlink prefix")
 
 let pred = Arg.(
-  value & opt_all string [] & info ["pred"]
-    ~docv:"PRED_OR"
+  value & opt_all string [] & info ["where"]
+    ~docv:"WHERE_OR"
     ~doc:"Satisfaction of all of the predicates in any comma-separated list implies inclusion")
 
 let build logfiles out_dir content_dir opam_path opam_remote href_prefix preds =

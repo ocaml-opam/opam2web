@@ -48,8 +48,8 @@ Some available options are:
     Generate a website with a remote in the local OPAM installation.
 - `--output / -o [directory]`
     The directory where to write the generated HTML files
-- `--pred [comma-separated predicate list]`
-    A package's satisfaction of all of the predicates in any of the list implies generation
+- `--where [comma-separated predicate list]`
+    A package's satisfaction of all of the predicates in any of the lists implies generation
 - `--help / -help`
     Display the list of options
 
