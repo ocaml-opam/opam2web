@@ -19,7 +19,7 @@ open OpamTypes
 type page = {
   page_link    : Cow.Html.link;
   page_depth   : int;
-  page_contents: Cow.Html.t;
+  page_contents: Cow.Xml.signal list;
 }
 
 type menu = {
@@ -28,8 +28,8 @@ type menu = {
 }
 
 and menu_item =
-  | Internal of int * Cow.Html.t
-  | No_menu of int * Cow.Html.t
+  | Internal of int * Cow.Xml.signal list
+  | No_menu of int * Cow.Xml.signal list
   | Submenu of menu list
   | Nav_header
   | Divider
@@ -46,6 +46,8 @@ type package_info = {
   pkg_opam     : OpamFile.OPAM.t;
   pkg_url      : OpamFile.URL.t option;
 }
+
+type pred = Tag of string
 
 type statistics = {
   (** Individual package download count *)

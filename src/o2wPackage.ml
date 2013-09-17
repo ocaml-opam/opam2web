@@ -44,11 +44,30 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
   | _ -> compare_alphanum p1 p2
 
 let href ?href_prefix name version =
-  let base = Printf.sprintf "pkg/%s.%s.html"
+  let base = Printf.sprintf "pkg/%s/%s/"
       (OpamPackage.Name.to_string name) (OpamPackage.Version.to_string version) in
   match href_prefix with
   | None   -> base
   | Some p -> p ^ base
+
+let are_preds_satisfied repo_info preds pkg =
+  try
+    let pkg_info = match OpamPackage.Map.find pkg repo_info.pkgs_infos with
+      | None -> raise Not_found
+      | Some info -> info
+    in
+    let tags = OpamFile.OPAM.tags pkg_info.pkg_opam in
+    let rec aux = function
+      | [] -> false
+      | pred::rest ->
+        if List.for_all (function
+        | Tag t -> List.mem t tags
+        ) pred
+        then true
+        else aux rest
+    in
+    if preds = [] then true else aux preds
+  with Not_found -> false
 
 (* Build a record representing information about a package *)
 let get_info ~dates repo prefix pkg =

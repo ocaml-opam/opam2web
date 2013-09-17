@@ -16,7 +16,11 @@
 open O2wTypes
 
 (* OPAM website homepage *)
-let to_html ~href_prefix ~statistics ~popularity repo_info =
+let to_html ~href_prefix ~statistics ~preds ~popularity repo_info =
+  let repo_info = { repo_info with
+    max_packages = OpamPackage.Set.filter
+      (O2wPackage.are_preds_satisfied repo_info preds) repo_info.max_packages
+  } in
   let url str = href_prefix ^ str in
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
@@ -135,6 +139,8 @@ let to_html ~href_prefix ~statistics ~popularity repo_info =
     >>
   in
 
+  (*let tag_cloud = *)
+
   let stats_html = match statistics with
     | None -> [ <:html< &>> ]
     | Some s -> [
@@ -189,7 +195,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
 
       <!-- Example row of columns -->
       <div class="row">
-        <div class="offset1 span4">
+        <div class="span4">
           <h2>News</h2>
           <p><i class="icon-ok"> </i> <strong>08/2013</strong> Package metadata are moving to <a href="https://github.com/OCamlPro/opam-repository/issues/955">CC0</a></p>
           <p><i class="icon-ok"> </i> <strong>14/03/2013</strong> Version 1.0 is out!<br/></p>
@@ -214,7 +220,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
           </p>
         </div>
 
-        <div class="span2 text-right">
+        <div class="span4">
           <h2>Tutorials</h2>
           <p><a href=$str:url "doc/About.html"$ title="Getting started with OPAM">Getting started</a></p>
           <p><a href=$str:url "doc/Quick_Install.html"$ title="Installing OPAM">Installing OPAM</a></p>
@@ -227,6 +233,8 @@ opam upgrade         # Upgrade the installed packages to their latest version
         </div>
 -->
       </div>
+      <hr />
+      <!-- tag_cloud -->
       <hr />
       <div class="row">
         <div class="span4">

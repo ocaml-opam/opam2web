@@ -18,5 +18,6 @@
 open O2wTypes
 
 (** Generate some web pages from a template *)
-val generate: out_dir:string -> menu list -> page list -> unit
+val generate:
+  content_dir:string -> out_dir:string -> menu list -> page list -> unit
 
