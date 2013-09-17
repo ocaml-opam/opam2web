@@ -20,5 +20,7 @@ open O2wTypes
 
 (** Generate the homepage *)
 val to_html: href_prefix:string ->
-  statistics:statistics_set option -> popularity:int64 name_map ->
+  statistics:statistics_set option ->
+  preds:pred list list ->
+  popularity:int64 name_map ->
   repository_info -> Cow.Html.t

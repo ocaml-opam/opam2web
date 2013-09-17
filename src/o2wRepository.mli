@@ -33,11 +33,13 @@ val sortby_links:
 (** Returns a HTML list of the packages in the given repository *)
 val to_html:
   href_prefix:string ->
+  content_dir:string ->
   sortby_links:(active:string -> Cow.Html.t list) ->
+  preds:pred list list ->
   popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
-  repository_info -> Cow.Html.t
+  repository_info -> Cow.Xml.signal list
 
 (** Load a repository from the local OPAM installation *)
 val of_opam: repository_name -> repository_info

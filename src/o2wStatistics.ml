@@ -277,33 +277,35 @@ let add_stats_set s1 s2 = {
   month_stats   = add_stats s1.month_stats s2.month_stats;
 }
 
-let statistics_set files =
-  let logs =
-    let filter e =
-      timestamp_of_entry e > month_filter.log_start_time in
-    List.rev_map (fun f ->
+let statistics_set = function
+  | [] -> None
+  | files ->
+    let logs =
+      let filter e =
+        timestamp_of_entry e > month_filter.log_start_time in
+      List.rev_map (fun f ->
         Readcombinedlog.create filter (OpamFilename.to_string f)
       ) files in
-  let total_size =
-    List.fold_left (fun acc t -> acc + Readcombinedlog.size t) 0 logs in
-  let current_size = ref 0 in
-  let chunk_size = 10_000 in
-  let stats = ref empty_stats_set in
-  let rec read l =
-    let percent = 100 * l.reads / l.size in
-    Printf.printf "\rBuilding entries: %3d%% (%s)%!" percent l.name;
-    begin match Readcombinedlog.read l chunk_size with
+    let total_size =
+      List.fold_left (fun acc t -> acc + Readcombinedlog.size t) 0 logs in
+    let current_size = ref 0 in
+    let chunk_size = 10_000 in
+    let stats = ref empty_stats_set in
+    let rec read l =
+      let percent = 100 * l.reads / l.size in
+      Printf.printf "\rBuilding entries: %3d%% (%s)%!" percent l.name;
+      begin match Readcombinedlog.read l chunk_size with
       | []    -> ()
       | lines ->
 	let new_stats = stats_of_lines current_size total_size lines in
 	stats := add_stats_set !stats new_stats
-    end;
-    if Readcombinedlog.is_empty l then
-      Printf.printf "\rBuilding entries: %3d%% (%s)\n%!" 100 l.name
-    else
-      read l in
-  List.iter read logs;
-  Some !stats
+      end;
+      if Readcombinedlog.is_empty l then
+        Printf.printf "\rBuilding entries: %3d%% (%s)\n%!" 100 l.name
+      else
+        read l in
+    List.iter read logs;
+    Some !stats
 
 let aggregate_package_popularity pkg_stats packages =
   OpamPackage.Map.fold (fun pkg pkg_count acc ->
