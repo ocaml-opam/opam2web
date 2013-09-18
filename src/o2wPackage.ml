@@ -155,25 +155,15 @@ let to_html ~href_prefix ~statistics repo_info pkg_info =
         </td>
         </tr>
       >> in
-  let pkg_maintainer = OpamFile.OPAM.maintainer pkg_info.pkg_opam in
-  let pkg_authors =
-    match OpamFile.OPAM.authors pkg_info.pkg_opam with
+  let list name l : (string * Cow.Xml.t) option = match l with
     | []  -> None
-    | [a] -> Some ("Author" , <:html<$str:a$>>)
-    | a   -> Some ("Authors", <:html<$str:OpamMisc.pretty_list a$>>) in
-  let pkg_license =
-    match OpamFile.OPAM.license pkg_info.pkg_opam with
-    | None   -> None
-    | Some l -> Some ("License", <:html<$str:l$>> ) in
-  let pkg_homepage =
-    match OpamFile.OPAM.homepage pkg_info.pkg_opam with
-    | None   -> None
-    | Some h -> Some ("Homepage", <:html<<a href=$str:h$>$str:h$</a>&>>) in
-  let pkg_tags =
-    match OpamFile.OPAM.tags pkg_info.pkg_opam with
-    | []  -> None
-    | [t] -> Some ("Tag" , <:html<$str:t$>>)
-    | ts  -> Some ("Tags", <:html<$str:OpamMisc.pretty_list ts$>>) in
+    | [e] -> Some (name      , <:html<$str:e$>>)
+    | l   -> Some (name ^ "s", <:html<$str:OpamMisc.pretty_list l$>>) in
+  let pkg_author = list "Author" (OpamFile.OPAM.author pkg_info.pkg_opam) in
+  let pkg_maintainer = list "Maintainer" (OpamFile.OPAM.maintainer pkg_info.pkg_opam) in
+  let pkg_license = list "License" (OpamFile.OPAM.license pkg_info.pkg_opam) in
+  let pkg_homepage = list "Homepage" (OpamFile.OPAM.homepage pkg_info.pkg_opam) in
+  let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_info.pkg_opam) in
   let pkg_update = O2wMisc.string_of_timestamp pkg_info.pkg_update in
   (* XXX: need to add hyperlink on package names *)
   let mk_formula name f = match f pkg_info.pkg_opam with
@@ -279,14 +269,11 @@ let to_html ~href_prefix ~statistics repo_info pkg_info =
 
         <table class="table">
           <tbody>
-            $mk_tr pkg_authors$
+            $mk_tr pkg_author$
             $mk_tr pkg_license$
             $mk_tr pkg_homepage$
             $mk_tr pkg_tags$
-            <tr>
-              <th>Maintainer</th>
-              <td>$str: pkg_maintainer$</td>
-            </tr>
+            $mk_tr pkg_maintainer$
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
             <tr>
