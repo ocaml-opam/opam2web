@@ -138,9 +138,54 @@ let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
     page :: acc
 
 (* Create a list of package pages to generate for a repository *)
-let to_pages ~href_prefix ~statistics repo_info =
-  OpamPackage.Map.fold
-    (to_page ~href_prefix ~statistics repo_info) repo_info.pkgs_infos []
+let to_pages ~href_prefix ~statistics ~preds repo_info =
+  let depends_graph =
+    Hashtbl.create (OpamPackage.Map.cardinal repo_info.pkgs_infos) in
+  let get_depends name =
+    try Hashtbl.find depends_graph name
+    with Not_found -> OpamPackage.Name.Set.empty in
+  let add_depends name deps =
+    let deps = OpamPackage.Name.Set.union deps (get_depends name) in
+    Hashtbl.replace depends_graph name deps in
+  (* fill the graph *)
+  let () =
+    OpamPackage.Map.iter (fun nv -> function
+        | None     -> ()
+        | Some pkg ->
+          let name = OpamPackage.name nv in
+          let opam = pkg.pkg_opam in
+          let atoms = OpamFormula.atoms (OpamFile.OPAM.depends opam) in
+          List.iter (fun (n, _) ->
+              add_depends name (OpamPackage.Name.Set.singleton n)
+            ) atoms
+      ) repo_info.pkgs_infos in
+    (* Transitive closure of the dependencies *)
+  (* XXX: very inefficient *)
+  let () =
+    let changes = ref true in
+    let names = Hashtbl.fold (fun h _ t -> h :: t) depends_graph [] in
+    while !changes do
+      changes := false;
+      List.iter (fun name ->
+          let preds0 = get_depends name in
+          let preds1 = OpamPackage.Name.Set.fold (fun n acc ->
+              OpamPackage.Name.Set.union acc (get_depends n)
+            ) preds0 preds0 in
+          if OpamPackage.Name.Set.compare preds0 preds1 <> 0 then changes := true;
+          add_depends name preds1
+        ) names
+    done in
+  let names = OpamPackage.Map.fold (fun nv pkg set ->
+      if O2wPackage.are_preds_satisfied repo_info preds nv then (
+        let name = OpamPackage.name nv in
+        let deps = get_depends name in
+        OpamPackage.Name.Set.(union set (add name deps))
+      ) else set
+    ) repo_info.pkgs_infos OpamPackage.Name.Set.empty in
+  let pkgs_infos = OpamPackage.Map.filter (fun nv _ ->
+      OpamPackage.Name.Set.mem (OpamPackage.name nv) names
+    ) repo_info.pkgs_infos in
+  OpamPackage.Map.fold (to_page ~href_prefix ~statistics repo_info) pkgs_infos []
 
 let sortby_links ~href_prefix ~links ~default ~active =
   let mk_item title =
