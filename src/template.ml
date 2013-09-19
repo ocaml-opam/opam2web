@@ -42,13 +42,15 @@ let generate content_dir template parameters =
     | (n,(_,Required)) -> n::acc
     | _ -> acc
   ) [] tt in
-  let ic = open_in (Filename.concat content_dir template.path) in
+  let filename = Filename.concat content_dir template.path in
+  let ic = open_in filename in
   let xml_stream = Cow.Xml.make_input (`Channel ic) in
   let input () =
     try
       Cow.Xml.input xml_stream
     with
-      | Xmlm.Error (_,e) ->
+      | Xmlm.Error ((line,char),e) ->
+        Printf.eprintf "XML parse error at %s:%d:%d:\n%!" filename line char;
         prerr_endline (Xmlm.error_message e);
         exit 1 in
   let signals = ref [] in
