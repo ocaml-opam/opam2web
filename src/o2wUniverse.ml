@@ -128,10 +128,11 @@ let of_repositories ?(preds=[]) repo_stack =
                    with repo_priority; repo_name } rmap),
       repo_priority - 1
     | Opam ->
-      RepoMap.(fold (fun k v (m,i) ->
+      List.fold_left (fun (m,i) r ->
+        let k = r.repo_name in
         let repo_name = OpamRepositoryName.(of_string ("opam:"^(to_string k))) in
-        add repo_name { v with repo_priority = i; repo_name } m, i - 1
-      ) opam_repos (rmap, repo_priority))
+        RepoMap.add repo_name { r with repo_priority = i; repo_name } m, i - 1
+      ) (rmap, repo_priority) (OpamRepository.sort opam_repos)
     ) (RepoMap.empty,256) repo_stack
   in
   let pkg_idx = OpamRepository.package_index repos in
