@@ -35,11 +35,10 @@ val to_html:
   href_prefix:string ->
   content_dir:string ->
   sortby_links:(active:string -> Cow.Html.t list) ->
-  preds:pred list list ->
   popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
   universe_info -> Cow.Xml.signal list
 
 (** Generate a universe from a list of repositories *)
-val of_repositories: repository list -> universe_info
+val of_repositories: ?preds:pred list list -> repository list -> universe_info

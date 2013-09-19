@@ -98,7 +98,7 @@ let reverse_dependencies pkg_idx opams =
     OpamPackage.Name.Map.add name names acc
   ) OpamPackage.Name.Map.empty names
 
-let mk_universe_info repos pkg_idx opams =
+let mk_universe_info preds repos pkg_idx opams =
   let pkg_idx = remove_base_packages pkg_idx in
   let versions = versions pkg_idx in
   let max_versions = max_versions versions in
@@ -106,11 +106,11 @@ let mk_universe_info repos pkg_idx opams =
   let reverse_deps = reverse_dependencies pkg_idx opams in
   let pkgs_dates = dates repos pkg_idx in
   let pkgs_infos = infos repos pkgs_dates pkg_idx in
-  { repos; versions; pkg_idx; max_versions; max_packages; reverse_deps;
+  { repos; preds; versions; pkg_idx; max_versions; max_packages; reverse_deps;
     pkgs_infos; pkgs_opams=opams; pkgs_dates }
 
 (* Generate a universe from a stack of repositories *)
-let of_repositories repo_stack =
+let of_repositories ?(preds=[]) repo_stack =
   let t = OpamState.load_state "opam2web" in
   let opam_repos = t.OpamState.Types.repositories in
   let repos,_ = List.fold_left
@@ -165,7 +165,7 @@ let of_repositories repo_stack =
     u_installed_roots = OpamPackage.Set.empty;
     u_pinned    = OpamPackage.Name.Map.empty;
   } in*)
-  mk_universe_info repos pkg_idx opams
+  mk_universe_info preds repos pkg_idx opams
 
 let to_page ~href_prefix ~statistics universe pkg pkg_info acc =
   match pkg_info with
@@ -181,7 +181,7 @@ let to_page ~href_prefix ~statistics universe pkg pkg_info acc =
     } in
     page :: acc
 
-(* Create a list of package pages to generate for a repository *)
+(* Create a list of package pages to generate for a universe *)
 let to_pages ~href_prefix ~statistics universe =
   OpamPackage.Map.fold
     (to_page ~href_prefix ~statistics universe) universe.pkgs_infos []
@@ -202,14 +202,14 @@ let sortby_links ~href_prefix ~links ~default ~active =
   in
   List.map mk_item links
 
-(* Returns a HTML list of the packages in the given repository *)
-let to_html ~href_prefix ~content_dir ~sortby_links ~preds
-    ~popularity ~active ~compare_pkg universe =
+(* Returns a HTML list of the packages in the given universe *)
+let to_html ~href_prefix ~content_dir ~sortby_links ~popularity ~active
+    ~compare_pkg universe =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
     let pkg_set = universe.max_packages in
     let pkg_set = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied universe preds) pkg_set
+      (O2wPackage.are_preds_satisfied universe) pkg_set
     in
     let packages = OpamPackage.Set.elements pkg_set in
     List.sort compare_pkg packages

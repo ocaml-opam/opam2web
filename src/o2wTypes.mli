@@ -119,6 +119,7 @@ type log_filter = {
 
 type universe_info = {
   repos       : OpamTypes.repository repository_name_map;
+  preds       : pred list list;
   pkg_idx     : (repository_name * string option) package_map;
   versions    : version_set name_map;
   max_packages: package_set;

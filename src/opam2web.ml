@@ -34,7 +34,6 @@ type options = {
   logfiles: filename list;
   repositories: O2wTypes.repository list;
   href_prefix: string;
-  preds: pred list list;
 }
 
 let version = Version.string
@@ -57,7 +56,6 @@ let make_website user_options universe =
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let href_prefix = user_options.href_prefix in
   let content_dir = user_options.content_dir in
-  let preds = user_options.preds in
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wUniverse.to_pages ~href_prefix ~statistics universe in
   Printf.printf "++ Building the documentation pages.\n%!";
@@ -75,7 +73,7 @@ let make_website user_options universe =
     | Some s -> O2wStatistics.aggregate_package_popularity
                   s.month_stats.pkg_stats universe.pkg_idx in
   let to_html = O2wUniverse.to_html
-    ~href_prefix ~content_dir ~sortby_links ~preds ~popularity in
+    ~href_prefix ~content_dir ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true universe.pkgs_dates in
@@ -110,7 +108,7 @@ let make_website user_options universe =
       OpamGlobals.warning "%s is not available." filename;
       <:html< >> in
   let home_index = O2wHome.to_html
-    ~href_prefix ~statistics ~preds ~popularity universe in
+    ~href_prefix ~statistics ~popularity universe in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum universe in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
@@ -212,9 +210,8 @@ let build logfiles out_dir content_dir repositories href_prefix preds =
     logfiles;
     repositories;
     href_prefix;
-    preds;
   } in
-  make_website user_options (O2wUniverse.of_repositories repositories)
+  make_website user_options (O2wUniverse.of_repositories ~preds repositories)
 
 let default_cmd =
   let doc = "generate a web site from an opam universe" in
