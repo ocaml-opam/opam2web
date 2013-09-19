@@ -155,6 +155,7 @@ let of_repositories ?(preds=[]) repo_stack =
       map
   ) packages OpamPackage.Map.empty
   in
+  let universe_info = mk_universe_info preds repos pkg_idx opams in
   let universe = {
     u_packages  = packages;
     u_action    = Depends;
@@ -169,7 +170,7 @@ let of_repositories ?(preds=[]) repo_stack =
   let dep_closure = OpamSolver.dependencies
     ~depopts:(List.mem [Depopt] preds) ~installed:false universe
     (OpamPackage.Set.filter
-       (O2wPackage.are_preds_satisfied opams preds) packages)
+       (O2wPackage.are_preds_satisfied universe_info) packages)
   in
   let packages = OpamPackage.Set.of_list dep_closure in
   let pkg_idx = OpamPackage.Map.filter
@@ -218,7 +219,7 @@ let to_html ~href_prefix ~content_dir ~sortby_links ~popularity ~active
   let sorted_packages =
     let pkg_set = universe.max_packages in
     let pkg_set = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied universe.pkgs_opams universe.preds)
+      (O2wPackage.are_preds_satisfied universe)
       pkg_set
     in
     let packages = OpamPackage.Set.elements pkg_set in

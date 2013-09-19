@@ -41,5 +41,4 @@ val to_html: href_prefix:string -> statistics:statistics_set option ->
 val href: ?href_prefix:string -> name -> version -> string
 
 (** Predicate to determine if DNF predicates are satisfied *)
-val are_preds_satisfied:
-  OpamFile.OPAM.t package_map -> pred list list -> package -> bool
+val are_preds_satisfied: universe_info -> package -> bool

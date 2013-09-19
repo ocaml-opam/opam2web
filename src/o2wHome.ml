@@ -19,7 +19,7 @@ open O2wTypes
 let to_html ~href_prefix ~statistics ~popularity universe =
   let universe = { universe with
     max_packages = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied universe.pkgs_opams universe.preds)
+      (O2wPackage.are_preds_satisfied universe)
       universe.max_packages
   } in
   let url str = href_prefix ^ str in
