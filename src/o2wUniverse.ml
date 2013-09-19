@@ -123,10 +123,18 @@ let of_repositories ?(preds=[]) repo_stack =
       repo_priority - 1
     | Local remote ->
       let repo_name = OpamRepositoryName.of_string ("local:"^remote) in
-      RepoMap.(add repo_name
-                 { find (OpamRepositoryName.of_string remote) opam_repos
-                   with repo_priority; repo_name } rmap),
-      repo_priority - 1
+      begin
+        try
+          let repo = RepoMap.find
+            (OpamRepositoryName.of_string remote) opam_repos in
+          RepoMap.add repo_name
+            { repo with repo_priority; repo_name } rmap,
+          repo_priority - 1
+        with Not_found ->
+          Printf.printf "Local opam remote '%s' not found, skipping.\n%!" remote;
+          Printf.printf "Maybe you wanted the 'path' namespace?\n%!";
+          rmap, repo_priority
+      end
     | Opam ->
       List.fold_left (fun (m,i) r ->
         let k = r.repo_name in
