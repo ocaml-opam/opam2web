@@ -56,6 +56,9 @@ let are_preds_satisfied universe pkg =
     let tags = OpamFile.OPAM.tags pkg_opam in
     let rec is_satisfied = function
       | Tag t -> List.mem t tags
+      | Repo r ->
+        let (rn,_) = OpamPackage.Map.find pkg universe.pkg_idx in
+        r = (OpamRepositoryName.to_string rn)
       | Not p -> not (is_satisfied p)
       | Depopt-> false
     in
