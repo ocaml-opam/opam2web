@@ -215,6 +215,12 @@ let to_html ~href_prefix ~content_dir ~sortby_links ~popularity ~active
     let packages = OpamPackage.Set.elements pkg_set in
     List.sort compare_pkg packages
   in
+  let repos_html =
+    let repos = OpamRepository.sort universe.repos in
+    List.map (fun r ->
+      <:html< <tr><td>$str:OpamRepository.to_string r$</td></tr> >>
+    ) repos
+  in
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
@@ -249,9 +255,11 @@ let to_html ~href_prefix ~content_dir ~sortby_links ~popularity ~active
   in
   let template = Template.({ path="repo.xhtml"; fields=[
     "nav",   (default <:html< >>, Optional);
+    "repos", (mandatory (),       Optional);
     "pkgs",  (mandatory (),       Required);
   ]}) in
   Template.(generate content_dir template [
-    "nav", serialize <:html< $list: sortby_links_html$ >>;
-    "pkgs", serialize <:html< <tbody> $list: packages_html$ </tbody> >>;
+    "nav",   serialize <:html< $list: sortby_links_html$ >>;
+    "repos", serialize <:html< <tbody> $list: repos_html$ </tbody> >>;
+    "pkgs",  serialize <:html< <tbody> $list: packages_html$ </tbody> >>;
   ])
