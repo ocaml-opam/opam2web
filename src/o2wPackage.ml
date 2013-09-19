@@ -54,15 +54,15 @@ let are_preds_satisfied opams preds pkg =
   try
     let pkg_opam = OpamPackage.Map.find pkg opams in
     let tags = OpamFile.OPAM.tags pkg_opam in
+    let rec is_satisfied = function
+      | Tag t -> List.mem t tags
+      | Not p -> not (is_satisfied p)
+      | Depopt-> false
+    in
     let rec aux = function
       | [] -> false
       | pred::rest ->
-        if List.for_all (function
-        | Tag t -> List.mem t tags
-        | Depopt -> false
-        ) pred
-        then true
-        else aux rest
+        if List.for_all is_satisfied pred then true else aux rest
     in
     if preds = [] then true else aux preds
   with Not_found -> false

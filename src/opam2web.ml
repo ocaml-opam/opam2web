@@ -179,14 +179,17 @@ let repositories =
       ~docv:"REPOSITORY"
       ~doc:"The repositories to consider as the universe. Available namespaces are 'path' for local directories, 'local' for named opam remotes, and 'opam' for the current local opam universe.")
 
+let rec parse_pred = function
+  | "not"::more -> Not (parse_pred more)
+  | "tag"::more -> Tag (String.concat ":" more)
+  | ["depopt"]  -> Depopt
+  | []   -> failwith "filter predicate empty"
+  | p::_ -> failwith ("unknown predicate "^p)
+
 let build logfiles out_dir content_dir repositories href_prefix preds =
   let preds = List.rev_map (fun pred ->
     List.rev_map (fun pred ->
-      match Re_str.(bounded_split (regexp_string ":") pred 2) with
-      | ["tag";tag] -> Tag tag
-      | ["depopt";] -> Depopt
-      | [] -> failwith "filter predicate empty"
-      | p::_ -> failwith ("unknown predicate "^p)
+      parse_pred Re_str.(split (regexp_string ":") pred)
     ) pred
   ) preds in
   let href_prefix = normalize href_prefix in
