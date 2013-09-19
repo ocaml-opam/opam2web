@@ -44,7 +44,13 @@ let generate content_dir template parameters =
   ) [] tt in
   let ic = open_in (Filename.concat content_dir template.path) in
   let xml_stream = Cow.Xml.make_input (`Channel ic) in
-  let input () = Cow.Xml.input xml_stream in
+  let input () =
+    try
+      Cow.Xml.input xml_stream
+    with
+      | Xmlm.Error (_,e) ->
+        prerr_endline (Xmlm.error_message e);
+        exit 1 in
   let signals = ref [] in
   let output signal = signals := signal :: !signals in
 
