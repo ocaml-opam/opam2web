@@ -58,7 +58,7 @@ let make_website user_options repo_info =
   let content_dir = user_options.content_dir in
   let preds = user_options.preds in
   Printf.printf "++ Building the package pages.\n%!";
-  let pages = O2wRepository.to_pages ~href_prefix ~statistics repo_info in
+  let pages = O2wRepository.to_pages ~href_prefix ~statistics ~preds repo_info in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc = O2wDocumentation.to_menu ~content_dir in
   let criteria = ["name"; "popularity"; "date"] in
