@@ -50,9 +50,9 @@ let href ?href_prefix name version =
   | None   -> base
   | Some p -> p ^ base
 
-let are_preds_satisfied universe pkg =
+let are_preds_satisfied opams preds pkg =
   try
-    let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
+    let pkg_opam = OpamPackage.Map.find pkg opams in
     let tags = OpamFile.OPAM.tags pkg_opam in
     let rec aux = function
       | [] -> false
@@ -63,7 +63,7 @@ let are_preds_satisfied universe pkg =
         then true
         else aux rest
     in
-    if universe.preds = [] then true else aux universe.preds
+    if preds = [] then true else aux preds
   with Not_found -> false
 
 (* Build a record representing information about a package *)

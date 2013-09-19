@@ -82,7 +82,7 @@ let dates repos pkg_idx =
 (* Create an association list (package_name -> reverse_dependencies) *)
 let reverse_dependencies pkg_idx opams =
   let revdeps_tbl: (name, name) Hashtbl.t = Hashtbl.create 300 in
-  (* Fill a hash table with reverse dependecies (required by...) *)
+  (* Fill a hash table with reverse dependencies (required by...) *)
   OpamPackage.Map.iter (fun pkg _ ->
     let depends = OpamFile.OPAM.depends (OpamPackage.Map.find pkg opams) in
     List.iter (fun (depname,_) ->
@@ -155,7 +155,7 @@ let of_repositories ?(preds=[]) repo_stack =
       map
   ) packages OpamPackage.Map.empty
   in
-  (*let universe = {
+  let universe = {
     u_packages  = packages;
     u_action    = Depends;
     u_installed = OpamPackage.Set.empty;
@@ -164,8 +164,17 @@ let of_repositories ?(preds=[]) repo_stack =
     u_depopts   = OpamPackage.Map.map OpamFile.OPAM.depopts opams;
     u_conflicts = OpamPackage.Map.map OpamFile.OPAM.conflicts opams;
     u_installed_roots = OpamPackage.Set.empty;
-    u_pinned    = OpamPackage.Name.Map.empty;
-  } in*)
+    u_pinned    = OpamPackage.Name.Set.empty;
+  } in
+  let dep_closure = OpamSolver.dependencies
+    ~depopts:false ~installed:false universe
+    (OpamPackage.Set.filter
+       (O2wPackage.are_preds_satisfied opams preds) packages)
+  in
+  List.iter (fun p -> print_endline (OpamPackage.to_string p)) dep_closure;
+  let packages = OpamPackage.Set.of_list dep_closure in
+  let pkg_idx = OpamPackage.Map.filter
+    (fun k _ -> OpamPackage.Set.mem k packages) pkg_idx in
   mk_universe_info preds repos pkg_idx opams
 
 let to_page ~href_prefix ~statistics universe pkg pkg_info acc =
@@ -210,7 +219,8 @@ let to_html ~href_prefix ~content_dir ~sortby_links ~popularity ~active
   let sorted_packages =
     let pkg_set = universe.max_packages in
     let pkg_set = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied universe) pkg_set
+      (O2wPackage.are_preds_satisfied universe.pkgs_opams universe.preds)
+      pkg_set
     in
     let packages = OpamPackage.Set.elements pkg_set in
     List.sort compare_pkg packages
