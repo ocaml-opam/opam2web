@@ -1,1 +1,8 @@
+stats.csv
+stats.json
+src/_build
+src/_config
+src/search.byte
+src/search.js
 src/version.ml
+www
