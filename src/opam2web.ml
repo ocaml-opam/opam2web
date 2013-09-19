@@ -184,6 +184,7 @@ let build logfiles out_dir content_dir repositories href_prefix preds =
     List.rev_map (fun pred ->
       match Re_str.(bounded_split (regexp_string ":") pred 2) with
       | ["tag";tag] -> Tag tag
+      | ["depopt";] -> Depopt
       | [] -> failwith "filter predicate empty"
       | p::_ -> failwith ("unknown predicate "^p)
     ) pred

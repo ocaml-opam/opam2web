@@ -59,6 +59,7 @@ let are_preds_satisfied opams preds pkg =
       | pred::rest ->
         if List.for_all (function
         | Tag t -> List.mem t tags
+        | Depopt -> false
         ) pred
         then true
         else aux rest

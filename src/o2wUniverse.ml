@@ -167,11 +167,10 @@ let of_repositories ?(preds=[]) repo_stack =
     u_pinned    = OpamPackage.Name.Set.empty;
   } in
   let dep_closure = OpamSolver.dependencies
-    ~depopts:false ~installed:false universe
+    ~depopts:(List.mem [Depopt] preds) ~installed:false universe
     (OpamPackage.Set.filter
        (O2wPackage.are_preds_satisfied opams preds) packages)
   in
-  List.iter (fun p -> print_endline (OpamPackage.to_string p)) dep_closure;
   let packages = OpamPackage.Set.of_list dep_closure in
   let pkg_idx = OpamPackage.Map.filter
     (fun k _ -> OpamPackage.Set.mem k packages) pkg_idx in
