@@ -17,16 +17,15 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
-let packages repo =
-  OpamPackage.Set.of_list (OpamPackage.Map.keys repo.packages)
+module RepoMap = OpamRepositoryName.Map
 
-let remove_base_packages packages =
+let remove_base_packages pkg_idx =
   OpamPackage.Map.filter (fun pkg _ ->
     let name = OpamPackage.name pkg in
     not (OpamMisc.starts_with ~prefix:"base" (OpamPackage.Name.to_string name))
-  ) packages
+  ) pkg_idx
 
-let versions packages =
+let versions pkg_idx =
   OpamPackage.Map.fold (fun nv _ map ->
       let name = OpamPackage.name nv in
       let versions, map =
@@ -38,7 +37,7 @@ let versions packages =
           OpamPackage.Version.Set.empty, map in
       let versions = OpamPackage.Version.Set.add (OpamPackage.version nv) versions in
       OpamPackage.Name.Map.add name versions map
-    ) packages OpamPackage.Name.Map.empty
+    ) pkg_idx OpamPackage.Name.Map.empty
 
 let max_versions versions =
   OpamPackage.Name.Map.map (fun versions ->
@@ -50,17 +49,18 @@ let max_packages max_versions =
       OpamPackage.Set.add (OpamPackage.create name version) set
     ) max_versions OpamPackage.Set.empty
 
-let infos repo dates packages =
-  let n = OpamPackage.Map.cardinal packages in
+let infos repos dates pkg_idx =
+  let n = OpamPackage.Map.cardinal pkg_idx in
   let c = ref 1 in
   let msg () =
     Printf.printf "\r++ Building the package infos: %-5d/%d%!" !c n;
     incr c in
-  let result = OpamPackage.Map.fold (fun pkg prefix map ->
-      msg ();
-      let info = O2wPackage.get_info ~dates repo prefix pkg in
-      OpamPackage.Map.add pkg info map
-    ) packages OpamPackage.Map.empty in
+  let result = OpamPackage.Map.fold (fun pkg (repo,prefix) map ->
+    msg ();
+    let repo = RepoMap.find repo repos in
+    let info = O2wPackage.get_info ~dates repo prefix pkg in
+    OpamPackage.Map.add pkg info map
+  ) pkg_idx OpamPackage.Map.empty in
   Printf.printf "\n%!";
   result
 
@@ -73,57 +73,101 @@ let last_update repo prefix package =
   let opam_stat = Unix.stat opam_filename in
   opam_stat.Unix.st_mtime
 
-let dates repo packages =
-  OpamPackage.Map.fold (fun pkg prefix map ->
-      let last_update = last_update repo prefix pkg in
+let dates repos pkg_idx =
+  OpamPackage.Map.fold (fun pkg (repo,prefix) map ->
+      let last_update = last_update (RepoMap.find repo repos) prefix pkg in
       OpamPackage.Map.add pkg last_update map
-    ) packages OpamPackage.Map.empty
+    ) pkg_idx OpamPackage.Map.empty
 
 (* Create an association list (package_name -> reverse_dependencies) *)
-let reverse_dependencies repo packages =
+let reverse_dependencies pkg_idx opams =
   let revdeps_tbl: (name, name) Hashtbl.t = Hashtbl.create 300 in
   (* Fill a hash table with reverse dependecies (required by...) *)
-  OpamPackage.Map.iter (fun pkg prefix ->
-    let name = OpamPackage.name pkg in
-    let opam_file = OpamFile.OPAM.read
-        (OpamPath.Repository.opam repo prefix pkg) in
-    let dependencies = OpamFormula.atoms (OpamFile.OPAM.depends opam_file) in
-    let deps = List.map (fun (name, _) -> name) dependencies in
-    List.iter (fun dep -> Hashtbl.add revdeps_tbl dep name) deps)
-    packages;
+  OpamPackage.Map.iter (fun pkg _ ->
+    let depends = OpamFile.OPAM.depends (OpamPackage.Map.find pkg opams) in
+    List.iter (fun (depname,_) ->
+      Hashtbl.add revdeps_tbl depname (OpamPackage.name pkg)
+    ) (OpamFormula.atoms depends)
+  ) pkg_idx;
   let names =
     Hashtbl.fold (fun name _ acc -> name :: acc) revdeps_tbl [] in
   (* Build the association list *)
   List.fold_left (fun acc name ->
-    let names = OpamPackage.Name.Set.of_list (Hashtbl.find_all revdeps_tbl name) in
+    let revdeps = Hashtbl.find_all revdeps_tbl name in
+    let names = OpamPackage.Name.Set.of_list revdeps in
     OpamPackage.Name.Map.add name names acc
   ) OpamPackage.Name.Map.empty names
 
-let mk_repo_info repo =
-  let root = repo.repo_root in
-  let packages = OpamRepository.packages_with_prefixes repo in
-  let packages = remove_base_packages packages in
-  let versions = versions packages in
+let mk_universe_info repos pkg_idx opams =
+  let pkg_idx = remove_base_packages pkg_idx in
+  let versions = versions pkg_idx in
   let max_versions = max_versions versions in
   let max_packages = max_packages max_versions in
-  let reverse_deps = reverse_dependencies repo packages in
-  let pkgs_dates = dates repo packages in
-  let pkgs_infos = infos repo pkgs_dates packages in
-  { root; repo; versions; packages; max_versions; max_packages; reverse_deps;
-    pkgs_infos; pkgs_dates }
+  let reverse_deps = reverse_dependencies pkg_idx opams in
+  let pkgs_dates = dates repos pkg_idx in
+  let pkgs_infos = infos repos pkgs_dates pkg_idx in
+  { repos; versions; pkg_idx; max_versions; max_packages; reverse_deps;
+    pkgs_infos; pkgs_opams=opams; pkgs_dates }
 
-(* Load a repository from the local OPAM installation *)
-let of_opam repo_name =
+(* Generate a universe from a stack of repositories *)
+let of_repositories repo_stack =
   let t = OpamState.load_state "opam2web" in
-  let repo = OpamRepositoryName.Map.find repo_name t.OpamState.Types.repositories in
-  mk_repo_info repo
+  let opam_repos = t.OpamState.Types.repositories in
+  let repos,_ = List.fold_left
+    (fun (rmap,repo_priority) -> function
+    | Path path ->
+      let repo_name = OpamRepositoryName.of_string ("path:"^path) in
+      RepoMap.add repo_name
+        { OpamRepository.local (OpamFilename.Dir.of_string path)
+          with repo_priority; repo_name } rmap,
+      repo_priority - 1
+    | Local remote ->
+      let repo_name = OpamRepositoryName.of_string ("local:"^remote) in
+      RepoMap.(add repo_name
+                 { find (OpamRepositoryName.of_string remote) opam_repos
+                   with repo_priority; repo_name } rmap),
+      repo_priority - 1
+    | Opam ->
+      RepoMap.(fold (fun k v (m,i) ->
+        let repo_name = OpamRepositoryName.(of_string ("opam:"^(to_string k))) in
+        add repo_name { v with repo_priority = i; repo_name } m, i - 1
+      ) opam_repos (rmap, repo_priority))
+    ) (RepoMap.empty,256) repo_stack
+  in
+  let pkg_idx = OpamRepository.package_index repos in
+  let packages = OpamPackage.Set.of_list (OpamPackage.Map.keys pkg_idx) in
+  let opams = OpamPackage.Set.fold (fun nv map ->
+    try
+      let repo, prefix = OpamPackage.Map.find nv pkg_idx in
+      let repo = OpamRepositoryName.Map.find repo repos in
+      let file = OpamPath.Repository.opam repo prefix nv in
+      let opam = OpamFile.OPAM.read file in
+      OpamPackage.Map.add nv opam map
+    with
+    | Not_found ->
+      Printf.printf "Cannot find an OPAM file for %s, skipping.\n"
+        (OpamPackage.to_string nv);
+      map
+    | Parsing.Parse_error | OpamSystem.Internal_error _ ->
+      Printf.printf "Errors while parsing %s OPAM file, skipping.\n"
+        (OpamPackage.to_string nv);
+      map
+  ) packages OpamPackage.Map.empty
+  in
+  (*let universe = {
+    u_packages  = packages;
+    u_action    = Depends;
+    u_installed = OpamPackage.Set.empty;
+    u_available = packages; (* TODO: ok? check opam's semantics *)
+    u_depends   = OpamPackage.Map.map OpamFile.OPAM.depends opams;
+    u_depopts   = OpamPackage.Map.map OpamFile.OPAM.depopts opams;
+    u_conflicts = OpamPackage.Map.map OpamFile.OPAM.conflicts opams;
+    u_installed_roots = OpamPackage.Set.empty;
+    u_pinned    = OpamPackage.Name.Map.empty;
+  } in*)
+  mk_universe_info repos pkg_idx opams
 
-(* Load a repository from a directory *)
-let of_path root =
-  let repo = OpamRepository.local root in
-  mk_repo_info repo
-
-let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
+let to_page ~href_prefix ~statistics universe pkg pkg_info acc =
   match pkg_info with
   | None  ->
     Printf.printf "Skipping %s\n%!" (OpamPackage.to_string pkg);
@@ -133,14 +177,14 @@ let to_page ~href_prefix ~statistics repo_info pkg pkg_info acc =
       page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
       page_depth    = 3;
       page_contents = Template.serialize
-        (O2wPackage.to_html ~href_prefix ~statistics repo_info pkg_info)
+        (O2wPackage.to_html ~href_prefix ~statistics universe pkg_info)
     } in
     page :: acc
 
 (* Create a list of package pages to generate for a repository *)
-let to_pages ~href_prefix ~statistics repo_info =
+let to_pages ~href_prefix ~statistics universe =
   OpamPackage.Map.fold
-    (to_page ~href_prefix ~statistics repo_info) repo_info.pkgs_infos []
+    (to_page ~href_prefix ~statistics universe) universe.pkgs_infos []
 
 let sortby_links ~href_prefix ~links ~default ~active =
   let mk_item title =
@@ -160,12 +204,12 @@ let sortby_links ~href_prefix ~links ~default ~active =
 
 (* Returns a HTML list of the packages in the given repository *)
 let to_html ~href_prefix ~content_dir ~sortby_links ~preds
-    ~popularity ~active ~compare_pkg repo_info =
+    ~popularity ~active ~compare_pkg universe =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
-    let pkg_set = repo_info.max_packages in
+    let pkg_set = universe.max_packages in
     let pkg_set = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied repo_info preds) pkg_set
+      (O2wPackage.are_preds_satisfied universe preds) pkg_set
     in
     let packages = OpamPackage.Set.elements pkg_set in
     List.sort compare_pkg packages
@@ -173,7 +217,7 @@ let to_html ~href_prefix ~content_dir ~sortby_links ~preds
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
-          try OpamPackage.Map.find pkg repo_info.pkgs_infos
+          try OpamPackage.Map.find pkg universe.pkgs_infos
           with Not_found -> None in
         match info with
         | None          -> acc

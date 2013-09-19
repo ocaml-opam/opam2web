@@ -43,11 +43,12 @@ type package_info = {
   pkg_href     : string;
   pkg_title    : string;
   pkg_update   : float;
-  pkg_opam     : OpamFile.OPAM.t;
   pkg_url      : OpamFile.URL.t option;
 }
 
 type pred = Tag of string
+
+type repository = Path of string | Local of string | Opam
 
 type statistics = {
   (** Individual package download count *)
@@ -116,14 +117,14 @@ type log_filter = {
   log_custom: log_entry -> bool
 }
 
-type repository_info = {
-  root        : dirname;
-  repo        : repository;
-  packages    : string option package_map;
+type universe_info = {
+  repos       : OpamTypes.repository repository_name_map;
+  pkg_idx     : (repository_name * string option) package_map;
   versions    : version_set name_map;
   max_packages: package_set;
   max_versions: version name_map;
   reverse_deps: name_set name_map;
   pkgs_infos  : package_info option package_map;
+  pkgs_opams  : OpamFile.OPAM.t package_map;
   pkgs_dates  : float package_map;
 }
