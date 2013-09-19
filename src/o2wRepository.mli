@@ -20,7 +20,7 @@ open O2wTypes
 
 (** Create a list of package pages to generate for a repository *)
 val to_pages: href_prefix:string -> statistics:statistics_set option ->
-  repository_info -> page list
+  preds:pred list list -> repository_info -> page list
 
 (** Generate the list of HTML links for a list of page names *)
 val sortby_links:
