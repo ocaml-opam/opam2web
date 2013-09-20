@@ -55,6 +55,9 @@ Some available options are:
 
 Some available predicates are:
 - `tag:*`
+- `depopt`
+- `not:*`
+- `repo:*`
 
 For complete command-line configuration options, run
 ```bash

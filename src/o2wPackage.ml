@@ -50,23 +50,24 @@ let href ?href_prefix name version =
   | None   -> base
   | Some p -> p ^ base
 
-let are_preds_satisfied repo_info preds pkg =
+let are_preds_satisfied universe pkg =
   try
-    let pkg_info = match OpamPackage.Map.find pkg repo_info.pkgs_infos with
-      | None -> raise Not_found
-      | Some info -> info
+    let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
+    let tags = OpamFile.OPAM.tags pkg_opam in
+    let rec is_satisfied = function
+      | Tag t -> List.mem t tags
+      | Repo r ->
+        let (rn,_) = OpamPackage.Map.find pkg universe.pkg_idx in
+        r = (OpamRepositoryName.to_string rn)
+      | Not p -> not (is_satisfied p)
+      | Depopt-> false
     in
-    let tags = OpamFile.OPAM.tags pkg_info.pkg_opam in
     let rec aux = function
       | [] -> false
       | pred::rest ->
-        if List.for_all (function
-        | Tag t -> List.mem t tags
-        ) pred
-        then true
-        else aux rest
+        if List.for_all is_satisfied pred then true else aux rest
     in
-    if preds = [] then true else aux preds
+    if universe.preds = [] then true else aux universe.preds
   with Not_found -> false
 
 (* Build a record representing information about a package *)
@@ -74,7 +75,8 @@ let get_info ~dates repo prefix pkg =
   let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
   let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
   let pkg_href = href (OpamPackage.name pkg) (OpamPackage.version pkg) in
-  let descr = OpamFile.Descr.safe_read (OpamPath.Repository.descr repo prefix pkg) in
+  let descr = OpamFile.Descr.safe_read
+    (OpamPath.Repository.descr repo prefix pkg) in
   let pkg_synopsis = OpamFile.Descr.synopsis descr in
   let pkg_descr_markdown = OpamFile.Descr.full descr in
   let short_descr, long_descr =
@@ -93,8 +95,6 @@ let get_info ~dates repo prefix pkg =
       Some (OpamFile.URL.read file)
     else
       None in
-  let pkg_opam =
-    OpamFile.OPAM.read (OpamPath.Repository.opam repo prefix pkg) in
   let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
   try
     let pkg_update =
@@ -108,20 +108,20 @@ let get_info ~dates repo prefix pkg =
       pkg_title;
       pkg_update;
       pkg_url;
-      pkg_opam;
     }
   with Not_found ->
     None
 
 (* Returns a HTML description of the given package *)
-let to_html ~href_prefix ~statistics repo_info pkg_info =
+let to_html ~href_prefix ~statistics universe pkg_info =
   let name = OpamPackage.Name.of_string pkg_info.pkg_name in
   let version = OpamPackage.Version.of_string pkg_info.pkg_version in
   let pkg = OpamPackage.create name version in
+  let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
   let version_links =
     let versions =
       try OpamPackage.Version.Set.elements
-            (OpamPackage.Name.Map.find name repo_info.versions)
+            (OpamPackage.Name.Map.find name universe.versions)
       with Not_found -> [version] in
     List.map
       (fun version ->
@@ -159,14 +159,14 @@ let to_html ~href_prefix ~statistics repo_info pkg_info =
     | []  -> None
     | [e] -> Some (name      , <:html<$str:e$>>)
     | l   -> Some (name ^ "s", <:html<$str:OpamMisc.pretty_list l$>>) in
-  let pkg_author = list "Author" (OpamFile.OPAM.author pkg_info.pkg_opam) in
-  let pkg_maintainer = list "Maintainer" (OpamFile.OPAM.maintainer pkg_info.pkg_opam) in
-  let pkg_license = list "License" (OpamFile.OPAM.license pkg_info.pkg_opam) in
-  let pkg_homepage = list "Homepage" (OpamFile.OPAM.homepage pkg_info.pkg_opam) in
-  let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_info.pkg_opam) in
+  let pkg_author = list "Author" (OpamFile.OPAM.author pkg_opam) in
+  let pkg_maintainer = list "Maintainer" (OpamFile.OPAM.maintainer pkg_opam) in
+  let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
+  let pkg_homepage = list "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
+  let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
   let pkg_update = O2wMisc.string_of_timestamp pkg_info.pkg_update in
   (* XXX: need to add hyperlink on package names *)
-  let mk_formula name f = match f pkg_info.pkg_opam with
+  let mk_formula name f = match f pkg_opam with
     | OpamFormula.Empty -> None
     | x                 -> Some (name, <:html<$str:OpamFormula.to_string x$>>) in
   let pkg_depends = mk_formula "Dependencies" OpamFile.OPAM.depends in
@@ -174,7 +174,7 @@ let to_html ~href_prefix ~statistics repo_info pkg_info =
   let html_of_dependencies title dependencies =
     let deps = List.map (fun (pkg_name, constr_opt) ->
         let latest_version =
-          try Some (OpamPackage.Name.Map.find pkg_name repo_info.max_versions)
+          try Some (OpamPackage.Name.Map.find pkg_name universe.max_versions)
           with Not_found -> None in
         let name = OpamPackage.Name.to_string pkg_name in
         let href = match latest_version with
@@ -210,12 +210,12 @@ let to_html ~href_prefix ~statistics repo_info pkg_info =
   in
   (* Keep only atomic formulas in dependency requirements
      TODO: handle any type of formula *)
-  let depends_atoms = OpamFormula.atoms (OpamFile.OPAM.depends pkg_info.pkg_opam) in
+  let depends_atoms = OpamFormula.atoms (OpamFile.OPAM.depends pkg_opam) in
   let dependencies = html_of_dependencies "Dependencies" depends_atoms in
-  let depopts_atoms = OpamFormula.atoms (OpamFile.OPAM.depopts pkg_info.pkg_opam) in
+  let depopts_atoms = OpamFormula.atoms (OpamFile.OPAM.depopts pkg_opam) in
   let depopts = html_of_dependencies "Optional" depopts_atoms in
   let requiredby =
-    try OpamPackage.Name.Map.find (OpamPackage.name pkg) repo_info.reverse_deps
+    try OpamPackage.Name.Map.find (OpamPackage.name pkg) universe.reverse_deps
     with Not_found -> OpamPackage.Name.Set.empty in
   let requiredby_deps =
     List.map (fun name -> name, None) (OpamPackage.Name.Set.elements requiredby) in
