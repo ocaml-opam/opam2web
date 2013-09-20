@@ -16,10 +16,11 @@
 open O2wTypes
 
 (* OPAM website homepage *)
-let to_html ~href_prefix ~statistics ~preds ~popularity repo_info =
-  let repo_info = { repo_info with
+let to_html ~href_prefix ~statistics ~popularity universe =
+  let universe = { universe with
     max_packages = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied repo_info preds) repo_info.max_packages
+      (O2wPackage.are_preds_satisfied universe)
+      universe.max_packages
   } in
   let url str = href_prefix ^ str in
   let updates_last10 =
@@ -39,11 +40,11 @@ let to_html ~href_prefix ~statistics ~preds ~popularity repo_info =
       >>
     in
     let dates_fn pkg =
-      try OpamPackage.Map.find pkg repo_info.pkgs_dates
+      try OpamPackage.Map.find pkg universe.pkgs_dates
       with Not_found -> 0. in
     let last_updates =
       O2wStatistics.top_packages ~reverse:true ~ntop:10
-        dates_fn repo_info.max_packages in
+        dates_fn universe.max_packages in
     let updated_items = List.map mk_update_li last_updates in
     <:html<
       <div class="span4">
@@ -86,7 +87,7 @@ let to_html ~href_prefix ~statistics ~preds ~popularity repo_info =
       let popularity_fn pkg =
         try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity
         with Not_found -> 0L in
-      let packages = repo_info.max_packages in
+      let packages = universe.max_packages in
       let nb_packages = OpamPackage.Set.cardinal packages in
       let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
       let top10_items = List.map mk_top_li top10_pkgs in

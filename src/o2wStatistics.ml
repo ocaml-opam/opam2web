@@ -307,9 +307,9 @@ let statistics_set = function
     List.iter read logs;
     Some !stats
 
-let aggregate_package_popularity pkg_stats packages =
+let aggregate_package_popularity pkg_stats pkg_idx =
   OpamPackage.Map.fold (fun pkg pkg_count acc ->
-    if not (OpamPackage.Map.mem pkg packages) then
+    if not (OpamPackage.Map.mem pkg pkg_idx) then
       (* This can happen when some packages are deleted *)
       acc
     else (
