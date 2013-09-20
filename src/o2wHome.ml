@@ -198,6 +198,7 @@ opam upgrade         # Upgrade the installed packages to their latest version
       <div class="row">
         <div class="span4">
           <h2>News</h2>
+          <p><i class="icon-ok"> </i> <strong>20/09/2013</strong> Version 1.1.0-beta is out!<br/></p>
           <p><i class="icon-ok"> </i> <strong>08/2013</strong> Package metadata are moving to <a href="https://github.com/OCamlPro/opam-repository/issues/955">CC0</a></p>
           <p><i class="icon-ok"> </i> <strong>14/03/2013</strong> Version 1.0 is out!<br/></p>
           <p><i class="icon-ok"> </i> <strong>15/01/2013</strong> Version 0.9 (BETA release) is out!<br/></p>
