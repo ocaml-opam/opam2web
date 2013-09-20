@@ -71,11 +71,6 @@ code {
   filter: progid:dximagetransform.microsoft.gradient(startColorstr='#ffb40404', endColorstr='#ff8f0222', GradientType=0);
 }
 
-.anchor-toc {
-  position: relative;
-  top: -50px;
-}
-
 .bs-docs-menu {
   width: inherit;
 }
