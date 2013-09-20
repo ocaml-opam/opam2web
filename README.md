@@ -58,6 +58,7 @@ Some available predicates are:
 - `depopt`
 - `not:*`
 - `repo:*`
+- `pkg:*`
 
 For complete command-line configuration options, run
 ```bash

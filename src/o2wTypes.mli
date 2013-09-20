@@ -46,7 +46,12 @@ type package_info = {
   pkg_url      : OpamFile.URL.t option;
 }
 
-type pred = Tag of string | Depopt | Not of pred | Repo of string
+type pred =
+| Tag of string
+| Depopt
+| Not of pred
+| Repo of string
+| Pkg of string
 
 type repository = Path of string | Local of string | Opam
 

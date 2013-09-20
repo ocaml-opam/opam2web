@@ -183,6 +183,7 @@ let rec parse_pred = function
   | "not"::more -> Not (parse_pred more)
   | "tag"::more -> Tag (String.concat ":" more)
   | "repo"::more -> Repo (String.concat ":" more)
+  | "pkg"::more -> Pkg (String.concat ":" more)
   | ["depopt"]  -> Depopt
   | []   -> failwith "filter predicate empty"
   | p::_ -> failwith ("unknown predicate "^p)
