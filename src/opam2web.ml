@@ -168,6 +168,14 @@ let pred = Arg.(
     ~docv:"WHERE_OR"
     ~doc:"Satisfaction of all of the predicates in any comma-separated list implies inclusion")
 
+let index = Arg.(
+  value & opt (enum [
+    "all", Index_all;
+    "where", Index_pred;
+  ]) Index_pred & info ["index"]
+  ~docv:"INDEX"
+  ~doc:"Changes the set of packages for which indices are generated: 'all' or 'where'")
+
 let repositories =
   let namespaces = Arg.enum [
     "path", Path_enum;
@@ -188,7 +196,7 @@ let rec parse_pred = function
   | []   -> failwith "filter predicate empty"
   | p::_ -> failwith ("unknown predicate "^p)
 
-let build logfiles out_dir content_dir repositories href_prefix preds =
+let build logfiles out_dir content_dir repositories href_prefix preds index =
   let preds = List.rev_map (fun pred ->
     List.rev_map (fun pred ->
       parse_pred Re_str.(split (regexp_string ":") pred)
@@ -217,7 +225,8 @@ let build logfiles out_dir content_dir repositories href_prefix preds =
     repositories;
     href_prefix;
   } in
-  make_website user_options (O2wUniverse.of_repositories ~preds repositories)
+  make_website user_options
+    (O2wUniverse.of_repositories ~preds index repositories)
 
 let default_cmd =
   let doc = "generate a web site from an opam universe" in
@@ -228,7 +237,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ repositories $ href_prefix $ pred),
+          $ repositories $ href_prefix $ pred $ index),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;

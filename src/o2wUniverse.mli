@@ -41,4 +41,5 @@ val to_html:
   universe_info -> Cow.Xml.signal list
 
 (** Generate a universe from a list of repositories *)
-val of_repositories: ?preds:pred list list -> repository list -> universe_info
+val of_repositories:
+  ?preds:pred list list -> index -> repository list -> universe_info
