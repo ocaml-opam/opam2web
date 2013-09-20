@@ -33,7 +33,7 @@ $(TARGET).native: version.ml
 	$(JS_OF_OCAML) $*.byte
 
 run: $(TARGET).native
-	_build/$< -c ../content -o $(WWWDIR) --remote default
+	_build/$< -c ../content -o $(WWWDIR)
 
 install:
 	install _build/opam2web.native $(PREFIX)/bin/$(TARGET)

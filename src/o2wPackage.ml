@@ -61,6 +61,9 @@ let are_preds_satisfied universe pkg =
         r = (OpamRepositoryName.to_string rn)
       | Not p -> not (is_satisfied p)
       | Depopt-> false
+      | Pkg p ->
+        let name = OpamPackage.(Name.to_string (name pkg)) in
+        p = name
     in
     let rec aux = function
       | [] -> false

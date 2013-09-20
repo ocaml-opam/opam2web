@@ -98,7 +98,7 @@ let reverse_dependencies pkg_idx opams =
     OpamPackage.Name.Map.add name names acc
   ) OpamPackage.Name.Map.empty names
 
-let mk_universe_info preds repos pkg_idx opams =
+let mk_universe_info preds index repos pkg_idx opams =
   let pkg_idx = remove_base_packages pkg_idx in
   let versions = versions pkg_idx in
   let max_versions = max_versions versions in
@@ -106,11 +106,11 @@ let mk_universe_info preds repos pkg_idx opams =
   let reverse_deps = reverse_dependencies pkg_idx opams in
   let pkgs_dates = dates repos pkg_idx in
   let pkgs_infos = infos repos pkgs_dates pkg_idx in
-  { repos; preds; versions; pkg_idx; max_versions; max_packages; reverse_deps;
-    pkgs_infos; pkgs_opams=opams; pkgs_dates }
+  { repos; preds; index; versions; pkg_idx; max_versions; max_packages;
+    reverse_deps; pkgs_infos; pkgs_opams=opams; pkgs_dates }
 
 (* Generate a universe from a stack of repositories *)
-let of_repositories ?(preds=[]) repo_stack =
+let of_repositories ?(preds=[]) index repo_stack =
   let t = OpamState.load_state "opam2web" in
   let opam_repos = t.OpamState.Types.repositories in
   let repos,_ = List.fold_left
@@ -163,7 +163,7 @@ let of_repositories ?(preds=[]) repo_stack =
       map
   ) packages OpamPackage.Map.empty
   in
-  let universe_info = mk_universe_info preds repos pkg_idx opams in
+  let universe_info = mk_universe_info preds index repos pkg_idx opams in
   let universe = {
     u_packages  = packages;
     u_action    = Depends;
@@ -183,7 +183,7 @@ let of_repositories ?(preds=[]) repo_stack =
   let packages = OpamPackage.Set.of_list dep_closure in
   let pkg_idx = OpamPackage.Map.filter
     (fun k _ -> OpamPackage.Set.mem k packages) pkg_idx in
-  mk_universe_info preds repos pkg_idx opams
+  mk_universe_info preds index repos pkg_idx opams
 
 let to_page ~href_prefix ~statistics universe pkg pkg_info acc =
   match pkg_info with
@@ -226,9 +226,11 @@ let to_html ~href_prefix ~content_dir ~sortby_links ~popularity ~active
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
     let pkg_set = universe.max_packages in
-    let pkg_set = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied universe)
-      pkg_set
+    let pkg_set = match universe.index with
+      | Index_all -> pkg_set
+      | Index_pred -> OpamPackage.Set.filter
+        (O2wPackage.are_preds_satisfied universe)
+        pkg_set
     in
     let packages = OpamPackage.Set.elements pkg_set in
     List.sort compare_pkg packages

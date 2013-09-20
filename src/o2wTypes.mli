@@ -46,7 +46,14 @@ type package_info = {
   pkg_url      : OpamFile.URL.t option;
 }
 
-type pred = Tag of string | Depopt | Not of pred | Repo of string
+type pred =
+| Tag of string
+| Depopt
+| Not of pred
+| Repo of string
+| Pkg of string
+
+type index = Index_pred | Index_all
 
 type repository = Path of string | Local of string | Opam
 
@@ -120,6 +127,7 @@ type log_filter = {
 type universe_info = {
   repos       : OpamTypes.repository repository_name_map;
   preds       : pred list list;
+  index       : index;
   pkg_idx     : (repository_name * string option) package_map;
   versions    : version_set name_map;
   max_packages: package_set;
