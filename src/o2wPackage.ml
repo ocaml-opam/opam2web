@@ -18,6 +18,14 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
+(* Get the repository opam file corresponding to a package in a universe *)
+let repo_links universe pkg =
+  let { pkg_idx; repos } = universe in
+  let repo_name, _ = OpamPackage.Map.find pkg pkg_idx in
+  let repo = OpamRepositoryName.Map.find repo_name repos in
+  let repo_file = OpamPath.Repository.repo repo in
+  OpamFile.Repo.safe_read repo_file
+
 (* Comparison function using string representation of an OpamPackage *)
 let compare_alphanum  p1 p2 =
   String.compare (OpamPackage.to_string p1) (OpamPackage.to_string p2)
@@ -269,6 +277,16 @@ let to_html ~statistics universe pkg_info =
               <td>$contents$</td>
             </tr>
       >> in
+  let pkg_edit = match OpamFile.Repo.upstream (repo_links universe pkg) with
+    | None -> <:html<&>>
+    | Some url_base ->
+      let name = OpamPackage.Name.to_string name in
+      let version = OpamPackage.Version.to_string version in
+      let url = Printf.sprintf "%spackages/%s.%s/opam" url_base name version in
+      mk_tr (Some ("Edit",<:html<
+        <a title="Edit this package description" href=$str:url$>$str:url$</a>
+      >>))
+  in
   <:html<
     <h2>$str: pkg_info.pkg_name$</h2>
 
@@ -297,6 +315,7 @@ let to_html ~statistics universe pkg_info =
             </tr>
             $pkg_url$
             $pkg_stats$
+            $pkg_edit$
           </tbody>
         </table>
 
