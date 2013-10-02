@@ -4,8 +4,8 @@ COMMIT=$(shell git rev-parse HEAD)
 GIT_DESCR=$(shell git describe)
 DIRTY=$(shell git diff-index --quiet HEAD; echo $$?)
 
-PREFIX=/usr/local
-WWWDIR=www
+PREFIX ?= /usr/local
+WWWDIR ?= www
 
 OCAMLBUILD=ocamlbuild -classic-display
 PACKAGES=-pkgs cow,cow.syntax,opam.client,cmdliner
