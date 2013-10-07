@@ -67,12 +67,22 @@ let infos repos dates pkg_idx =
 
 (* Get the last update timestamp of a package in a given repository *)
 let last_update repo prefix package =
-  let opam_filename =
-      OpamFilename.to_string (OpamPath.Repository.opam repo prefix package) in
-  (* XXX: the files are updated during the latest pull, need to look at
-     the Git commit timestamp instead *)
-  let opam_stat = Unix.stat opam_filename in
-  opam_stat.Unix.st_mtime
+  let opam_filename = OpamPath.Repository.opam repo prefix package in
+  try
+    let command =
+      [ "git"; "log"; "-n1"; "--pretty=format:%ct";
+        OpamFilename.Base.to_string (OpamFilename.basename opam_filename) ] in
+    let return =
+      OpamFilename.in_dir
+        (OpamFilename.dirname opam_filename)
+        (fun () -> OpamSystem.read_command_output command) in
+    match return with
+    | [ts] -> float_of_string ts
+    | _ -> raise Not_found
+  with
+  | OpamSystem.Process_error _ | Failure "float_of_string" | Not_found ->
+    let opam_stat = Unix.stat (OpamFilename.to_string opam_filename) in
+    opam_stat.Unix.st_mtime
 
 let dates repos pkg_idx =
   OpamPackage.Map.fold (fun pkg (repo,prefix) map ->
