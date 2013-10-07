@@ -91,15 +91,15 @@ let dates repos pkg_idx =
     ) pkg_idx OpamPackage.Map.empty
 
 (* Create an association list (package_name -> reverse_dependencies) *)
-let reverse_dependencies pkg_idx opams =
+let reverse_dependencies opams =
   let revdeps_tbl: (name, name) Hashtbl.t = Hashtbl.create 300 in
   (* Fill a hash table with reverse dependencies (required by...) *)
-  OpamPackage.Map.iter (fun pkg _ ->
-    let depends = OpamFile.OPAM.depends (OpamPackage.Map.find pkg opams) in
+  OpamPackage.Map.iter (fun pkg opam ->
+    let depends = OpamFile.OPAM.depends opam in
     List.iter (fun (depname,_) ->
-      Hashtbl.add revdeps_tbl depname (OpamPackage.name pkg)
-    ) (OpamFormula.atoms depends)
-  ) pkg_idx;
+        Hashtbl.add revdeps_tbl depname (OpamPackage.name pkg)
+      ) (OpamFormula.atoms depends)
+  ) opams;
   let names =
     Hashtbl.fold (fun name _ acc -> name :: acc) revdeps_tbl [] in
   (* Build the association list *)
@@ -114,7 +114,7 @@ let mk_universe_info preds index repos pkg_idx opams =
   let versions = versions pkg_idx in
   let max_versions = max_versions versions in
   let max_packages = max_packages max_versions in
-  let reverse_deps = reverse_dependencies pkg_idx opams in
+  let reverse_deps = reverse_dependencies opams in
   let pkgs_dates = dates repos pkg_idx in
   let pkgs_infos = infos repos pkgs_dates pkg_idx in
   { repos; preds; index; versions; pkg_idx; max_versions; max_packages;
