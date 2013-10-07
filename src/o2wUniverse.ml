@@ -202,13 +202,18 @@ let to_page ~href_prefix ~statistics universe pkg pkg_info acc =
     Printf.printf "Skipping %s\n%!" (OpamPackage.to_string pkg);
     acc
   | Some pkg_info ->
-    let page = {
-      page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
-      page_depth    = 3;
-      page_contents = Template.serialize
-        (O2wPackage.to_html ~href_prefix ~statistics universe pkg_info)
-    } in
-    page :: acc
+    try
+      let page = {
+        page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
+        page_depth    = 3;
+        page_contents = Template.serialize
+            (O2wPackage.to_html ~href_prefix ~statistics universe pkg_info)
+      } in
+      page :: acc
+    with e ->
+      Printf.printf "Skipping %s (%s)\n%!" (OpamPackage.to_string pkg)
+        (Printexc.to_string e);
+      acc
 
 (* Create a list of package pages to generate for a universe *)
 let to_pages ~href_prefix ~statistics universe =
