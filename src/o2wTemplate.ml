@@ -152,8 +152,9 @@ let make_footer depth =
     </div>
     <div class="copyright">
       <small>
-      &copy; 2012-2013 OCamlPro SAS, All rights reserved.
-      <a href="mailto:contact@ocamlpro.com">Contact an administrator</a>.
+      Generated using <a href="http://github.com/OCamlPro/opam2web">opam2web</a>,
+      courtesy of <a href="http://ocamlpro.com">OCamlPro</a>.
+      <a href="http://opam.ocamlpro.com">Commercial support</a>.
       </small>
     </div>
   >>
