@@ -16,7 +16,7 @@
    inkscape:version="0.48.4 r9939"
    width="420"
    height="420"
-   sodipodi:docname="logo.svg"
+   sodipodi:docname="opam.svg"
    inkscape:export-filename="/home/lg/ocamlpro/opam2web/ext/img/opam.png"
    inkscape:export-xdpi="29.875652"
    inkscape:export-ydpi="29.875652"
@@ -63,7 +63,6 @@
          id="stop5381" />
     </linearGradient>
     <linearGradient
-       inkscape:collect="always"
        id="linearGradient5355"
        osb:paint="gradient">
       <stop
@@ -153,8 +152,8 @@
      id="namedview4"
      showgrid="false"
      inkscape:zoom="2"
-     inkscape:cx="194.5"
-     inkscape:cy="178.51079"
+     inkscape:cx="134.87189"
+     inkscape:cy="247.63815"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -236,9 +235,4 @@
      inkscape:export-filename="/home/lg/ocamlpro/opam2web/ext/img/opam.png"
      inkscape:export-xdpi="90"
      inkscape:export-ydpi="90" />
-  <g
-     inkscape:groupmode="layer"
-     id="layer4"
-     inkscape:label="Calque "
-     style="display:inline;opacity:1" />
 </svg>
