@@ -168,7 +168,11 @@ let to_html ~href_prefix ~statistics ~popularity universe =
   <:html<
       <!-- Main hero unit for a primary marketing message or call to action -->
       <div class="hero-unit">
-        <h1>OCaml Package Manager</h1>
+        <h1>
+          <img style="width: 1em;vertical-align:middle;" src="ext/img/opam.png"/>
+          &nbsp;OCaml Package Manager
+        </h1>
+        <br/>
         <p>OPAM is a source-based package manager for OCaml. It supports multiple simultaneous
            compiler installations, flexible package constraints, and a Git-friendly development
            workflow. Managing your OCaml installation can be as simple as:</p>
