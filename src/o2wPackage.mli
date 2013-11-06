@@ -35,7 +35,7 @@ val get_info: dates:float package_map ->
   OpamTypes.repository -> string option -> package -> package_info option
 
 (** Returns a HTML description of the given package info *)
-val to_html: href_base:Uri.t -> statistics:statistics_set option ->
+val to_html: statistics:statistics_set option ->
   universe_info -> package_info -> Cow.Html.t
 
 (** Return the hyper link for a given package *)

@@ -58,8 +58,6 @@ Some available options are:
 - `--content / -c [direcory]`
     The directory where to find documentation and templates to use.
     Defaults to 'content'.
-- `--base [href_base]`
-    The (perhaps relative) hyperlink base. Defaults to ''.
 - `--where [comma-separated predicate list]`
     A package's satisfaction of all of the predicates in any of the
     lists implies generation.

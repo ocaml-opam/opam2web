@@ -34,7 +34,6 @@ type options = {
   content_dir: string;
   logfiles: filename list;
   repositories: O2wTypes.repository list;
-  href_base: Uri.t;
 }
 
 let version = Version.string
@@ -55,26 +54,24 @@ let make_website user_options universe =
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
-  let href_base = user_options.href_base in
   let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
-  let pages = O2wUniverse.to_pages ~href_base ~statistics universe in
+  let pages = O2wUniverse.to_pages ~statistics universe in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc = O2wDocumentation.to_menu ~content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
     | None   ->
-      O2wUniverse.sortby_links ~href_base ~links:criteria_nostats ~default:"name"
+      O2wUniverse.sortby_links ~links:criteria_nostats ~default:"name"
     | Some _ ->
-      O2wUniverse.sortby_links ~href_base ~links:criteria ~default:"name" in
+      O2wUniverse.sortby_links ~links:criteria ~default:"name" in
   let popularity =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
     | Some s -> O2wStatistics.aggregate_package_popularity
                   s.month_stats.pkg_stats universe.pkg_idx in
-  let to_html = O2wUniverse.to_html
-    ~href_base ~content_dir ~sortby_links ~popularity in
+  let to_html = O2wUniverse.to_html ~content_dir ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true universe.pkgs_dates in
@@ -108,15 +105,14 @@ let make_website user_options universe =
     with _ ->
       OpamGlobals.warning "%s is not available." filename;
       <:html< >> in
-  let home_index = O2wHome.to_html
-    ~href_base ~statistics ~popularity universe in
+  let home_index = O2wHome.to_html ~statistics ~popularity universe in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum universe in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="/" };
+      { menu_link = { text="Home"; href="" };
         menu_item = Internal (0, Template.serialize home_index) };
 
       { menu_link = { text="Packages"; href="pkg/" };
@@ -159,11 +155,6 @@ let content_dir = Arg.(
     ~docv:"CONTENT_DIR"
     ~doc:"The directory where to find documentation to include")
 
-let href_base = Arg.(
-  value & opt string "/" & info ["base"]
-    ~docv:"HREF_BASE"
-    ~doc:"The (perhaps relative) hyperlink base")
-
 let pred = Arg.(
   value & opt_all (list string) [] & info ["where"]
     ~docv:"WHERE_OR"
@@ -197,13 +188,12 @@ let rec parse_pred = function
   | []   -> failwith "filter predicate empty"
   | p::_ -> failwith ("unknown predicate "^p)
 
-let build logfiles out_dir content_dir repositories href_base preds index =
+let build logfiles out_dir content_dir repositories preds index =
   let preds = List.rev_map (fun pred ->
     List.rev_map (fun pred ->
       parse_pred Re_str.(split (regexp_string ":") pred)
     ) pred
   ) preds in
-  let href_base = Uri.of_string href_base in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
   let repositories = List.map (function
@@ -224,7 +214,6 @@ let build logfiles out_dir content_dir repositories href_base preds index =
     content_dir;
     logfiles;
     repositories;
-    href_base;
   } in
   make_website user_options
     (O2wUniverse.of_repositories ~preds index repositories)
@@ -238,7 +227,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ repositories $ href_base $ pred $ index),
+          $ repositories $ pred $ index),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;

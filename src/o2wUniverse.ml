@@ -196,7 +196,7 @@ let of_repositories ?(preds=[]) index repo_stack =
     (fun k _ -> OpamPackage.Set.mem k packages) pkg_idx in
   mk_universe_info preds index repos pkg_idx opams
 
-let to_page ~href_base ~statistics universe pkg pkg_info acc =
+let to_page ~statistics universe pkg pkg_info acc =
   match pkg_info with
   | None  ->
     Printf.printf "Skipping %s\n%!" (OpamPackage.to_string pkg);
@@ -204,10 +204,11 @@ let to_page ~href_base ~statistics universe pkg pkg_info acc =
   | Some pkg_info ->
     try
       let page = {
-        page_link     = { text=pkg_info.pkg_title; href=pkg_info.pkg_href };
+        page_link     = { text=pkg_info.pkg_title;
+                          href=Uri.to_string pkg_info.pkg_href };
         page_depth    = 3;
         page_contents = Template.serialize
-            (O2wPackage.to_html ~href_base ~statistics universe pkg_info)
+            (O2wPackage.to_html ~statistics universe pkg_info)
       } in
       page :: acc
     with e ->
@@ -216,19 +217,16 @@ let to_page ~href_base ~statistics universe pkg pkg_info acc =
       acc
 
 (* Create a list of package pages to generate for a universe *)
-let to_pages ~href_base ~statistics universe =
+let to_pages ~statistics universe =
   OpamPackage.Map.fold
-    (to_page ~href_base ~statistics universe) universe.pkgs_infos []
+    (to_page ~statistics universe) universe.pkgs_infos []
 
-let sortby_links ~href_base ~links ~default ~active =
+let sortby_links ~links ~default ~active =
   let mk_item title =
     let href =
       if title = default
-      then Uri.(resolve "http" href_base (of_string "pkg/"))
-      else Uri.(
-        resolve "http" href_base
-          (of_string ("pkg/index-"^(String.lowercase title)^".html"))
-      )
+      then Uri.of_string "./"
+      else Uri.of_string ("index-"^(String.lowercase title)^".html")
     in
     let ahref =
       <:html< <a href=$uri: href$>sort by $str: title$</a> >>
@@ -240,7 +238,7 @@ let sortby_links ~href_base ~links ~default ~active =
   List.map mk_item links
 
 (* Returns a HTML list of the packages in the given universe *)
-let to_html ~href_base ~content_dir ~sortby_links ~popularity ~active
+let to_html ~content_dir ~sortby_links ~popularity ~active
     ~compare_pkg universe =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
@@ -278,8 +276,8 @@ let to_html ~href_base ~content_dir ~sortby_links ~popularity ~active
               Printf.sprintf "Last update: %s"
                 (O2wMisc.string_of_timestamp pkg_info.pkg_update)
           in
-          let pkg_href = Uri.(resolve "http" href_base
-                                (of_string pkg_info.pkg_href)) in
+          let pkg_href = Uri.(resolve "http"
+                                (of_string "../") pkg_info.pkg_href) in
           <:html<
             <tr>
               <td title=$str:pkg_download$>

@@ -20,12 +20,11 @@ open OpamTypes
 open O2wTypes
 
 (** Create a list of package pages to generate for a repository *)
-val to_pages: href_base:Uri.t -> statistics:statistics_set option ->
+val to_pages: statistics:statistics_set option ->
   universe_info -> page list
 
 (** Generate the list of HTML links for a list of page names *)
 val sortby_links:
-  href_base:Uri.t ->
   links:string list ->
   default:string ->
   active:string ->
@@ -33,7 +32,6 @@ val sortby_links:
 
 (** Returns a HTML list of the packages in the given repository *)
 val to_html:
-  href_base:Uri.t ->
   content_dir:string ->
   sortby_links:(active:string -> Cow.Html.t list) ->
   popularity:int64 name_map ->
