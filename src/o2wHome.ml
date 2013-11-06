@@ -68,7 +68,7 @@ let to_html ~statistics ~popularity universe =
   in
 
   let nb_packages, packages_top10 = match statistics with
-    | None      -> 0, <:html< >>
+    | None      -> OpamPackage.Set.cardinal universe.max_packages, <:html< >>
     | Some sset ->
       let mk_top_li (pkg, pkg_count) =
         let name = OpamPackage.name pkg in
