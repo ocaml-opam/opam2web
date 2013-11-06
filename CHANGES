@@ -13,6 +13,7 @@ comma-separated predicates
 * Factor common page template into content/template.xhtml
 * Factor universe index into content/universe.xhtml
 * Factor home page into content/home.xhtml
+* Requires ocaml-uri 1.3.11 or higher
 
 1.2.0 (2013-01-15):
 * Last release before change tracking
