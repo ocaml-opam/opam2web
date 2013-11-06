@@ -20,7 +20,7 @@ open OpamTypes
 open O2wTypes
 
 (** Generate the homepage *)
-val to_html: href_prefix:string ->
+val to_html: href_base:Uri.t ->
   statistics:statistics_set option ->
   popularity:int64 name_map ->
   universe_info -> Cow.Html.t
