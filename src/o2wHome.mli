@@ -20,6 +20,6 @@ open OpamTypes
 open O2wTypes
 
 (** Generate the homepage *)
-val to_html: statistics:statistics_set option ->
+val to_html: content_dir:string -> statistics:statistics_set option ->
   popularity:int64 name_map ->
-  universe_info -> Cow.Html.t
+  universe_info -> Cow.Xml.signal list

@@ -17,7 +17,7 @@
 open O2wTypes
 
 (* OPAM website homepage *)
-let to_html ~statistics ~popularity universe =
+let to_html ~content_dir ~statistics ~popularity universe =
   let universe = { universe with
     max_packages = OpamPackage.Set.filter
       (O2wPackage.are_preds_satisfied universe)
@@ -165,91 +165,20 @@ let to_html ~statistics ~popularity universe =
       | _ -> "packages" in
     number_of_packages nb_packages packages in
 
-  <:html<
-      <!-- Main hero unit for a primary marketing message or call to action -->
-      <div class="hero-unit">
-        <h1>
-          <img style="width: 1em;vertical-align:middle;" src="ext/img/opam.png"/>
-          &nbsp;OCaml Package Manager
-        </h1>
-        <br/>
-        <p>OPAM is a source-based package manager for OCaml. It supports multiple simultaneous
-           compiler installations, flexible package constraints, and a Git-friendly development
-           workflow. Managing your OCaml installation can be as simple as:</p>
-        <pre class="prettyprint lang-sh linenums">
-opam list            # List the available packages
-opam install lwt     # Install LWT
-opam update          # Update the package list
-...
-opam upgrade         # Upgrade the installed packages to their latest version
-</pre>
-        <br/>
-        <br/>
-        <div class="text-right">
-        <div class="btn-group">
-          <a class="btn btn-large"
-              href="doc/Quick_Install.html">
-            Download and install OPAM »
-          </a>
-          <a class="btn btn-large"
-              href="doc/Basic_Usage.html">
-            How to use OPAM »
-          </a>
-        </div>
-        </div>
-      </div>
+  let stats = <:html<
+                <div class="span4">
+                  $number_of_packages$
+                  $list: stats_html$
+                </div>
+              >> in
 
-      <!-- Example row of columns -->
-      <div class="row">
-        <div class="span4">
-          <h2>News</h2>
-          <p><i class="icon-ok"> </i> <strong>14/10/2013</strong> Version 1.1.0 Release Candidate is out!<br/></p>
-          <p><i class="icon-share"> </i> <strong>14/10/2013</strong> Moving the default repository to <a href="http://opam.ocaml.org">opam.ocaml.org</a><br/></p>
-          <p><i class="icon-ok"> </i> <strong>20/09/2013</strong> Version 1.1.0-beta is out!<br/></p>
-          <p><i class="icon-ok"> </i> <strong>08/2013</strong> Package metadata are moving to <a href="https://github.com/OCamlPro/opam-repository/issues/955">CC0</a></p>
-          <p><i class="icon-ok"> </i> <strong>14/03/2013</strong> Version 1.0 is out!<br/></p>
-          <p><i class="icon-ok"> </i> <strong>15/01/2013</strong> Version 0.9 (BETA release) is out!<br/></p>
-          <p><i class="icon-eye-open"> </i> <strong>14/09/2012</strong> Talk at <a href="http://oud.ocaml.org/2012/">OUD 2012</a>
-                 [ <a href="http://gazagnaire.org/ocamlpro/oud-opam.pdf">slides</a>
-                  | <a href="http://www.youtube.com/watch?v=ivLqeRZJTGs">video</a> ]</p>
-        </div>
-        <div class="span4">
-          <h2>Contribute</h2>
-          <p>
-          <i class="icon-tag"> </i>
-          <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">Report</a> and
-          <a href="https://github.com/OCamlPro/opam" title="OCamlPro/opam">ask for feature requests</a>
-          the OPAM tool<br/>
-          <i class="icon-tags"> </i>
-          <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">Report</a> packaging issues or
-          <a href="https://github.com/OCamlPro/opam-repository" title="OCamlPro/opam-repository">request</a> new packages<br/></p>
-          <p>
-          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/platform">Address</a> general queries on the tool and packages<br/>
-          <i class="icon-pencil"> </i> <a href="http://lists.ocaml.org/listinfo/opam-devel">Discuss</a> the tool internals<br/>
-          </p>
-        </div>
-
-        <div class="span4">
-          <h2>Tutorials</h2>
-          <p><a href="doc/Quick_Install.html" title="Installing OPAM">Installing OPAM</a></p>
-          <p><a href="doc/Packaging.html" title="Creating OPAM packages">Creating Packages</a></p>
-          <p><a href="https://github.com/OCamlPro/opam/raw/master/doc/dev-manual/dev-manual.pdf" title="Developer Manual for OPAM">Developer Manual</a></p>
-        </div>
-<!--
-        <div class="span2">
-          <img src="ext/img/camel_rider.png" alt="Camel Rider" />
-        </div>
--->
-      </div>
-      <hr />
-      <!-- tag_cloud -->
-      <hr />
-      <div class="row">
-        <div class="span4">
-          $number_of_packages$
-          $list: stats_html$
-        </div>
-        $updates_last10$
-        $packages_top10$
-      </div>
-  >>
+  let template = Template.({ path="home.xhtml"; fields=[
+    "stats",          (mandatory (), Optional);
+    "updates_last10", (mandatory (), Optional);
+    "packages_top10", (mandatory (), Optional);
+  ]}) in
+  Template.(generate content_dir template [
+    "stats",          serialize stats;
+    "updates_last10", serialize updates_last10;
+    "packages_top10", serialize packages_top10;
+  ])

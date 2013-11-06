@@ -12,6 +12,7 @@ comma-separated predicates
 * Now operates over entire opam universes rather than single repositories
 * Factor common page template into content/template.xhtml
 * Factor universe index into content/universe.xhtml
+* Factor home page into content/home.xhtml
 
 1.2.0 (2013-01-15):
 * Last release before change tracking

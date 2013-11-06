@@ -105,7 +105,8 @@ let make_website user_options universe =
     with _ ->
       OpamGlobals.warning "%s is not available." filename;
       <:html< >> in
-  let home_index = O2wHome.to_html ~statistics ~popularity universe in
+  let home_index = O2wHome.to_html
+    ~content_dir ~statistics ~popularity universe in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum universe in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
@@ -113,7 +114,7 @@ let make_website user_options universe =
     ~content_dir ~out_dir:user_options.out_dir
     ([
       { menu_link = { text="Home"; href="" };
-        menu_item = Internal (0, Template.serialize home_index) };
+        menu_item = Internal (0, home_index) };
 
       { menu_link = { text="Packages"; href="pkg/" };
         menu_item = Internal (1, package_index) };
