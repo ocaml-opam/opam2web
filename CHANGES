@@ -2,16 +2,16 @@
 * Use cmdliner for CLI
 * -l and --local opam repo options are now --remote
 * -p and --prefix HREF prefix options have been removed
-* HREF prefix now defaults to "/"
 * Providing a web server access log is now optional
 * opam2web version/revision and dirty flag are now exposed in meta generator
 * Packages and their versions have been moved into a path hierarchy
 * Anonymous command-line arguments no longer supported/interpreted as repo dirs
-* --where disjunctively filters the opam repo by a conjunction of
+* --where disjunctively filters the opam universe by a conjunction of
 comma-separated predicates
-* Added "tag:*" predicate
+* Added "tag:*","depopt","not:*","repo:*","pkg:*" predicates
+* Now operates over entire opam universes rather than single repositories
 * Factor common page template into content/template.xhtml
-* Factor repository index into content/repo.xhtml
+* Factor universe index into content/universe.xhtml
 
 1.2.0 (2013-01-15):
 * Last release before change tracking
