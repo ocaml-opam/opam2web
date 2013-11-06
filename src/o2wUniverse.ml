@@ -292,7 +292,7 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
       []
       (List.rev sorted_packages)
   in
-  let template = Template.({ path="repo.xhtml"; fields=[
+  let template = Template.({ path="universe.xhtml"; fields=[
     "nav",   (default <:html< >>, Optional);
     "repos", (mandatory (),       Optional);
     "pkgs",  (mandatory (),       Required);
