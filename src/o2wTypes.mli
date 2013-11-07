@@ -41,7 +41,7 @@ type package_info = {
   pkg_version  : string;
   pkg_descr    : Cow.Html.t;
   pkg_synopsis : string;
-  pkg_href     : string;
+  pkg_href     : Uri.t;
   pkg_title    : string;
   pkg_update   : float;
   pkg_url      : OpamFile.URL.t option;

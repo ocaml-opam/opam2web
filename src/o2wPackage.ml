@@ -44,12 +44,14 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
     compare d1 d2
   | _ -> compare_alphanum p1 p2
 
-let href ?href_prefix name version =
-  let base = Printf.sprintf "pkg/%s/%s/"
-      (OpamPackage.Name.to_string name) (OpamPackage.Version.to_string version) in
-  match href_prefix with
+let href ?href_base name version =
+  let base = Printf.sprintf "%s/%s/"
+      (OpamPackage.Name.to_string name)
+      (OpamPackage.Version.to_string version) in
+  let base = Uri.of_string base in
+  match href_base with
   | None   -> base
-  | Some p -> p ^ base
+  | Some p -> Uri.resolve "http" p base
 
 let are_preds_satisfied universe pkg =
   try
@@ -78,7 +80,8 @@ let are_preds_satisfied universe pkg =
 let get_info ~dates repo prefix pkg =
   let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
   let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-  let pkg_href = href (OpamPackage.name pkg) (OpamPackage.version pkg) in
+  let pkg_href = href ~href_base:Uri.(of_string "pkg/")
+    (OpamPackage.name pkg) (OpamPackage.version pkg) in
   let descr = OpamFile.Descr.safe_read
     (OpamPath.Repository.descr repo prefix pkg) in
   let pkg_synopsis = OpamFile.Descr.synopsis descr in
@@ -117,7 +120,7 @@ let get_info ~dates repo prefix pkg =
     None
 
 (* Returns a HTML description of the given package *)
-let to_html ~href_prefix ~statistics universe pkg_info =
+let to_html ~statistics universe pkg_info =
   let name = OpamPackage.Name.of_string pkg_info.pkg_name in
   let version = OpamPackage.Version.of_string pkg_info.pkg_version in
   let pkg = OpamPackage.create name version in
@@ -129,7 +132,7 @@ let to_html ~href_prefix ~statistics universe pkg_info =
       with Not_found -> [version] in
     List.map
       (fun version ->
-         let href = href ~href_prefix name version in
+         let href = href ~href_base:Uri.(of_string "../../") name version in
          let version = OpamPackage.Version.to_string version in
          if pkg_info.pkg_version = version then
            <:html<
@@ -138,7 +141,7 @@ let to_html ~href_prefix ~statistics universe pkg_info =
              </li>
            >>
          else
-           <:html< <li><a href="$str: href$">$str: version$</a></li> >>)
+           <:html< <li><a href=$uri: href$>$str: version$</a></li> >>)
       versions in
   let pkg_url = match pkg_info.pkg_url with
     | None          -> <:html< >>
@@ -154,7 +157,7 @@ let to_html ~href_prefix ~statistics universe pkg_info =
         <tr>
         <th>Source $kind$</th>
         <td>
-          <a href="$str: url$" title="Download source">$str: url$</a><br />
+          <a href=$str: url$ title="Download source">$str: url$</a><br />
           $checksum$
         </td>
         </tr>
@@ -184,8 +187,8 @@ let to_html ~href_prefix ~statistics universe pkg_info =
         let href = match latest_version with
           | None -> <:html< $str: name$ >>
           | Some v ->
-            let href_str =href ~href_prefix pkg_name v in
-            <:html< <a href="$str: href_str$">$str: name$</a> >>
+            let href = href ~href_base:Uri.(of_string "../../") pkg_name v in
+            <:html< <a href=$uri: href$>$str: name$</a> >>
         in
         let version = match constr_opt with
           | None -> ""
