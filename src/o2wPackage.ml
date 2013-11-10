@@ -166,10 +166,16 @@ let to_html ~statistics universe pkg_info =
     | []  -> None
     | [e] -> Some (name      , <:html<$str:e$>>)
     | l   -> Some (name ^ "s", <:html<$str:OpamMisc.pretty_list l$>>) in
+  let links name = function
+    | [] -> None
+    | (_::t) as l ->
+      let urls = List.map (fun e -> <:html< <a href="$str:e$">$str:e$</a> >>) l in
+      let name = match t with [] -> name | _ -> name  ^ "s" in
+      Some(name, <:html< $list:urls$ >>) in
   let pkg_author = list "Author" (OpamFile.OPAM.author pkg_opam) in
   let pkg_maintainer = list "Maintainer" (OpamFile.OPAM.maintainer pkg_opam) in
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
-  let pkg_homepage = list "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
+  let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
   let pkg_update = O2wMisc.string_of_timestamp pkg_info.pkg_update in
   (* XXX: need to add hyperlink on package names *)
