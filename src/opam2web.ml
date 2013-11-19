@@ -49,11 +49,26 @@ let include_files (path: string) files_path : unit =
   (* Check if output directory exists, create it if it doesn't *)
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
+let make_stats user_options universe =
+  let statistics = O2wStatistics.statistics_set user_options.logfiles in
+  let popularity =
+    match statistics with
+    | None   -> OpamPackage.Name.Map.empty
+    | Some s -> O2wStatistics.aggregate_package_popularity
+                  s.month_stats.pkg_stats universe.pkg_idx in
+  let _ = match statistics with
+    | None   -> ()
+    | Some s ->
+      let popularity = s.month_stats.pkg_stats in
+      O2wStatistics.to_csv popularity "stats.csv";
+      O2wStatistics.to_json popularity "stats.json" in
+  statistics, popularity
+
 (* Generate a whole static website using the given repository stack *)
 let make_website user_options universe =
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
-  let statistics = O2wStatistics.statistics_set user_options.logfiles in
+  let statistics, popularity = make_stats user_options universe in
   let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wUniverse.to_pages ~statistics universe in
@@ -66,11 +81,6 @@ let make_website user_options universe =
       O2wUniverse.sortby_links ~links:criteria_nostats ~default:"name"
     | Some _ ->
       O2wUniverse.sortby_links ~links:criteria ~default:"name" in
-  let popularity =
-    match statistics with
-    | None   -> OpamPackage.Name.Map.empty
-    | Some s -> O2wStatistics.aggregate_package_popularity
-                  s.month_stats.pkg_stats universe.pkg_idx in
   let to_html = O2wUniverse.to_html ~content_dir ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
@@ -126,13 +136,7 @@ let make_website user_options universe =
         menu_item = Internal (0, Template.serialize about_page) };
 
     ] @ package_links)
-    pages;
-  match statistics with
-  | None   -> ()
-  | Some s ->
-    let popularity = s.month_stats.pkg_stats in
-    O2wStatistics.to_csv popularity "stats.csv";
-    O2wStatistics.to_json popularity "stats.json"
+    pages
 
 let normalize d =
   let len = String.length d in
@@ -180,6 +184,10 @@ let repositories =
       ~docv:"REPOSITORY"
       ~doc:"The repositories to consider as the universe. Available namespaces are 'path' for local directories, 'local' for named opam remotes, and 'opam' for the current local opam universe.")
 
+let stats_only =
+  Arg.(value & flag & info ["stats-only"]
+         ~doc:"Only generate stats.csv and stats.json, not a full website")
+
 let rec parse_pred = function
   | "not"::more -> Not (parse_pred more)
   | "tag"::more -> Tag (String.concat ":" more)
@@ -189,7 +197,7 @@ let rec parse_pred = function
   | []   -> failwith "filter predicate empty"
   | p::_ -> failwith ("unknown predicate "^p)
 
-let build logfiles out_dir content_dir repositories preds index =
+let build logfiles out_dir content_dir repositories stats_only preds index =
   let preds = List.rev_map (fun pred ->
     List.rev_map (fun pred ->
       parse_pred Re_str.(split (regexp_string ":") pred)
@@ -216,8 +224,11 @@ let build logfiles out_dir content_dir repositories preds index =
     logfiles;
     repositories;
   } in
-  make_website user_options
-    (O2wUniverse.of_repositories ~preds index repositories)
+  let universe = O2wUniverse.of_repositories ~preds index repositories in
+  if stats_only then
+    ignore (make_stats user_options universe)
+  else
+    make_website user_options universe
 
 let default_cmd =
   let doc = "generate a web site from an opam universe" in
@@ -228,7 +239,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ repositories $ pred $ index),
+          $ repositories $ stats_only $ pred $ index),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;
