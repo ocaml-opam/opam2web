@@ -283,25 +283,18 @@ let to_html ~statistics universe pkg_info =
       >> in
   let repo = repo_of_pkg universe pkg in
   let links = repo_links repo in
-  let _, path = OpamPackage.Map.find pkg universe.pkg_idx in
+  let _, prefix = OpamPackage.Map.find pkg universe.pkg_idx in
   let pkg_edit = match OpamFile.Repo.upstream links with
     | None -> <:html<&>>
     | Some url_base ->
       let base = Uri.of_string url_base in
-      let pkgs_path = Uri.of_string "packages/" in
-      let pkg_path = Uri.of_string ((OpamPackage.to_string pkg)^"/") in
-      let prefix = match path with
-        | None -> Uri.resolve "" pkgs_path pkg_path
-        | Some p ->
-          let p = String.(sub p 1 (length p - 1))^"/" in
-          Uri.(resolve ""
-                 (resolve "" pkgs_path (of_string p))
-                 pkg_path)
-      in
-      let url = Uri.(resolve "" (resolve "" base prefix) (of_string "opam")) in
-      let surl = Uri.to_string url in
+      let repo = { repo with repo_root=OpamFilename.Dir.of_string "" } in
+      let opam_loc = OpamFilename.to_string
+        (OpamPath.Repository.opam repo prefix pkg) in
+      let url = Uri.(resolve "" base (of_string opam_loc)) in
+      let loc = Uri.to_string url in
       mk_tr (Some ("Edit",<:html<
-        <a title="Edit this package description" href=$uri:url$>$str:surl$</a>
+        <a title="Edit this package description" href=$uri:url$>$str:loc$</a>
       >>))
   in
   <:html<
