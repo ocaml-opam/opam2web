@@ -18,11 +18,15 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
-(* Get the repository opam file corresponding to a package in a universe *)
-let repo_links universe pkg =
+(* Get the repository corresponding to a package in a universe *)
+let repo_of_pkg universe pkg =
   let { pkg_idx; repos } = universe in
   let repo_name, _ = OpamPackage.Map.find pkg pkg_idx in
   let repo = OpamRepositoryName.Map.find repo_name repos in
+  repo
+
+(* Get the repository opam file corresponding to a repo *)
+let repo_links repo =
   let repo_file = OpamPath.Repository.repo repo in
   OpamFile.Repo.safe_read repo_file
 
@@ -277,14 +281,27 @@ let to_html ~statistics universe pkg_info =
               <td>$contents$</td>
             </tr>
       >> in
-  let pkg_edit = match OpamFile.Repo.upstream (repo_links universe pkg) with
+  let repo = repo_of_pkg universe pkg in
+  let links = repo_links repo in
+  let _, path = OpamPackage.Map.find pkg universe.pkg_idx in
+  let pkg_edit = match OpamFile.Repo.upstream links with
     | None -> <:html<&>>
     | Some url_base ->
-      let name = OpamPackage.Name.to_string name in
-      let version = OpamPackage.Version.to_string version in
-      let url = Printf.sprintf "%spackages/%s.%s/opam" url_base name version in
+      let base = Uri.of_string url_base in
+      let pkgs_path = Uri.of_string "packages/" in
+      let pkg_path = Uri.of_string ((OpamPackage.to_string pkg)^"/") in
+      let prefix = match path with
+        | None -> Uri.resolve "" pkgs_path pkg_path
+        | Some p ->
+          let p = String.(sub p 1 (length p - 1))^"/" in
+          Uri.(resolve ""
+                 (resolve "" pkgs_path (of_string p))
+                 pkg_path)
+      in
+      let url = Uri.(resolve "" (resolve "" base prefix) (of_string "opam")) in
+      let surl = Uri.to_string url in
       mk_tr (Some ("Edit",<:html<
-        <a title="Edit this package description" href=$str:url$>$str:url$</a>
+        <a title="Edit this package description" href=$uri:url$>$str:surl$</a>
       >>))
   in
   <:html<
