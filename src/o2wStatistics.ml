@@ -80,7 +80,7 @@ let request_of_entry e =
     Unknown_req e.request
 
 let internal_regexp =
-  Re_str.regexp "http://opam\\.ocaml\\(\.org\\|pro\\.com\\)/\\(.*\\)/?"
+  Re_str.regexp "http://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
 
 let referrer_of_entry e =
   let open Logentry in
