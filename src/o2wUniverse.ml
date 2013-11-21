@@ -70,17 +70,18 @@ let last_update repo prefix package =
   let opam_filename = OpamPath.Repository.opam repo prefix package in
   try
     let command =
-      [ "git"; "log"; "-n1"; "--pretty=format:%ct";
-        OpamFilename.Base.to_string (OpamFilename.basename opam_filename) ] in
+      [ "git"; "log"; "--reverse"; "--pretty=format:%ct"; "--";
+        "*/" ^ OpamPackage.to_string package ^ "/opam" ] in
     let return =
       OpamFilename.in_dir
-        (OpamFilename.dirname opam_filename)
+        (OpamFilename.dirname_dir (OpamPath.Repository.packages_dir repo))
         (fun () -> OpamSystem.read_command_output command) in
     match return with
-    | [ts] -> float_of_string ts
-    | _ -> raise Not_found
+    | ts::_ -> float_of_string ts
+    | [] -> raise Not_found
   with
-  | OpamSystem.Process_error _ | Failure "float_of_string" | Not_found ->
+  | (OpamSystem.Process_error _ | Failure "float_of_string" | Not_found as e) ->
+    OpamGlobals.warning "last_update of %s failed with %s\n" (OpamPackage.to_string package) (Printexc.to_string e);
     let opam_stat = Unix.stat (OpamFilename.to_string opam_filename) in
     opam_stat.Unix.st_mtime
 
