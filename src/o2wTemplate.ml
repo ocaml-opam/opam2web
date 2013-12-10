@@ -31,7 +31,7 @@ let prepend_root (depth: int) (src: string): string =
   if src <> "" && src.[0] = '/' then src else aux src depth
 
 let create ~title ~header ~body ~footer ~depth =
-  let title = <:html< OPAM - $str:title$ >> in
+  let title = <:html< $str:title$ >> in
   let css_files = [
     "ext/css/bootstrap.css";
     "ext/css/bootstrap-responsive.css";

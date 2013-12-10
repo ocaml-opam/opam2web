@@ -13,6 +13,8 @@ comma-separated predicates
 * Factor common page template into content/template.xhtml
 * Factor universe index into content/universe.xhtml
 * Factor home page into content/home.xhtml
+* Conform generated paths to opam overlay convention
+* Add edit link to opam metadata on each package page
 * Requires ocaml-uri 1.3.11 or higher
 
 1.2.0 (2013-01-15):

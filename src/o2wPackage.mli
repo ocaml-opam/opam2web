@@ -43,3 +43,8 @@ val href: ?href_base:Uri.t -> name -> version -> Uri.t
 
 (** Predicate to determine if DNF predicates are satisfied *)
 val are_preds_satisfied: universe_info -> package -> bool
+
+(** [repo_links repository] is repository metadata file
+    corresponding to [repository].
+*)
+val repo_links: OpamTypes.repository -> OpamFile.Repo.t

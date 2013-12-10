@@ -18,6 +18,18 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
+(* Get the repository corresponding to a package in a universe *)
+let repo_of_pkg universe pkg =
+  let { pkg_idx; repos } = universe in
+  let repo_name, _ = OpamPackage.Map.find pkg pkg_idx in
+  let repo = OpamRepositoryName.Map.find repo_name repos in
+  repo
+
+(* Get the repository opam file corresponding to a repo *)
+let repo_links repo =
+  let repo_file = OpamPath.Repository.repo repo in
+  OpamFile.Repo.safe_read repo_file
+
 (* Comparison function using string representation of an OpamPackage *)
 let compare_alphanum  p1 p2 =
   String.compare (OpamPackage.to_string p1) (OpamPackage.to_string p2)
@@ -45,9 +57,9 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
   | _ -> compare_alphanum p1 p2
 
 let href ?href_base name version =
-  let base = Printf.sprintf "%s/%s/"
-      (OpamPackage.Name.to_string name)
-      (OpamPackage.Version.to_string version) in
+  let name = OpamPackage.Name.to_string name in
+  let version = OpamPackage.Version.to_string version in
+  let base = Printf.sprintf "%s/%s.%s/" name name version in
   let base = Uri.of_string base in
   match href_base with
   | None   -> base
@@ -93,8 +105,8 @@ let get_info ~dates repo prefix pkg =
   let pkg_descr =
     let to_html md = Cow.Markdown.to_html (Cow.Markdown_github.of_string md) in
     <:html<
-      <h4>$to_html short_descr$</h4>
-      <p>$to_html long_descr$</p>
+      <h4>$str:short_descr$</h4>
+      $to_html long_descr$
     >> in
   let pkg_url =
     let file = OpamPath.Repository.url repo prefix pkg in
@@ -269,6 +281,22 @@ let to_html ~statistics universe pkg_info =
               <td>$contents$</td>
             </tr>
       >> in
+  let repo = repo_of_pkg universe pkg in
+  let links = repo_links repo in
+  let _, prefix = OpamPackage.Map.find pkg universe.pkg_idx in
+  let pkg_edit = match OpamFile.Repo.upstream links with
+    | None -> <:html<&>>
+    | Some url_base ->
+      let base = Uri.of_string url_base in
+      let repo = { repo with repo_root=OpamFilename.Dir.of_string "" } in
+      let opam_loc = OpamFilename.to_string
+        (OpamPath.Repository.opam repo prefix pkg) in
+      let url = Uri.(resolve "" base (of_string opam_loc)) in
+      let loc = Uri.to_string url in
+      mk_tr (Some ("Edit",<:html<
+        <a title="Edit this package description" href=$uri:url$>$str:loc$</a>
+      >>))
+  in
   <:html<
     <h2>$str: pkg_info.pkg_name$</h2>
 
@@ -297,6 +325,7 @@ let to_html ~statistics universe pkg_info =
             </tr>
             $pkg_url$
             $pkg_stats$
+            $pkg_edit$
           </tbody>
         </table>
 
