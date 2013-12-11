@@ -185,7 +185,7 @@ let of_repositories ?(preds=[]) index repo_stack =
     u_depopts   = OpamPackage.Map.map OpamFile.OPAM.depopts opams;
     u_conflicts = OpamPackage.Map.map OpamFile.OPAM.conflicts opams;
     u_installed_roots = OpamPackage.Set.empty;
-    u_pinned    = OpamPackage.Name.Set.empty;
+    u_pinned    = OpamPackage.Name.Map.empty;
   } in
   let dep_closure = OpamSolver.dependencies
     ~depopts:(List.mem [Depopt] preds) ~installed:false universe
