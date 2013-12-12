@@ -9,7 +9,8 @@
 * --where disjunctively filters the opam universe by a conjunction of
 comma-separated predicates
 * Added "tag:*","depopt","not:*","repo:*","pkg:*" predicates
-* Now operates over entire opam universes rather than single repositories
+* Operates over entire opam universes rather than single repositories
+* Factor opam universe functions into new dependency opamfu
 * Factor common page template into content/template.xhtml
 * Factor universe index into content/universe.xhtml
 * Factor home page into content/home.xhtml

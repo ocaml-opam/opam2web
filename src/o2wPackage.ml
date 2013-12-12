@@ -18,18 +18,6 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
-(* Get the repository corresponding to a package in a universe *)
-let repo_of_pkg universe pkg =
-  let { pkg_idx; repos } = universe in
-  let repo_name, _ = OpamPackage.Map.find pkg pkg_idx in
-  let repo = OpamRepositoryName.Map.find repo_name repos in
-  repo
-
-(* Get the repository opam file corresponding to a repo *)
-let repo_links repo =
-  let repo_file = OpamPath.Repository.repo repo in
-  OpamFile.Repo.safe_read repo_file
-
 (* Comparison function using string representation of an OpamPackage *)
 let compare_alphanum  p1 p2 =
   String.compare (OpamPackage.to_string p1) (OpamPackage.to_string p2)
@@ -56,85 +44,19 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
     compare d1 d2
   | _ -> compare_alphanum p1 p2
 
-let href ?href_base name version =
-  let name = OpamPackage.Name.to_string name in
-  let version = OpamPackage.Version.to_string version in
-  let base = Printf.sprintf "%s/%s.%s/" name name version in
-  let base = Uri.of_string base in
-  match href_base with
-  | None   -> base
-  | Some p -> Uri.resolve "http" p base
-
-let are_preds_satisfied universe pkg =
-  try
-    let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
-    let tags = OpamFile.OPAM.tags pkg_opam in
-    let rec is_satisfied = function
-      | Tag t -> List.mem t tags
-      | Repo r ->
-        let (rn,_) = OpamPackage.Map.find pkg universe.pkg_idx in
-        r = (OpamRepositoryName.to_string rn)
-      | Not p -> not (is_satisfied p)
-      | Depopt-> false
-      | Pkg p ->
-        let name = OpamPackage.(Name.to_string (name pkg)) in
-        p = name
-    in
-    let rec aux = function
-      | [] -> false
-      | pred::rest ->
-        if List.for_all is_satisfied pred then true else aux rest
-    in
-    if universe.preds = [] then true else aux universe.preds
-  with Not_found -> false
-
-(* Build a record representing information about a package *)
-let get_info ~dates repo prefix pkg =
-  let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
-  let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-  let pkg_href = href ~href_base:Uri.(of_string "pkg/")
-    (OpamPackage.name pkg) (OpamPackage.version pkg) in
-  let descr = OpamFile.Descr.safe_read
-    (OpamPath.Repository.descr repo prefix pkg) in
-  let pkg_synopsis = OpamFile.Descr.synopsis descr in
-  let pkg_descr_markdown = OpamFile.Descr.full descr in
-  let short_descr, long_descr =
-    match OpamMisc.cut_at pkg_descr_markdown '\n' with
-    | None       -> pkg_descr_markdown, ""
-    | Some (s,d) -> s, d in
-  let pkg_descr =
-    let to_html md = Cow.Markdown.to_html (Cow.Markdown_github.of_string md) in
-    <:html<
-      <h4>$str:short_descr$</h4>
-      $to_html long_descr$
-    >> in
-  let pkg_url =
-    let file = OpamPath.Repository.url repo prefix pkg in
-    if OpamFilename.exists file then
-      Some (OpamFile.URL.read file)
-    else
-      None in
-  let pkg_title = Printf.sprintf "%s %s" pkg_name pkg_version in
-  try
-    let pkg_update =
-      OpamPackage.Map.find pkg dates in
-    Some {
-      pkg_name;
-      pkg_version;
-      pkg_descr;
-      pkg_synopsis;
-      pkg_href;
-      pkg_title;
-      pkg_update;
-      pkg_url;
-    }
-  with Not_found ->
-    None
+(* An HTML fragment for the description of a package *)
+let html_descr (short,long) =
+  let to_html md = Cow.Markdown.to_html (Cow.Markdown_github.of_string md) in
+  <:html<
+    <h4>$str:short$</h4>
+    $to_html long$
+  >>
 
 (* Returns a HTML description of the given package *)
 let to_html ~statistics universe pkg_info =
-  let name = OpamPackage.Name.of_string pkg_info.pkg_name in
-  let version = OpamPackage.Version.of_string pkg_info.pkg_version in
+  let open OpamfUniverse in
+  let name = OpamPackage.Name.of_string pkg_info.name in
+  let version = OpamPackage.Version.of_string pkg_info.version in
   let pkg = OpamPackage.create name version in
   let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
   let version_links =
@@ -144,9 +66,9 @@ let to_html ~statistics universe pkg_info =
       with Not_found -> [version] in
     List.map
       (fun version ->
-         let href = href ~href_base:Uri.(of_string "../../") name version in
+         let href = Pkg.href ~href_base:Uri.(of_string "../../") name version in
          let version = OpamPackage.Version.to_string version in
-         if pkg_info.pkg_version = version then
+         if pkg_info.version = version then
            <:html<
              <li class="active">
                <a href="#">version $str: version$</a>
@@ -155,7 +77,7 @@ let to_html ~statistics universe pkg_info =
          else
            <:html< <li><a href=$uri: href$>$str: version$</a></li> >>)
       versions in
-  let pkg_url = match pkg_info.pkg_url with
+  let pkg_url = match pkg_info.url with
     | None          -> <:html< >>
     | Some url_file ->
       let kind = match OpamFile.URL.kind url_file with
@@ -189,7 +111,7 @@ let to_html ~statistics universe pkg_info =
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
-  let pkg_update = O2wMisc.string_of_timestamp pkg_info.pkg_update in
+  let pkg_update = O2wMisc.string_of_timestamp pkg_info.update in
   (* XXX: need to add hyperlink on package names *)
   let mk_formula name f = match f pkg_opam with
     | OpamFormula.Empty -> None
@@ -205,7 +127,7 @@ let to_html ~statistics universe pkg_info =
         let href = match latest_version with
           | None -> <:html< $str: name$ >>
           | Some v ->
-            let href = href ~href_base:Uri.(of_string "../../") pkg_name v in
+            let href = Pkg.href ~href_base:Uri.(of_string "../../") pkg_name v in
             <:html< <a href=$uri: href$>$str: name$</a> >>
         in
         let version = match constr_opt with
@@ -281,8 +203,8 @@ let to_html ~statistics universe pkg_info =
               <td>$contents$</td>
             </tr>
       >> in
-  let repo = repo_of_pkg universe pkg in
-  let links = repo_links repo in
+  let repo = Pkg.to_repo universe pkg in
+  let links = Repo.links repo in
   let _, prefix = OpamPackage.Map.find pkg universe.pkg_idx in
   let pkg_edit = match OpamFile.Repo.upstream links with
     | None -> <:html<&>>
@@ -298,7 +220,7 @@ let to_html ~statistics universe pkg_info =
       >>))
   in
   <:html<
-    <h2>$str: pkg_info.pkg_name$</h2>
+    <h2>$str: pkg_info.name$</h2>
 
     <div class="row">
       <div class="span9">
@@ -329,7 +251,7 @@ let to_html ~statistics universe pkg_info =
           </tbody>
         </table>
 
-        <div class="well">$pkg_info.pkg_descr$</div>
+        <div class="well">$pkg_info.descr$</div>
 
       </div>
 

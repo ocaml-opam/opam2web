@@ -30,21 +30,9 @@ val compare_date: ?reverse:bool -> float package_map ->
 val compare_popularity: ?reverse:bool -> int64 name_map ->
   package -> package -> int
 
-(** Return package info *)
-val get_info: dates:float package_map ->
-  OpamTypes.repository -> string option -> package -> package_info option
+(** An HTML fragment for the description of a package *)
+val html_descr : string * string -> Cow.Html.t
 
 (** Returns a HTML description of the given package info *)
 val to_html: statistics:statistics_set option ->
-  universe_info -> package_info -> Cow.Html.t
-
-(** Return the hyper link for a given package *)
-val href: ?href_base:Uri.t -> name -> version -> Uri.t
-
-(** Predicate to determine if DNF predicates are satisfied *)
-val are_preds_satisfied: universe_info -> package -> bool
-
-(** [repo_links repository] is repository metadata file
-    corresponding to [repository].
-*)
-val repo_links: OpamTypes.repository -> OpamFile.Repo.t
+  Cow.Html.t OpamfUniverse.t -> Cow.Html.t OpamfUniverse.pkg -> Cow.Html.t

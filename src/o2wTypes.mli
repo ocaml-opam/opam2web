@@ -36,28 +36,6 @@ and menu_item =
   | Divider
   | External
 
-type package_info = {
-  pkg_name     : string;
-  pkg_version  : string;
-  pkg_descr    : Cow.Html.t;
-  pkg_synopsis : string;
-  pkg_href     : Uri.t;
-  pkg_title    : string;
-  pkg_update   : float;
-  pkg_url      : OpamFile.URL.t option;
-}
-
-type pred =
-| Tag of string
-| Depopt
-| Not of pred
-| Repo of string
-| Pkg of string
-
-type index = Index_pred | Index_all
-
-type repository = Path of string | Local of string | Opam
-
 type statistics = {
   (** Individual package download count *)
   pkg_stats: int64 package_map;
@@ -123,18 +101,4 @@ type log_filter = {
   log_start_time: float;
   log_end_time: float;
   log_custom: log_entry -> bool
-}
-
-type universe_info = {
-  repos       : OpamTypes.repository repository_name_map;
-  preds       : pred list list;
-  index       : index;
-  pkg_idx     : (repository_name * string option) package_map;
-  versions    : version_set name_map;
-  max_packages: package_set;
-  max_versions: version name_map;
-  reverse_deps: name_set name_map;
-  pkgs_infos  : package_info option package_map;
-  pkgs_opams  : OpamFile.OPAM.t package_map;
-  pkgs_dates  : float package_map;
 }

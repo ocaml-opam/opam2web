@@ -14,20 +14,21 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open OpamfUniverse
 open O2wTypes
 
 (* OPAM website homepage *)
 let to_html ~content_dir ~statistics ~popularity universe =
   let universe = { universe with
     max_packages = OpamPackage.Set.filter
-      (O2wPackage.are_preds_satisfied universe)
+      (Pkg.are_preds_satisfied universe)
       universe.max_packages
   } in
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
       let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-      let pkg_href = O2wPackage.href ~href_base:Uri.(of_string "pkg/")
+      let pkg_href = Pkg.href ~href_base:Uri.(of_string "pkg/")
         (OpamPackage.name pkg) (OpamPackage.version pkg) in
       let pkg_date = O2wMisc.string_of_timestamp ~short:true update_tm in
       <:html<
@@ -74,7 +75,7 @@ let to_html ~content_dir ~statistics ~popularity universe =
         let name = OpamPackage.name pkg in
         let version = OpamPackage.version pkg in
         let pkg_name = OpamPackage.Name.to_string name in
-        let pkg_href = O2wPackage.href ~href_base:Uri.(of_string "pkg/")
+        let pkg_href = Pkg.href ~href_base:Uri.(of_string "pkg/")
           name version in
         <:html<
           <tr>
