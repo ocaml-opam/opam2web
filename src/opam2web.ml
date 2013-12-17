@@ -152,9 +152,9 @@ let content_dir = Arg.(
 
 let build logfiles out_dir content_dir repositories preds index =
   let () = List.iter OpamfUniverse.(function
-    | Path path -> Printf.printf "=== Repository: %s ===\n%!" path;
-    | Local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
-    | Opam -> Printf.printf "=== Universe: current opam universe ===\n%!";
+    | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
+    | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
+    | `opam -> Printf.printf "=== Universe: current opam universe ===\n%!";
   ) repositories in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
