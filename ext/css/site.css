@@ -143,3 +143,32 @@ html, body {
   text-decoration: none;
   border-bottom: 0;
 }
+
+table.formula th, table.formula td {
+  border: none;
+  white-space: nowrap;
+}
+
+table.formula th.operator {
+  vertical-align: middle;
+  font-size: 150%;
+  border-right: 1px solid rgb(221, 221, 221);
+}
+
+table.formula td.pkgname {
+  vertical-align: middle;
+}
+
+td table.formula {
+  margin-left: -8px;
+}
+
+table.formula-wrap > tbody > tr > th,
+table.formula-wrap > tbody > tr > td {
+  padding: 0;
+  border: none;
+}
+
+table.formula > tbody > tr > td:last-child {
+  width: 100%;
+}

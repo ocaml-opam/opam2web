@@ -47,14 +47,15 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
 (* An HTML fragment for the description of a package *)
 let html_descr (short,long) =
   let to_html md = Cow.Markdown.to_html (Cow.Markdown_github.of_string md) in
-  <:html<
+  begin <:html<
     <h4>$str:short$</h4>
     $to_html long$
-  >>
+  >> end
 
 (* Returns a HTML description of the given package *)
 let to_html ~statistics universe pkg_info =
   let open OpamfUniverse in
+  let href = Pkg.href ~href_base:Uri.(of_string "../../") in
   let name = OpamPackage.Name.of_string pkg_info.name in
   let version = OpamPackage.Version.of_string pkg_info.version in
   let pkg = OpamPackage.create name version in
@@ -66,7 +67,7 @@ let to_html ~statistics universe pkg_info =
       with Not_found -> [version] in
     List.map
       (fun version ->
-         let href = Pkg.href ~href_base:Uri.(of_string "../../") name version in
+         let href = href name version in
          let version = OpamPackage.Version.to_string version in
          if pkg_info.version = version then
            <:html<
@@ -112,10 +113,109 @@ let to_html ~statistics universe pkg_info =
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
   let pkg_update = O2wMisc.string_of_timestamp pkg_info.update in
-  (* XXX: need to add hyperlink on package names *)
-  let mk_formula name f = match f pkg_opam with
-    | OpamFormula.Empty -> None
-    | x                 -> Some (name, <:html<$str:OpamFormula.to_string x$>>) in
+  let html_conj = <:html<&#x2227;>> in
+  let html_disj = <:html<&#x2228;>> in
+  let vset_of_name name =
+    try
+      OpamPackage.Name.Map.find name universe.versions
+    with Not_found -> OpamPackage.Version.Set.empty
+  in
+  let html_of_name name vset =
+    let name_str = OpamPackage.Name.to_string name in
+    if OpamPackage.Version.Set.cardinal vset = 0
+    then <:html< $str:name_str$&>>
+    else let v = OpamPackage.Version.Set.max_elt vset in
+         <:html< <a href=$uri: href name v$>$str:name_str$</a>&>>
+  in
+  let html_of_vc attrs name vset ((relop,v) as vc) =
+    let vstr = OpamPackage.Version.to_string v in
+    let rhtml = <:html< $str:(OpamFormula.string_of_relop relop)$&nbsp;>> in
+    match OpamfuFormula.extremum_of_version_constraint vset vc with
+    | Some v -> <:html<
+      <td $alist:attrs$>$rhtml$<a href=$uri: href name v$>$str:vstr$</a></td>&>>
+    | None -> <:html<<td $alist:attrs$>$rhtml$$str:vstr$</td>&>>
+  in
+  let html_of_namevc name vc =
+    let vset = vset_of_name name in
+    let vvset = OpamfuFormula.(filter_versions (Some (Atom vc)) vset) in
+    let vchtml = html_of_vc ["colspan","3"] name vset vc in
+    <:html<<td>$html_of_name name vvset$</td>$vchtml$>>
+  in
+  let html_of_namevconj name lo hi =
+    let vset = vset_of_name name in
+    let vvset = OpamfuFormula.(
+      filter_versions (Some (And [Atom lo; Atom hi])) vset
+    ) in
+    let lo = html_of_vc [] name vset lo in
+    let hi = html_of_vc [] name vset hi in
+    <:html<<td>$html_of_name name vvset$</td>$lo$<td>$html_conj$</td>$hi$>>
+  in
+  let html_of_namevdisj name lo hi =
+    let vset = vset_of_name name in
+    let vvset = OpamfuFormula.(
+      filter_versions (Some (Or [Atom lo; Atom hi])) vset
+    ) in
+    let lo = html_of_vc [] name vset lo in
+    let hi = html_of_vc [] name vset hi in
+    <:html<<td>$html_of_name name vvset$</td>$lo$<td>$html_disj$</td>$hi$>>
+  in
+  let enrow tds = <:html<<tr>$tds$</tr>&>> in
+  let html_of_operator k ophtml hd argl =
+    let rows = List.length argl + 1 in
+    <:html<
+      <td colspan='4'><table class="formula">
+        <tr>
+          <th class="operator" rowspan=$int:rows$>$ophtml$</th>
+          $k hd$
+        </tr>
+        $list:List.map (fun x -> enrow (k x)) argl$
+      </table></td>
+    >> in
+  let rec html_of_formula html_of_atom = OpamfuFormula.(function
+    | Atom x -> html_of_atom x
+    | And []  | Or []  -> <:html<<td/>&>>
+    | And [x] | Or [x] -> html_of_formula html_of_atom x
+    | And (hd::conjl)  ->
+      html_of_operator (html_of_formula html_of_atom) html_conj hd conjl
+    | Or  (hd::disjl)  ->
+      html_of_operator (html_of_formula html_of_atom) html_disj hd disjl
+  ) in
+  let html_of_namevf = OpamfuFormula.(function
+    | (name,(None | Some (And []) | Some (Or []))) -> <:html<
+      <td>$html_of_name name (vset_of_name name)$</td><td colspan='3'/>
+    >>
+    | (name,Some (Atom vc)) -> html_of_namevc name vc
+    | (name,Some (And [Atom x; Atom y])) -> html_of_namevconj name x y
+    | (name,((Some (And (c::cl))) as vf)) ->
+      let vset = vset_of_name name in
+      let vvset = OpamfuFormula.filter_versions vf vset in
+      let ophtml = html_of_operator
+        (html_of_formula (html_of_vc ["colspan","3"] name vset)) html_conj c cl
+      in <:html<
+        <td class="pkgname">$html_of_name name vvset$</td>
+        $ophtml$
+      >>
+    | (name,Some (Or [Atom x; Atom y])) -> html_of_namevdisj name x y
+    | (name,((Some (Or (d::dl))) as vf)) ->
+      let vset = vset_of_name name in
+      let vvset = OpamfuFormula.filter_versions vf vset in
+      let ophtml = html_of_operator
+        (html_of_formula (html_of_vc ["colspan","3"] name vset)) html_disj d dl
+      in <:html<
+        <td class="pkgname">$html_of_name name vvset$</td>
+        $ophtml$
+      >>
+  ) in
+  let mk_formula name f =
+    let f = OpamfuFormula.of_opam_formula (f pkg_opam) in
+    let f = OpamfuFormula.(sort_formula (simplify f)) in
+    match f with
+    | None -> None
+    | Some f ->
+      Some (name, <:html<<table class="formula-wrap">
+        <tr>$html_of_formula html_of_namevf f$</tr>
+      </table>&>>)
+  in
   let pkg_depends = mk_formula "Dependencies" OpamFile.OPAM.depends in
   let pkg_depopts = mk_formula "Optional dependencies" OpamFile.OPAM.depopts in
   let html_of_dependencies title dependencies =
@@ -155,12 +255,8 @@ let to_html ~statistics universe pkg_info =
              </tr>
            >> :: deps
   in
-  (* Keep only atomic formulas in dependency requirements
-     TODO: handle any type of formula *)
-  let depends_atoms = OpamFormula.atoms (OpamFile.OPAM.depends pkg_opam) in
-  let dependencies = html_of_dependencies "Dependencies" depends_atoms in
-  let depopts_atoms = OpamFormula.atoms (OpamFile.OPAM.depopts pkg_opam) in
-  let depopts = html_of_dependencies "Optional" depopts_atoms in
+
+
   let requiredby =
     try OpamPackage.Name.Map.find (OpamPackage.name pkg) universe.reverse_deps
     with Not_found -> OpamPackage.Name.Set.empty in
@@ -168,8 +264,9 @@ let to_html ~statistics universe pkg_info =
     List.map (fun name -> name, None) (OpamPackage.Name.Set.elements requiredby) in
   let requiredby_html =
     html_of_dependencies "Required by" requiredby_deps in
-  let nodeps =
-    <:html< <tr><td>No dependency</td></tr> >> in
+
+  let norevdeps = <:html< <tr><td>No package is dependent</td></tr>&>> in
+
   let pkg_stats = match statistics with
     | None -> <:html< >>
     | Some sset ->
@@ -258,12 +355,10 @@ let to_html ~statistics universe pkg_info =
       <div class="span3">
         <table class="table table-bordered">
           <tbody>
-            $list: dependencies$
-            $list: depopts$
             $list: requiredby_html$
-            $match dependencies, depopts, requiredby_deps with
-              | ([], [], []) -> nodeps
-              | _            -> Cow.Html.nil$
+            $match requiredby_deps with
+              | [] -> norevdeps
+              | _  -> Cow.Html.nil$
           </tbody>
         </table>
       </div>
