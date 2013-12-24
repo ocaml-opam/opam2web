@@ -18,9 +18,7 @@ open OpamTypes
 open Cow.Html
 open O2wTypes
 
-(* Comparison function using string representation of an OpamPackage *)
-let compare_alphanum  p1 p2 =
-  String.compare (OpamPackage.to_string p1) (OpamPackage.to_string p2)
+let compare_alphanum = OpamPackage.compare
 
 (* Comparison function using number of downloads for each package *)
 let compare_popularity ?(reverse = false) pkg_stats p1 p2 =
