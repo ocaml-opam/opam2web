@@ -21,7 +21,8 @@ open O2wTypes
 let to_html ~content_dir ~statistics ~popularity universe =
   let universe = { universe with
     max_packages = OpamPackage.Set.filter
-      (Pkg.are_preds_satisfied universe)
+      (Pkg.are_preds_satisfied
+         universe.pkgs_opams universe.pkg_idx universe.preds)
       universe.max_packages
   } in
   let updates_last10 =

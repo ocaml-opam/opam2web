@@ -127,7 +127,7 @@ let to_html ~statistics universe pkg_info =
   in
   let html_of_vc attrs name vset ((relop,v) as vc) =
     let vstr = OpamPackage.Version.to_string v in
-    let rhtml = <:html< $str:(OpamFormula.string_of_relop relop)$&nbsp;>> in
+    let rhtml = <:html<$str:(OpamFormula.string_of_relop relop)$&nbsp;>> in
     match OpamfuFormula.extremum_of_version_constraint vset vc with
     | Some v -> <:html<
       <td $alist:attrs$>$rhtml$<a href=$uri: href name v$>$str:vstr$</a></td>&>>
@@ -157,7 +157,7 @@ let to_html ~statistics universe pkg_info =
     let hi = html_of_vc [] name vset hi in
     <:html<<td>$html_of_name name vvset$</td>$lo$<td>$html_disj$</td>$hi$>>
   in
-  let enrow tds = <:html<<tr>$tds$</tr>&>> in
+  let enrow ?(attrs=[]) tds = <:html<<tr $alist:attrs$>$tds$</tr>&>> in
   let html_of_operator k ophtml hd argl =
     let rows = List.length argl + 1 in
     <:html<
@@ -179,7 +179,7 @@ let to_html ~statistics universe pkg_info =
       html_of_operator (html_of_formula html_of_atom) html_disj hd disjl
   ) in
   let html_of_namevf = OpamfuFormula.(function
-    | (name,(None | Some (And []) | Some (Or []))) -> <:html<
+    | (name,(None | Some ((And []) | (Or [])))) -> <:html<
       <td>$html_of_name name (vset_of_name name)$</td><td colspan='3'/>
     >>
     | (name,Some (Atom vc)) -> html_of_namevc name vc
@@ -216,52 +216,65 @@ let to_html ~statistics universe pkg_info =
   in
   let pkg_depends = mk_formula "Dependencies" OpamFile.OPAM.depends in
   let pkg_depopts = mk_formula "Optional dependencies" OpamFile.OPAM.depopts in
-  let html_of_dependencies title dependencies =
-    let deps = List.map (fun (pkg_name, constr_opt) ->
-        let latest_version =
-          try Some (OpamPackage.Name.Map.find pkg_name universe.max_versions)
-          with Not_found -> None in
-        let name = OpamPackage.Name.to_string pkg_name in
-        let href = match latest_version with
-          | None -> <:html< $str: name$ >>
-          | Some v ->
-            let href = Pkg.href ~href_base:Uri.(of_string "../../") pkg_name v in
-            <:html< <a href=$uri: href$>$str: name$</a> >>
-        in
-        let version = match constr_opt with
-          | None -> ""
-          | Some (r, v) ->
-            Printf.sprintf "( %s %s )"
-              (OpamFormula.string_of_relop r)
-              (OpamPackage.Version.to_string v)
-        in
-        <:html<
-          <tr>
-            <td>
-              $href$
-              <small>$str: version$</small>
-            </td>
-          </tr>
-        >>)
-        dependencies
+  let html_of_revdeps title revdeps =
+    let deps = List.map (fun (dep_name, vdnf) ->
+      let vf = OpamfuFormula.(simplify_expr (expr_of_version_dnf vdnf)) in
+      let vset = vset_of_name dep_name in
+      let vvset = OpamfuFormula.filter_versions vf vset in
+      let name_html = <:html<
+        <tr><td colspan='3'>$html_of_name dep_name vvset$</td></tr>
+      >> in
+      let rec html_of_vf span = OpamfuFormula.(function
+        | None | Some ((And []) | (Or [])) -> []
+        | Some (Atom vc) ->
+          [html_of_vc ["colspan",string_of_int span] dep_name vset vc]
+        | Some (And ((Atom vc)::cl)) ->
+          let rows = 1 + List.length cl in
+          (<:html<
+            <th class="operator" rowspan=$int:rows$>$html_conj$</th>
+            $html_of_vc ["colspan",string_of_int (span - 1)] dep_name vset vc$
+          >>)::(List.fold_right (fun c l ->
+            l @ (html_of_vf (span - 1) (Some c))
+          ) cl [])
+        | Some (Or (d::dl)) ->
+          let rows = OpamfuFormula.expr_width (Or (d::dl)) in
+          begin match html_of_vf (span - 1) (Some d) with
+          | h::t -> (<:html<
+            <th class="operator" rowspan=$int:rows$>$html_disj$</th>
+            $h$
+          >>)::(List.fold_right (fun d l ->
+            l @ (html_of_vf (span - 1) (Some d))
+          ) dl t)
+          | [] -> []
+          end
+        | Some ((And _) | (Or _)) -> assert false (* DNF failure *)
+      ) in
+      let attrs = ["class","embedded-formula"] in
+      <:html<$name_html$$list:List.map (enrow ~attrs) (html_of_vf 3 vf)$>>
+    ) revdeps
     in
     match deps with
     | [] -> []
     | _ -> <:html<
              <tr class="well">
-             <th>$str: title$</th>
+             <th colspan='3'>$str: title$</th>
              </tr>
            >> :: deps
   in
 
-
   let requiredby =
-    try OpamPackage.Name.Map.find (OpamPackage.name pkg) universe.reverse_deps
-    with Not_found -> OpamPackage.Name.Set.empty in
-  let requiredby_deps =
-    List.map (fun name -> name, None) (OpamPackage.Name.Set.elements requiredby) in
+    try OpamPackage.Map.find pkg universe.rev_depends
+    with Not_found -> OpamPackage.Name.Map.empty in
+  let requiredby_deps = OpamPackage.Name.Map.bindings requiredby in
   let requiredby_html =
-    html_of_dependencies "Required by" requiredby_deps in
+    html_of_revdeps "Required by" requiredby_deps in
+
+  let usedby =
+    try OpamPackage.Map.find pkg universe.rev_depopts
+    with Not_found -> OpamPackage.Name.Map.empty in
+  let usedby_deps = OpamPackage.Name.Map.bindings usedby in
+  let usedby_html =
+    html_of_revdeps "Utilized by" usedby_deps in
 
   let norevdeps = <:html< <tr><td>No package is dependent</td></tr>&>> in
 
@@ -354,9 +367,10 @@ let to_html ~statistics universe pkg_info =
         <table class="table table-bordered">
           <tbody>
             $list: requiredby_html$
-            $match requiredby_deps with
-              | [] -> norevdeps
-              | _  -> Cow.Html.nil$
+            $list: usedby_html$
+            $match requiredby_deps,usedby_deps with
+              | [], [] -> norevdeps
+              | _ , _  -> Cow.Html.nil$
           </tbody>
         </table>
       </div>

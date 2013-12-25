@@ -37,6 +37,7 @@ let to_page ~statistics universe pkg pkg_info acc =
     with e ->
       Printf.printf "Skipping %s (%s)\n%!" (OpamPackage.to_string pkg)
         (Printexc.to_string e);
+      Printexc.print_backtrace stdout;
       acc
 
 (* Create a list of package pages to generate for a universe *)
@@ -69,7 +70,10 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
     let pkg_set = match universe.index with
       | Index_all -> pkg_set
       | Index_pred -> OpamPackage.Set.filter
-        (Pkg.are_preds_satisfied universe)
+        (Pkg.are_preds_satisfied
+           universe.pkgs_opams
+           universe.pkg_idx
+           universe.preds)
         pkg_set
     in
     let packages = OpamPackage.Set.elements pkg_set in
