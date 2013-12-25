@@ -17,6 +17,9 @@ comma-separated predicates
 * Conform generated paths to opam overlay convention
 * Add edit link to opam metadata on each package page
 * Requires ocaml-uri 1.3.11 or higher
+* Add structured rendering of dependency and reverse dependency formulae
+* Add links in formulae rendering for packages and constraint versions
+* Add constrained reverse and optional reverse dependency rendering
 
 1.2.0 (2013-01-15):
 * Last release before change tracking
