@@ -20,6 +20,7 @@ comma-separated predicates
 * Add structured rendering of dependency and reverse dependency formulae
 * Add links in formulae rendering for packages and constraint versions
 * Add constrained reverse and optional reverse dependency rendering
+* Use publication date terminology
 
 1.2.0 (2013-01-15):
 * Last release before change tracking

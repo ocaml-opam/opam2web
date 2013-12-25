@@ -31,7 +31,7 @@ let compare_popularity ?(reverse = false) pkg_stats p1 p2 =
     Int64.compare c1 c2
   | _ -> compare_alphanum p1 p2
 
-(* Comparison function using the last update time of packages *)
+(* Comparison function using the publication time of packages *)
 let compare_date ?(reverse = false) pkg_dates p1 p2 =
   let pkg_date pkg =
     try OpamPackage.Map.find pkg pkg_dates
@@ -110,7 +110,7 @@ let to_html ~statistics universe pkg_info =
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
-  let pkg_update = O2wMisc.string_of_timestamp pkg_info.update in
+  let pkg_published = O2wMisc.string_of_timestamp pkg_info.published in
   let html_conj = <:html<&#x2227;>> in
   let html_disj = <:html<&#x2228;>> in
   let vset_of_name name =
@@ -348,9 +348,9 @@ let to_html ~statistics universe pkg_info =
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
             <tr>
-              <th>Last update</th>
+              <th>Published</th>
               <td>
-                $str: pkg_update$
+                $str: pkg_published$
               </td>
             </tr>
             $pkg_url$

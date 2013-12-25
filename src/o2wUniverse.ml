@@ -97,11 +97,11 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
             try
               let d = OpamPackage.Name.Map.find (OpamPackage.name pkg)
                 popularity in
-              Printf.sprintf "Downloads: %Ld | Last update: %s"
-                d (O2wMisc.string_of_timestamp pkg_info.update)
+              Printf.sprintf "Downloads: %Ld | Published: %s"
+                d (O2wMisc.string_of_timestamp pkg_info.published)
             with Not_found ->
-              Printf.sprintf "Last update: %s"
-                (O2wMisc.string_of_timestamp pkg_info.update)
+              Printf.sprintf "Published: %s"
+                (O2wMisc.string_of_timestamp pkg_info.published)
           in
           let pkg_href = Uri.(resolve "http"
                                 (of_string "../") pkg_info.href) in

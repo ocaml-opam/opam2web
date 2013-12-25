@@ -52,7 +52,7 @@ let to_html ~content_dir ~statistics ~popularity universe =
       <div class="span4">
         <table class="table table-striped">
           <thead>
-            <tr><th colspan="2">Recent updates</th></tr>
+            <tr><th colspan="2">New packages</th></tr>
           </thead>
           <tbody>
             $list: updated_items$
