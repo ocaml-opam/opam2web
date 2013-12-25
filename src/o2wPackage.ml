@@ -278,6 +278,15 @@ let to_html ~statistics universe pkg_info =
 
   let norevdeps = <:html< <tr><td>No package is dependent</td></tr>&>> in
 
+  let pkg_compiler = match OpamFile.OPAM.ocaml_version pkg_opam with
+    | None -> None
+    | Some cvf ->
+      let formula_str = OpamFormula.(string_of_formula (fun (relop,v) ->
+        (string_of_relop relop)^" "^(OpamCompiler.Version.to_string v)
+      ) cvf) in
+      Some ("OCaml",<:html<$str:formula_str$>>)
+  in
+
   let pkg_stats = match statistics with
     | None -> <:html< >>
     | Some sset ->
@@ -347,6 +356,7 @@ let to_html ~statistics universe pkg_info =
             $mk_tr pkg_maintainer$
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
+            $mk_tr pkg_compiler$
             <tr>
               <th>Published</th>
               <td>
