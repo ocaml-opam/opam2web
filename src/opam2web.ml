@@ -113,7 +113,7 @@ let make_website user_options universe =
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="" };
+      { menu_link = { text="Home"; href="/" };
         menu_item = Internal (0, home_index) };
 
       { menu_link = { text="Packages"; href="pkg/" };
