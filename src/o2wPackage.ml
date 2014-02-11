@@ -327,8 +327,8 @@ let to_html ~statistics universe pkg_info =
     | None -> <:html<&>>
     | Some url_base ->
       let base = Uri.of_string url_base in
-      let repo = { repo with repo_root=OpamFilename.Dir.of_string "" } in
-      let opam_loc = OpamFilename.to_string
+      let opam_loc = OpamFilename.remove_prefix
+        repo.OpamTypes.repo_root
         (OpamPath.Repository.opam repo prefix pkg) in
       let url = Uri.(resolve "" base (of_string opam_loc)) in
       let loc = Uri.to_string url in
