@@ -20,26 +20,21 @@ open Cow.Html
 open O2wTypes
 open OpamTypes
 
-exception Unknown_repository of string
-
-type repo_enum =
-| Path_enum
-| Local_enum
-| Opam_enum
-
 (* Options *)
 type options = {
   out_dir: string;
   files_dir: string;
   content_dir: string;
   logfiles: filename list;
-  repositories: O2wTypes.repository list;
+  repositories: OpamfUniverse.repository list;
 }
 
 let version = Version.string
 
+let packages_prefix = O2wHome.packages_prefix
+
 let include_files (path: string) files_path : unit =
-  let subpathes = ["doc"; "pkg"] in
+  let subpathes = ["doc"; packages_prefix] in
   let pathes =
     if String.length path > 0 then
       path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
@@ -51,6 +46,7 @@ let include_files (path: string) files_path : unit =
 
 (* Generate a whole static website using the given repository stack *)
 let make_website user_options universe =
+  let open OpamfUniverse in
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
@@ -76,7 +72,7 @@ let make_website user_options universe =
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true universe.pkgs_dates in
     let date = {
-      menu_link = { text="Packages"; href="pkg/index-date.html" };
+      menu_link = { text="Packages"; href=packages_prefix^"/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
     } in
     match statistics with
@@ -84,7 +80,8 @@ let make_website user_options universe =
     | Some s ->
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
-        menu_link = { text="Packages"; href="pkg/index-popularity.html" };
+        menu_link = { text="Packages";
+                      href=packages_prefix^"/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg universe);
       } in
       [ popularity; date ]
@@ -116,7 +113,7 @@ let make_website user_options universe =
       { menu_link = { text="Home"; href="/" };
         menu_item = Internal (0, home_index) };
 
-      { menu_link = { text="Packages"; href="pkg/" };
+      { menu_link = { text="Packages"; href=packages_prefix^"/" };
         menu_item = Internal (1, package_index) };
 
       { menu_link = { text="Documentation"; href="doc/" };
@@ -156,59 +153,14 @@ let content_dir = Arg.(
     ~docv:"CONTENT_DIR"
     ~doc:"The directory where to find documentation to include")
 
-let pred = Arg.(
-  value & opt_all (list string) [] & info ["where"]
-    ~docv:"WHERE_OR"
-    ~doc:"Satisfaction of all of the predicates in any comma-separated list implies inclusion")
-
-let index = Arg.(
-  value & opt (enum [
-    "all", Index_all;
-    "where", Index_pred;
-  ]) Index_pred & info ["index"]
-  ~docv:"INDEX"
-  ~doc:"Changes the set of packages for which indices are generated: 'all' or 'where'")
-
-let repositories =
-  let namespaces = Arg.enum [
-    "path", Path_enum;
-    "local", Local_enum;
-    "opam", Opam_enum
-  ] in
-  Arg.(
-    value & pos_all (pair ~sep:':' namespaces string) [Opam_enum,""] & info []
-      ~docv:"REPOSITORY"
-      ~doc:"The repositories to consider as the universe. Available namespaces are 'path' for local directories, 'local' for named opam remotes, and 'opam' for the current local opam universe.")
-
-let rec parse_pred = function
-  | "not"::more -> Not (parse_pred more)
-  | "tag"::more -> Tag (String.concat ":" more)
-  | "repo"::more -> Repo (String.concat ":" more)
-  | "pkg"::more -> Pkg (String.concat ":" more)
-  | ["depopt"]  -> Depopt
-  | []   -> failwith "filter predicate empty"
-  | p::_ -> failwith ("unknown predicate "^p)
-
 let build logfiles out_dir content_dir repositories preds index =
-  let preds = List.rev_map (fun pred ->
-    List.rev_map (fun pred ->
-      parse_pred Re_str.(split (regexp_string ":") pred)
-    ) pred
-  ) preds in
+  let () = List.iter OpamfUniverse.(function
+    | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
+    | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
+    | `opam -> Printf.printf "=== Universe: current opam universe ===\n%!";
+  ) repositories in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
-  let repositories = List.map (function
-    | Path_enum, path ->
-      Printf.printf "=== Repository: %s ===\n%!" path;
-      Path path
-    | Local_enum, local ->
-      Printf.printf "=== Repository: %s [opam] ===\n%!" local;
-      O2wTypes.Local local
-    | Opam_enum, _ ->
-      Printf.printf "=== Universe: current opam universe ===\n%!";
-      Opam
-  ) repositories
-  in
   let user_options = {
     out_dir;
     files_dir = "";
@@ -228,7 +180,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ repositories $ pred $ index),
+          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;

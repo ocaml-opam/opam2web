@@ -21,7 +21,7 @@ open O2wTypes
 
 (** Create a list of package pages to generate for a repository *)
 val to_pages: statistics:statistics_set option ->
-  universe_info -> page list
+  Cow.Html.t OpamfUniverse.t -> page list
 
 (** Generate the list of HTML links for a list of page names *)
 val sortby_links:
@@ -37,8 +37,9 @@ val to_html:
   popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
-  universe_info -> Cow.Xml.signal list
+  Cow.Html.t OpamfUniverse.t -> Cow.Xml.signal list
 
 (** Generate a universe from a list of repositories *)
 val of_repositories:
-  ?preds:pred list list -> index -> repository list -> universe_info
+  ?preds:OpamfUniverse.pred list list -> OpamfUniverse.index ->
+  OpamfUniverse.repository list -> Cow.Html.t OpamfUniverse.t

@@ -9,13 +9,19 @@
 * --where disjunctively filters the opam universe by a conjunction of
 comma-separated predicates
 * Added "tag:*","depopt","not:*","repo:*","pkg:*" predicates
-* Now operates over entire opam universes rather than single repositories
+* Operates over entire opam universes rather than single repositories
+* Factor opam universe functions into new dependency opamfu
 * Factor common page template into content/template.xhtml
 * Factor universe index into content/universe.xhtml
 * Factor home page into content/home.xhtml
 * Conform generated paths to opam overlay convention
 * Add edit link to opam metadata on each package page
 * Requires ocaml-uri 1.3.11 or higher
+* Add structured rendering of dependency and reverse dependency formulae
+* Add links in formulae rendering for packages and constraint versions
+* Add constrained reverse and optional reverse dependency rendering
+* Use publication date terminology
+* Show OCaml version constraint on package page
 
 1.2.0 (2013-01-15):
 * Last release before change tracking
