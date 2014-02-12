@@ -31,8 +31,10 @@ type options = {
 
 let version = Version.string
 
+let packages_prefix = O2wHome.packages_prefix
+
 let include_files (path: string) files_path : unit =
-  let subpathes = ["doc"; "pkg"] in
+  let subpathes = ["doc"; packages_prefix] in
   let pathes =
     if String.length path > 0 then
       path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
@@ -70,7 +72,7 @@ let make_website user_options universe =
   let package_links =
     let compare_pkg = O2wPackage.compare_date ~reverse:true universe.pkgs_dates in
     let date = {
-      menu_link = { text="Packages"; href="pkg/index-date.html" };
+      menu_link = { text="Packages"; href=packages_prefix^"/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
     } in
     match statistics with
@@ -78,7 +80,8 @@ let make_website user_options universe =
     | Some s ->
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
-        menu_link = { text="Packages"; href="pkg/index-popularity.html" };
+        menu_link = { text="Packages";
+                      href=packages_prefix^"/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg universe);
       } in
       [ popularity; date ]
@@ -110,7 +113,7 @@ let make_website user_options universe =
       { menu_link = { text="Home"; href="" };
         menu_item = Internal (0, home_index) };
 
-      { menu_link = { text="Packages"; href="pkg/" };
+      { menu_link = { text="Packages"; href=packages_prefix^"/" };
         menu_item = Internal (1, package_index) };
 
       { menu_link = { text="Documentation"; href="doc/" };

@@ -17,6 +17,8 @@
 open OpamfUniverse
 open O2wTypes
 
+let packages_prefix = "packages"
+
 (* OPAM website homepage *)
 let to_html ~content_dir ~statistics ~popularity universe =
   let universe = { universe with
@@ -29,7 +31,7 @@ let to_html ~content_dir ~statistics ~popularity universe =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
       let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-      let pkg_href = Pkg.href ~href_base:Uri.(of_string "pkg/")
+      let pkg_href = Pkg.href ~href_base:Uri.(of_string (packages_prefix^"/"))
         (OpamPackage.name pkg) (OpamPackage.version pkg) in
       let pkg_date = O2wMisc.string_of_timestamp ~short:true update_tm in
       <:html<
@@ -58,7 +60,7 @@ let to_html ~content_dir ~statistics ~popularity universe =
             $list: updated_items$
             <tr>
               <td class="btn-more" colspan="2">
-                <a href="pkg/index-date.html">
+                <a href=$str:packages_prefix^"/index-date.html"$>
                   <button class="btn btn-small">all packages</button>
                 </a>
               </td>
@@ -76,7 +78,7 @@ let to_html ~content_dir ~statistics ~popularity universe =
         let name = OpamPackage.name pkg in
         let version = OpamPackage.version pkg in
         let pkg_name = OpamPackage.Name.to_string name in
-        let pkg_href = Pkg.href ~href_base:Uri.(of_string "pkg/")
+        let pkg_href = Pkg.href ~href_base:Uri.(of_string (packages_prefix^"/"))
           name version in
         <:html<
           <tr>
@@ -105,7 +107,7 @@ let to_html ~content_dir ~statistics ~popularity universe =
               $list: top10_items$
               <tr>
                 <td class="btn-more" colspan="2">
-                  <a href="pkg/index-popularity.html">
+                  <a href=$str:packages_prefix^"/index-popularity.html"$>
                    <button class="btn btn-small" type="button">all packages</button>
                   </a>
                 </td>
