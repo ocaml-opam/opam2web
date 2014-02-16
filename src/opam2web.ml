@@ -45,7 +45,6 @@ let include_files (path: string) files_path : unit =
 
 (* Generate a whole static website using the given repository stack *)
 let make_website user_options universe =
-(*  let open OpamfUniverse in*)
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
