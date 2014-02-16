@@ -27,8 +27,8 @@ let to_page ~statistics universe pkg pkg_info acc =
   | Some pkg_info ->
     try
       let page = {
-        page_link     = { text=pkg_info.title;
-                          href=Uri.to_string pkg_info.href };
+        page_link     = { Cow.Html.text=pkg_info.title;
+                          href=Uri.to_string pkg_info.OpamfUniverse.href };
         page_depth    = 3;
         page_contents = Template.serialize
             (O2wPackage.to_html ~statistics universe pkg_info)
@@ -104,7 +104,7 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
                 (O2wMisc.string_of_timestamp pkg_info.published)
           in
           let pkg_href = Uri.(resolve "http"
-                                (of_string "../") pkg_info.href) in
+                                (of_string "../") pkg_info.OpamfUniverse.href) in
           <:html<
             <tr>
               <td title=$str:pkg_download$>

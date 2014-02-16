@@ -15,7 +15,6 @@
 (**************************************************************************)
 
 open Cmdliner
-open Cow
 open Cow.Html
 open O2wTypes
 open OpamTypes
@@ -46,7 +45,7 @@ let include_files (path: string) files_path : unit =
 
 (* Generate a whole static website using the given repository stack *)
 let make_website user_options universe =
-  let open OpamfUniverse in
+(*  let open OpamfUniverse in*)
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
@@ -65,12 +64,14 @@ let make_website user_options universe =
   let popularity =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
-    | Some s -> O2wStatistics.aggregate_package_popularity
-                  s.month_stats.pkg_stats universe.pkg_idx in
+    | Some s -> OpamfUniverse.(O2wStatistics.aggregate_package_popularity
+                                 s.month_stats.pkg_stats universe.pkg_idx) in
   let to_html = O2wUniverse.to_html ~content_dir ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
-    let compare_pkg = O2wPackage.compare_date ~reverse:true universe.pkgs_dates in
+    let compare_pkg =
+      O2wPackage.compare_date ~reverse:true universe.OpamfUniverse.pkgs_dates
+    in
     let date = {
       menu_link = { text="Packages"; href=packages_prefix^"/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
@@ -154,7 +155,7 @@ let content_dir = Arg.(
     ~doc:"The directory where to find documentation to include")
 
 let build logfiles out_dir content_dir repositories preds index =
-  let () = List.iter OpamfUniverse.(function
+  let () = List.iter (function
     | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
     | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
     | `opam -> Printf.printf "=== Universe: current opam universe ===\n%!";
