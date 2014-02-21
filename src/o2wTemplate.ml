@@ -136,7 +136,7 @@ let make_footer depth =
   Template.serialize <:html<
     <div class="icons">
     <div class="icon">
-      <a href="https://github.com/OCamlPro/opam2web">
+      <a href="https://github.com/ocaml/opam2web">
       <img src=$str:icon "github.png"$ />
       </a>
     </div>
@@ -153,7 +153,7 @@ let make_footer depth =
     </div>
     <div class="copyright">
       <small>
-      Generated using <a href="http://github.com/OCamlPro/opam2web">opam2web</a>,
+      Generated using <a href="http://github.com/ocaml/opam2web">opam2web</a>,
       courtesy of <a href="http://ocamlpro.com">OCamlPro</a>.
       <a href="http://opam.ocamlpro.com">Commercial support</a>.
       </small>

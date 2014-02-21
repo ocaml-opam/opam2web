@@ -177,7 +177,7 @@ let default_cmd =
     `S "DESCRIPTION";
     `P "$(b,opam2web) generates a web site from an opam universe.";
     `S "BUGS";
-    `P "Report bugs on the web at <https://github.com/OCamlPro/opam2web>.";
+    `P "Report bugs on the web at <https://github.com/ocaml/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
           $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index),
