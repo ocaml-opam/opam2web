@@ -25,6 +25,7 @@ let documentation_pages = [
   "Primer";
   "Quick_Install.md";
   "Basic_Usage.md";
+  "Specifying_Solver_Preferences.md";
   "FAQ.md";
   "";
   "Go Further";
