@@ -15,6 +15,7 @@
 (**************************************************************************)
 
 open OpamTypes
+open OpamTypesBase
 open Cow.Html
 open O2wTypes
 
@@ -247,7 +248,6 @@ let to_html ~statistics universe pkg_info =
           ) dl t)
           | [] -> []
           end
-        | Some ((And _) | (Or _)) -> assert false (* DNF failure *)
       ) in
       let attrs = ["class","embedded-formula"] in
       <:html<$name_html$$list:List.map (enrow ~attrs) (html_of_vf 3 vf)$>>
