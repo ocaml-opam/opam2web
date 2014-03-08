@@ -7,6 +7,12 @@ This utility creates a static website from an OPAM universe, listing all
 available packages and their details. A homepage and OPAM documentation is 
 included as well.
 
+The latest release of opam2web is available via
+[opam](http://opam.ocaml.org). To install, simply run:
+```bash
+opam install opam2web
+```
+
 ### Prerequisties
 
 - re [github.com/ocaml/ocaml-re](https://github.com/ocaml/ocaml-re)
