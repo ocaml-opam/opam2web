@@ -7,6 +7,8 @@ DIRTY=$(shell git diff-index --quiet HEAD; echo $$?)
 PREFIX ?= /usr/local
 WWWDIR ?= www
 
+BUILD=_build
+
 OCAMLBUILD=ocamlbuild -classic-display
 PACKAGES=-pkgs cow,cow.syntax,opam.client,opamfu.cli,cmdliner
 SYNTAX=-tags "syntax(camlp4o)"
@@ -17,7 +19,9 @@ TARGET=opam2web
 JS_OF_OCAML=js_of_ocaml
 JSFLAGS=-package js_of_ocaml.syntax,js_of_ocaml -syntax camlp4o
 
-all: $(TARGET).native search.js
+ARCHIVES=$(TARGET).cma $(TARGET).cmxa $(TARGET).a
+
+all: $(ARCHIVES) $(TARGET).native search.js
 
 version.ml: version.ml.in .FORCE
 	sed s/%%COMMIT%%/$(COMMIT)/ < version.ml.in \
@@ -27,16 +31,27 @@ version.ml: version.ml.in .FORCE
 $(TARGET).native: version.ml
 	$(OCAMLBUILD) $(INCLUDES) $(FLAGS) $(SYNTAX) $(PACKAGES) $@
 
+$(TARGET).cma:
+	$(OCAMLBUILD) $(INCLUDES) $(FLAGS) $(SYNTAX) $(PACKAGES) $@
+
+$(TARGET).cmxa:
+	$(OCAMLBUILD) $(INCLUDES) $(FLAGS) $(SYNTAX) $(PACKAGES) $@
+
+$(TARGET).a:
+	$(OCAMLBUILD) $(INCLUDES) $(FLAGS) $(SYNTAX) $(PACKAGES) $@
+
 %.js: %.ml
 	ocamlfind ocamlc -linkpkg -o $*.byte $(JSFLAGS) $<
-	mv $*.cmo $*.cmi _build
+	mv $*.cmo $*.cmi $(BUILD)
 	$(JS_OF_OCAML) $*.byte
 
 run: $(TARGET).native
-	_build/$< -c ../content -o $(WWWDIR)
+	$(BUILD)/$< -c ../content -o $(WWWDIR)
 
-install:
-	install _build/opam2web.native $(PREFIX)/bin/$(TARGET)
+install: all
+	install $(BUILD)/opam2web.native $(PREFIX)/bin/$(TARGET)
+	ocamlfind install opam2web META \
+		$(BUILD)/*.mli $(BUILD)/*.cmi $(addprefix $(BUILD)/,$(ARCHIVES))
 
 clean:
 	ocamlbuild -clean
