@@ -287,6 +287,16 @@ let to_html ~statistics universe pkg_info =
       Some ("OCaml",<:html<$str:formula_str$>>)
   in
 
+  let pkg_os = OpamFormula.(
+    match OpamFile.OPAM.os pkg_opam with
+    | Empty -> None
+    | f ->
+      let formula_str = string_of_formula (fun (b,s) ->
+        if b then s else "!"^s
+      ) f in
+      Some ("OS",<:html<$str:formula_str$>>)
+  ) in
+
   let pkg_stats = match statistics with
     | None -> <:html< >>
     | Some sset ->
@@ -357,6 +367,7 @@ let to_html ~statistics universe pkg_info =
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
             $mk_tr pkg_compiler$
+            $mk_tr pkg_os$
             <tr>
               <th>Published</th>
               <td>
