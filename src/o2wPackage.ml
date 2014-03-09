@@ -110,6 +110,7 @@ let to_html ~statistics universe pkg_info =
   let pkg_maintainer = list "Maintainer" (OpamFile.OPAM.maintainer pkg_opam) in
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
+  let pkg_issues = links "Issue Tracker" (OpamFile.OPAM.bug_reports pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
   let pkg_published = O2wMisc.string_of_timestamp pkg_info.published in
   let html_conj = <:html<&#x2227;>> in
@@ -287,6 +288,16 @@ let to_html ~statistics universe pkg_info =
       Some ("OCaml",<:html<$str:formula_str$>>)
   in
 
+  let pkg_os = OpamFormula.(
+    match OpamFile.OPAM.os pkg_opam with
+    | Empty -> None
+    | f ->
+      let formula_str = string_of_formula (fun (b,s) ->
+        if b then s else "!"^s
+      ) f in
+      Some ("OS",<:html<$str:formula_str$>>)
+  ) in
+
   let pkg_stats = match statistics with
     | None -> <:html< >>
     | Some sset ->
@@ -352,11 +363,13 @@ let to_html ~statistics universe pkg_info =
             $mk_tr pkg_author$
             $mk_tr pkg_license$
             $mk_tr pkg_homepage$
+            $mk_tr pkg_issues$
             $mk_tr pkg_tags$
             $mk_tr pkg_maintainer$
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
             $mk_tr pkg_compiler$
+            $mk_tr pkg_os$
             <tr>
               <th>Published</th>
               <td>
