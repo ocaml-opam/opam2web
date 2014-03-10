@@ -1,12 +1,29 @@
-.PHONY: all build install clean
+.PHONY: all build clean \
+	install install-bin install-lib \
+	uninstall uninstall-bin uninstall-lib
 
 all: build
 
 build:
-	cd src && $(MAKE)
+	$(MAKE) -C src
 
 install:
-	cd src && $(MAKE) install
+	$(MAKE) -C src install
+
+install-bin:
+	$(MAKE) -C src install-bin
+
+install-lib:
+	$(MAKE) -C src install-lib
+
+uninstall:
+	$(MAKE) -C src uninstall
+
+uninstall-bin:
+	$(MAKE) -C src uninstall-bin
+
+uninstall-lib:
+	$(MAKE) -C src uninstall-lib
 
 clean:
-	cd src && $(MAKE) clean
+	$(MAKE) -C src clean
