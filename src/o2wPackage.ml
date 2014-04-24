@@ -80,9 +80,9 @@ let to_html ~statistics universe pkg_info =
   let pkg_url = match pkg_info.url with
     | None          -> <:html< >>
     | Some url_file ->
-      let kind = match OpamFile.URL.kind url_file with
-        | Some k -> <:html< [$str: string_of_repository_kind k$] >>
-        | None -> <:html< >> in
+      let kind =
+        let k = OpamFile.URL.kind url_file in
+        <:html< [$str: string_of_repository_kind k$] >> in
       let checksum = match OpamFile.URL.checksum url_file with
         | Some c -> <:html< <small>$str: c$</small> >>
         | None -> <:html< >> in
