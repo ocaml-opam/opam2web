@@ -275,7 +275,7 @@ let to_html ~statistics universe pkg_info =
     with Not_found -> OpamPackage.Name.Map.empty in
   let usedby_deps = OpamPackage.Name.Map.bindings usedby in
   let usedby_html =
-    html_of_revdeps "Utilized by" usedby_deps in
+    html_of_revdeps "Used by" usedby_deps in
 
   let norevdeps = <:html< <tr><td>No package is dependent</td></tr>&>> in
 
