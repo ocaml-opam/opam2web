@@ -70,14 +70,16 @@ let request_of_entry e =
   let update_regexp =
     Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
   let open Logentry in
-  if Re_str.string_match html_regexp e.request 0 then
-    Html_req (Re_str.matched_group 1 e.request)
-  else if Re_str.string_match archive_regexp e.request 0 then
-    Archive_req (OpamPackage.of_string (Re_str.matched_group 1 e.request))
-  else if Re_str.string_match update_regexp e.request 0 then
-    Update_req
-  else
-    Unknown_req e.request
+  try
+    if Re_str.string_match html_regexp e.request 0 then
+      Html_req (Re_str.matched_group 1 e.request)
+    else if Re_str.string_match archive_regexp e.request 0 then
+      Archive_req (OpamPackage.of_string (Re_str.matched_group 1 e.request))
+    else if Re_str.string_match update_regexp e.request 0 then
+      Update_req
+    else
+      Unknown_req e.request
+  with Failure _ -> Unknown_req e.request
 
 let internal_regexp =
   Re_str.regexp "http://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
