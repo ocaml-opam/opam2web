@@ -216,8 +216,10 @@ let to_html ~statistics universe pkg_info =
         <tr>$html_of_formula html_of_namevf f$</tr>
       </table>&>>)
   in
-  let pkg_depends = mk_formula "Dependencies" OpamFile.OPAM.depends in
-  let pkg_depopts = mk_formula "Optional dependencies" OpamFile.OPAM.depopts in
+  let pkg_depends = mk_formula "Dependencies"
+      (fun opam -> filter_deps (OpamFile.OPAM.depends opam)) in
+  let pkg_depopts = mk_formula "Optional dependencies"
+      (fun opam -> filter_deps (OpamFile.OPAM.depopts opam)) in
   let html_of_revdeps title revdeps =
     let deps = List.map (fun (dep_name, vdnf) ->
       let vf = OpamfuFormula.(simplify_expr (expr_of_version_dnf vdnf)) in
