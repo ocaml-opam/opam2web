@@ -48,23 +48,6 @@ let split_filename (file: string): (string * string) =
    directory *)
 let to_menu ~content_dir ~pages =
 
-  let wrap_li ~depth c = <:html<<li>$c$</li>&>> in
-
-  let wrap_a ~depth ~heading c =
-    let href = "#" ^ Cow.Markdown.id_of_heading heading in
-    let html_a =
-      if depth > 1 then <:html<<a href="$str: href$"><small>$c$</small></a>&>>
-      else <:html<<a href="$str: href$"><strong>$c$</strong></a>&>>
-    in wrap_li ~depth html_a
-  in
-
-  let wrap_ul ~depth l =
-    if depth = 0 then
-      <:html<<ul class="nav nav-list bs-docs-sidenav">$l$</ul>&>>
-    else
-      <:html<$l$&>>
-  in
-
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
     if not (OpamFilename.exists filename) then (
@@ -75,11 +58,9 @@ let to_menu ~content_dir ~pages =
       match kind with
       | "html" -> Cow.Html.of_string content
       | "md" ->
-        let md_content = Cow.Markdown_github.of_string content in
-        let html_toc =
-          Cow.Markdown.to_html_toc
-            ~wrap_list:wrap_ul ~wrap_item:wrap_a md_content
-        in
+        let md_content = Omd.of_string content in
+        (* let md_toc = Omd.toc md_content in *)
+        (* let html_toc = Cow.Html.of_string (Omd.to_html md_toc) in *)
         <:html<
           <div class="row">
             <div class="span3">
@@ -88,11 +69,10 @@ let to_menu ~content_dir ~pages =
               data-spy="affix"
               data-offset-top="0" data-offset-bottom="140">
             $doc_menu$
-            $html_toc$
           </div>
           </div>
           <div class="span9">
-          $Cow.Markdown.to_html md_content$
+          $Cow.Html.of_string (Omd.to_html md_content)$
           </div>
         </div>
       >>

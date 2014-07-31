@@ -45,7 +45,7 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
 
 (* An HTML fragment for the description of a package *)
 let html_descr (short,long) =
-  let to_html md = Cow.Markdown.to_html (Cow.Markdown_github.of_string md) in
+  let to_html md = Cow.Markdown.of_string md in
   begin <:html<
     <h4>$str:short$</h4>
     $to_html long$

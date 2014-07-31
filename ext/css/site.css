@@ -196,3 +196,13 @@ tr.embedded-formula > td:last-child {
   width: 100%;
   text-align: right;
 }
+
+
+h2 {
+  border-bottom: 1px solid lightgrey;
+  padding-top: 5px;
+}
+
+h2, h3, h4 {
+  margin-top: 1ex;
+}
