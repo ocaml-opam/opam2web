@@ -33,7 +33,7 @@ let version = Version.string
 let packages_prefix = O2wHome.packages_prefix
 
 let include_files (path: string) files_path : unit =
-  let subpathes = ["doc"; packages_prefix] in
+  let subpathes = ["doc"; "blog"; packages_prefix] in
   let pathes =
     if String.length path > 0 then
       path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
@@ -53,6 +53,7 @@ let make_website user_options universe =
   let pages = O2wUniverse.to_pages ~statistics universe in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc = O2wDocumentation.to_menu ~content_dir in
+  let menu_of_blog = O2wBlog.to_menu ~content_dir in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
@@ -106,11 +107,23 @@ let make_website user_options universe =
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum universe in
   let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
+  let blog_pages =
+    OpamFilename.files OpamFilename.OP.(
+        OpamFilename.Dir.of_string content_dir / "blog"
+      ) in
+  let blog_menu =
+    menu_of_blog
+      ~pages:(List.map
+                (fun f -> OpamFilename.Base.to_string (OpamFilename.basename f))
+                blog_pages) in
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
       { menu_link = { text="Home"; href="/" };
         menu_item = Internal (0, home_index) };
+
+      { menu_link = { text="Blog"; href="blog/" };
+        menu_item = Submenu blog_menu };
 
       { menu_link = { text="Packages"; href=packages_prefix^"/" };
         menu_item = Internal (1, package_index) };
