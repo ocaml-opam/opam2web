@@ -98,7 +98,7 @@ let html_date timestamp =
         (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
         d.tm_hour d.tm_min d.tm_sec
     ) in
-  <:html< <time datetime="$str:d$">$str:short_date timestamp$</time> >>
+  <:html< <time datetime="$str:d$">$str:short_date timestamp$</time>&>>
 
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
