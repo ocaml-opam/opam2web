@@ -185,18 +185,23 @@ let generate ~content_dir ~out_dir menu pages =
     let len = String.length href in
     len = 0 || href.[len - 1] = '/'
   in
+  let empty_uri = Uri.of_string "" in
   let aux page =
     Printf.printf "\r[%-5d/%d] %s %40s%!" !c n page.page_link.href ""; incr c;
     let header = make_nav (page.page_link, page.page_depth) menu in
     let footer = make_footer page.page_depth in
+    let uri_dir = Uri.(
+      resolve "http"
+        (of_string out_dir) (with_path empty_uri page.page_link.href)
+    ) in
+    let dir = Uri.to_string uri_dir in
     let suffix =
-      if is_dir page.page_link.href
-      then (OpamFilename.(mkdir (Dir.of_string
-                                   (out_dir ^ page.page_link.href)));
-            "index.html")
-      else ""
+      if is_dir dir
+      then (OpamFilename.(mkdir (Dir.of_string dir));
+            Uri.with_path empty_uri "index.html")
+      else empty_uri
     in
-    let path = Printf.sprintf "%s%s%s" out_dir page.page_link.href suffix in
+    let path = Uri.(to_string (resolve "http" uri_dir suffix)) in
     let template = Template.({ path="template.xhtml"; fields=[
       "title", (default <:html< OPAM >>, Optional);
       "head",  (default <:html< >>,      Optional);
