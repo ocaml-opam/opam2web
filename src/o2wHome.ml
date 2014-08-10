@@ -20,7 +20,7 @@ open O2wTypes
 let packages_prefix = "packages"
 
 (* OPAM website homepage *)
-let to_html ~content_dir ~statistics ~popularity universe =
+let to_html ~content_dir ~statistics ~popularity ~news universe =
   let universe = { universe with
     max_packages = OpamPackage.Set.filter
       (Pkg.are_preds_satisfied
@@ -177,11 +177,13 @@ let to_html ~content_dir ~statistics ~popularity universe =
               >> in
 
   let template = Template.({ path="home.xhtml"; fields=[
+    "news",           (mandatory (), Optional);
     "stats",          (mandatory (), Optional);
     "updates_last10", (mandatory (), Optional);
     "packages_top10", (mandatory (), Optional);
   ]}) in
   Template.(generate content_dir template [
+    "news",           serialize news;
     "stats",          serialize stats;
     "updates_last10", serialize updates_last10;
     "packages_top10", serialize packages_top10;

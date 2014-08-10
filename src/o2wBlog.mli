@@ -19,9 +19,20 @@
 open OpamTypes
 open O2wTypes
 
-val packages_prefix : string
+type post
 
-(** Generate the homepage *)
-val to_html: content_dir:string -> statistics:statistics_set option ->
-  popularity:int64 name_map -> news:Cow.Xml.t ->
-  Cow.Html.t OpamfUniverse.t -> Cow.Xml.signal list
+
+(** Generate the blog *)
+val get_entries: content_dir:string -> pages:string list -> post list
+
+val make_pages: post list -> Cow.Xml.signal list list
+
+(** Main entry (last) as "Blog", and invisible list of older entries *)
+val make_menu: post list -> menu * menu list
+
+(** xhtml to include in main page *)
+val make_news: post list -> Cow.Xml.t
+
+(** Atom feed *)
+val make_feed: root:string -> post list -> Cow.Xml.t
+

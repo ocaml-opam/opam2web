@@ -26,6 +26,7 @@ type options = {
   content_dir: string;
   logfiles: filename list;
   repositories: OpamfUniverse.repository list;
+  root_uri: string;
 }
 
 let version = Version.string
@@ -33,7 +34,7 @@ let version = Version.string
 let packages_prefix = O2wHome.packages_prefix
 
 let include_files (path: string) files_path : unit =
-  let subpathes = ["doc"; packages_prefix] in
+  let subpathes = ["doc"; "blog"; packages_prefix] in
   let pathes =
     if String.length path > 0 then
       path :: List.map (fun p -> Printf.sprintf "%s/%s" path p) subpathes
@@ -53,6 +54,19 @@ let make_website user_options universe =
   let pages = O2wUniverse.to_pages ~statistics universe in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc = O2wDocumentation.to_menu ~content_dir in
+  Printf.printf "++ Building the blog.\n%!";
+  let blog_pages =
+    let files =
+      OpamFilename.files OpamFilename.OP.(
+          OpamFilename.Dir.of_string content_dir / "blog"
+        ) in
+    List.map (fun f -> OpamFilename.Base.to_string (OpamFilename.basename f))
+      files
+  in
+  let blog_entries = O2wBlog.get_entries ~content_dir ~pages:blog_pages in
+  let news = (O2wBlog.make_news blog_entries) in
+  let blog_latest, blog_links = O2wBlog.make_menu blog_entries in
+  let blog_feed = O2wBlog.make_feed ~root:user_options.root_uri blog_entries in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
@@ -101,15 +115,15 @@ let make_website user_options universe =
     with _ ->
       OpamGlobals.warning "%s is not available." filename;
       <:html< >> in
+  let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   let home_index = O2wHome.to_html
-    ~content_dir ~statistics ~popularity universe in
+    ~content_dir ~statistics ~popularity ~news universe in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum universe in
-  let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="/" };
+      { menu_link = { text="Home"; href="" };
         menu_item = Internal (0, home_index) };
 
       { menu_link = { text="Packages"; href=packages_prefix^"/" };
@@ -121,8 +135,14 @@ let make_website user_options universe =
       { menu_link = { text="About"; href="about.html" };
         menu_item = Internal (0, Template.serialize about_page) };
 
-    ] @ package_links)
+      blog_latest;
+
+    ] @ package_links
+      @ blog_links)
     pages;
+  OpamFilename.write
+    (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "feed.xml"))
+    (Cow.Xml.to_string blog_feed);
   match statistics with
   | None   -> ()
   | Some s ->
@@ -152,7 +172,12 @@ let content_dir = Arg.(
     ~docv:"CONTENT_DIR"
     ~doc:"The directory where to find documentation to include")
 
-let build logfiles out_dir content_dir repositories preds index =
+let root_uri = Arg.(
+    value & opt string (Sys.getcwd ()) & info ["r"; "root"]
+      ~docv:"URI"
+      ~doc:"The root URI from which we'll be serving pages (e.g. 'http://opam.ocaml.org')")
+
+let build logfiles out_dir content_dir repositories preds index root_uri =
   let () = List.iter (function
     | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
     | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
@@ -166,6 +191,7 @@ let build logfiles out_dir content_dir repositories preds index =
     content_dir;
     logfiles;
     repositories;
+    root_uri;
   } in
   make_website user_options
     (O2wUniverse.of_repositories ~preds index repositories)
@@ -179,7 +205,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/ocaml/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index),
+          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index $ root_uri),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;
