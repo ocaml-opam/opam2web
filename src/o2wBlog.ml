@@ -241,10 +241,11 @@ let make_menu entries =
           menu_item = No_menu (1, page) })
       entries pages
   in
-  let latest =
-    let entry, page = List.hd entries, List.hd pages in
-    { menu_link = link ~text:"Blog" entry;
-      menu_item = Internal (1, page) }
+  let latest = match entries, pages with
+    | [], _ | _, [] -> []
+    | first_entry::_, first_page::_ ->
+      [{ menu_link = link ~text:"Blog" first_entry;
+         menu_item = Internal (1, first_page) }]
   in
   latest, menu
 

@@ -135,10 +135,10 @@ let make_website user_options universe =
       { menu_link = { text="About"; href="about.html" };
         menu_item = Internal (0, Template.serialize about_page) };
 
-      blog_latest;
-
-    ] @ package_links
-      @ blog_links)
+     ]
+     @ blog_latest
+     @ package_links
+     @ blog_links)
     pages;
   OpamFilename.write
     (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "feed.xml"))
