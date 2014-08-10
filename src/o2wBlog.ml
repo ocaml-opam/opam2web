@@ -44,7 +44,7 @@ let split_filename (file: string): (string * string) =
   with
     Not_found -> file, ""
 
-let header_separator = "--BODY--"
+let header_separator = "^--BODY--$"
 
 type post = {
   blog_title: string;
@@ -304,7 +304,7 @@ let make_feed ~root entries =
       rights = None;
       updated =
         to_atom_date (List.fold_left max 0. (List.map (fun e -> e.blog_date) entries));
-      links = [ mk_link (Uri.of_string "http://opam.ocaml.org") ];
+      links = [ mk_link (Uri.of_string root) ];
     } in
     {
       feed = meta;

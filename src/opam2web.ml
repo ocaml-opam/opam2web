@@ -26,6 +26,7 @@ type options = {
   content_dir: string;
   logfiles: filename list;
   repositories: OpamfUniverse.repository list;
+  root_uri: string;
 }
 
 let version = Version.string
@@ -65,7 +66,7 @@ let make_website user_options universe =
   let blog_entries = O2wBlog.get_entries ~content_dir ~pages:blog_pages in
   let news = (O2wBlog.make_news blog_entries) in
   let blog_latest, blog_links = O2wBlog.make_menu blog_entries in
-  let blog_feed = O2wBlog.make_feed ~root:"http://opam.ocaml.org" blog_entries in
+  let blog_feed = O2wBlog.make_feed ~root:user_options.root_uri blog_entries in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
@@ -122,7 +123,7 @@ let make_website user_options universe =
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="/" };
+      { menu_link = { text="Home"; href="" };
         menu_item = Internal (0, home_index) };
 
       { menu_link = { text="Packages"; href=packages_prefix^"/" };
@@ -171,7 +172,12 @@ let content_dir = Arg.(
     ~docv:"CONTENT_DIR"
     ~doc:"The directory where to find documentation to include")
 
-let build logfiles out_dir content_dir repositories preds index =
+let root_uri = Arg.(
+    value & opt string (Sys.getcwd ()) & info ["r"; "root"]
+      ~docv:"URI"
+      ~doc:"The root URI from which we'll be serving pages (e.g. 'http://opam.ocaml.org')")
+
+let build logfiles out_dir content_dir repositories preds index root_uri =
   let () = List.iter (function
     | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
     | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
@@ -185,6 +191,7 @@ let build logfiles out_dir content_dir repositories preds index =
     content_dir;
     logfiles;
     repositories;
+    root_uri;
   } in
   make_website user_options
     (O2wUniverse.of_repositories ~preds index repositories)
@@ -198,7 +205,7 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/ocaml/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index),
+          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index $ root_uri),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;
