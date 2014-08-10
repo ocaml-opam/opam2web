@@ -92,8 +92,7 @@ let make_website user_options universe =
     try
       let filename = OpamFilename.of_string filename in
       let contents = OpamFilename.read filename in
-      let contents = Cow.Markdown_github.of_string contents in
-      let contents = Cow.Markdown.to_html contents in
+      let contents = Cow.Markdown.of_string contents in
       <:html<
         <div class="container">
         $contents$
