@@ -45,7 +45,11 @@ let compare_date ?(reverse = false) pkg_dates p1 p2 =
 
 (* An HTML fragment for the description of a package *)
 let html_descr (short,long) =
-  let to_html md = Cow.Markdown.of_string md in
+  let to_html md =
+    try Cow.Markdown.of_string md with
+      Invalid_argument _ ->
+        OpamGlobals.error "BAD MARKDOWN in %s" short;
+        <:html< $str:md$ >> in
   begin <:html<
     <h4>$str:short$</h4>
     $to_html long$
