@@ -168,8 +168,8 @@ let make_pages entries =
       List.map (fun entry ->
           let classes = if active_entry = entry then "active" else "" in
           <:html<
-            <li class="$str:classes$">
-              <a href="$str:entry.blog_name^".html"$">$str: entry.blog_title$</a>
+            <li class=$str:classes$>
+              <a href=$str:"../"^entry.blog_name^"/"$>$str: entry.blog_title$</a>
             </li>
           >>)
         entries
@@ -233,19 +233,19 @@ let make_menu entries =
   let pages = make_pages entries in
   let link ?text entry = {
     text = OpamMisc.Option.default entry.blog_title text;
-    href = "blog/" ^ entry.blog_name ^ ".html";
+    href = "blog/" ^ entry.blog_name ^ "/";
   } in
   let menu =
     List.map2 (fun entry page ->
         { menu_link = link entry;
-          menu_item = No_menu (1, page) })
+          menu_item = No_menu (2, page) })
       entries pages
   in
   let latest = match entries, pages with
     | [], _ | _, [] -> []
     | first_entry::_, first_page::_ ->
       [{ menu_link = link ~text:"Blog" first_entry;
-         menu_item = Internal (1, first_page) }]
+         menu_item = Internal (2, first_page) }]
   in
   latest, menu
 
@@ -253,7 +253,7 @@ let make_news entries =
   let oldest = Unix.time() -. 3600.*.24.*.365. in
   let news = List.filter (fun e -> e.blog_date > oldest ) entries in
   let mk entry =
-    let link = "blog/" ^ entry.blog_name ^ ".html" in
+    let link = "blog/" ^ entry.blog_name ^ "/" in
     <:html<
       <p>
         <i class="icon-ok"> </i>
@@ -284,7 +284,7 @@ let make_feed ~root entries =
           };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link (Uri.of_string (root ^ "/blog/" ^ entry.blog_name ^ ".html")) ];
+        links = [ mk_link (Uri.of_string (root ^ "/blog/" ^ entry.blog_name ^ "/")) ];
       };
       summary = None;
       content = entry.blog_body;
