@@ -104,7 +104,7 @@ let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
   let filename = OpamFilename.OP.(content_dir//filename) in
   let content = OpamFilename.read filename in
-  match Re_str.bounded_split (Re_str.regexp_string header_separator) content 2 with
+  match Re_str.bounded_split (Re_str.regexp header_separator) content 2 with
   | [] | [_] | _::_::_::_ ->
       OpamGlobals.note "Skipping %s: no header found"
         (OpamFilename.to_string filename);
