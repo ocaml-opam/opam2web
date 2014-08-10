@@ -98,7 +98,7 @@ let html_date timestamp =
         (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
         d.tm_hour d.tm_min d.tm_sec
     ) in
-  <:html< <time datetime="$str:d$">$str:short_date timestamp$</time> >>
+  <:html< <time datetime="$str:d$">$str:short_date timestamp$</time>&>>
 
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
@@ -168,8 +168,8 @@ let make_pages entries =
       List.map (fun entry ->
           let classes = if active_entry = entry then "active" else "" in
           <:html<
-            <li class="$str:classes$">
-              <a href="$str:entry.blog_name^".html"$">$str: entry.blog_title$</a>
+            <li class=$str:classes$>
+              <a href=$str:"../"^entry.blog_name^"/"$>$str: entry.blog_title$</a>
             </li>
           >>)
         entries
@@ -233,18 +233,19 @@ let make_menu entries =
   let pages = make_pages entries in
   let link ?text entry = {
     text = OpamMisc.Option.default entry.blog_title text;
-    href = "blog/" ^ entry.blog_name ^ ".html";
+    href = "blog/" ^ entry.blog_name ^ "/";
   } in
   let menu =
     List.map2 (fun entry page ->
         { menu_link = link entry;
-          menu_item = No_menu (1, page) })
+          menu_item = No_menu (2, page) })
       entries pages
   in
-  let latest =
-    let entry, page = List.hd entries, List.hd pages in
-    { menu_link = link ~text:"Blog" entry;
-      menu_item = Internal (1, page) }
+  let latest = match entries, pages with
+    | [], _ | _, [] -> []
+    | first_entry::_, first_page::_ ->
+      [{ menu_link = link ~text:"Blog" first_entry;
+         menu_item = Internal (2, first_page) }]
   in
   latest, menu
 
@@ -252,7 +253,7 @@ let make_news entries =
   let oldest = Unix.time() -. 3600.*.24.*.365. in
   let news = List.filter (fun e -> e.blog_date > oldest ) entries in
   let mk entry =
-    let link = "blog/" ^ entry.blog_name ^ ".html" in
+    let link = "blog/" ^ entry.blog_name ^ "/" in
     <:html<
       <p>
         <i class="icon-ok"> </i>
@@ -271,40 +272,45 @@ let make_feed ~root entries =
     Unix.(d.tm_year + 1900, d.tm_mon + 1, d.tm_mday, d.tm_hour, d.tm_min)
   in
 
-  let to_atom_entry entry = {
+  let blog_uri = Uri.(resolve "http" root (of_string "blog/")) in
+  let feed_uri = Uri.(resolve "http" blog_uri (of_string "feed.xml")) in
+  let to_atom_entry entry =
+    let entry_path = Uri.of_string (entry.blog_name ^ "/") in
+    let id = Uri.(to_string (resolve "http" blog_uri entry_path)) in
+    {
       entry = {
-        id = entry.blog_name;
+        id;
         title = entry.blog_title;
         subtitle = None;
         author = Some {
-            name = OpamMisc.pretty_list (List.map fst entry.blog_authors);
-            uri = snd (List.hd entry.blog_authors);
-            email = None;
-          };
+          name = OpamMisc.pretty_list (List.map fst entry.blog_authors);
+          uri = snd (List.hd entry.blog_authors);
+          email = None;
+        };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link (Uri.of_string (root ^ "/blog/" ^ entry.blog_name ^ ".html")) ];
+        links = [ mk_link entry_path ];
       };
       summary = None;
       content = entry.blog_body;
       base = None;
-  }
+    }
   in
 
   let feed =
     let meta = {
-      id = "ocaml-platform-blog";
+      id = Uri.to_string blog_uri;
       title = "The OCaml Platform Blog";
       subtitle = None;
       author = Some {
           name = "The OCaml Platform Team";
-          uri = Some root;
+          uri = Some (Uri.to_string root);
           email = None;
         };
       rights = None;
       updated =
         to_atom_date (List.fold_left max 0. (List.map (fun e -> e.blog_date) entries));
-      links = [ mk_link (Uri.of_string root) ];
+      links = [ mk_link feed_uri ];
     } in
     {
       feed = meta;

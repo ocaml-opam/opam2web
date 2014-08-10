@@ -28,11 +28,11 @@ val get_entries: content_dir:string -> pages:string list -> post list
 val make_pages: post list -> Cow.Xml.signal list list
 
 (** Main entry (last) as "Blog", and invisible list of older entries *)
-val make_menu: post list -> menu * menu list
+val make_menu: post list -> menu list * menu list
 
 (** xhtml to include in main page *)
 val make_news: post list -> Cow.Xml.t
 
 (** Atom feed *)
-val make_feed: root:string -> post list -> Cow.Xml.t
+val make_feed: root:Uri.t -> post list -> Cow.Xml.t
 
