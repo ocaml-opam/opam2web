@@ -272,40 +272,45 @@ let make_feed ~root entries =
     Unix.(d.tm_year + 1900, d.tm_mon + 1, d.tm_mday, d.tm_hour, d.tm_min)
   in
 
-  let to_atom_entry entry = {
+  let blog_uri = Uri.(resolve "http" root (of_string "blog/")) in
+  let feed_uri = Uri.(resolve "http" blog_uri (of_string "feed.xml")) in
+  let to_atom_entry entry =
+    let entry_path = Uri.of_string (entry.blog_name ^ "/") in
+    let id = Uri.(to_string (resolve "http" blog_uri entry_path)) in
+    {
       entry = {
-        id = entry.blog_name;
+        id;
         title = entry.blog_title;
         subtitle = None;
         author = Some {
-            name = OpamMisc.pretty_list (List.map fst entry.blog_authors);
-            uri = snd (List.hd entry.blog_authors);
-            email = None;
-          };
+          name = OpamMisc.pretty_list (List.map fst entry.blog_authors);
+          uri = snd (List.hd entry.blog_authors);
+          email = None;
+        };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link (Uri.of_string (root ^ "/blog/" ^ entry.blog_name ^ "/")) ];
+        links = [ mk_link entry_path ];
       };
       summary = None;
       content = entry.blog_body;
       base = None;
-  }
+    }
   in
 
   let feed =
     let meta = {
-      id = "ocaml-platform-blog";
+      id = Uri.to_string blog_uri;
       title = "The OCaml Platform Blog";
       subtitle = None;
       author = Some {
           name = "The OCaml Platform Team";
-          uri = Some root;
+          uri = Some (Uri.to_string root);
           email = None;
         };
       rights = None;
       updated =
         to_atom_date (List.fold_left max 0. (List.map (fun e -> e.blog_date) entries));
-      links = [ mk_link (Uri.of_string root) ];
+      links = [ mk_link feed_uri ];
     } in
     {
       feed = meta;
