@@ -44,104 +44,272 @@ let split_filename (file: string): (string * string) =
   with
     Not_found -> file, ""
 
+let header_separator = "--BODY--"
+
+type post = {
+  blog_title: string;
+  blog_authors: (string * string option) list; (* name, url *)
+  blog_date: float;
+  blog_body: Cow.Html.t;
+  blog_name: string;
+}
+
+(* format: 2014-08-09 17:44:00+02:00 *)
+let parse_date filename d =
+  let re =
+    Re_str.regexp
+      "\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)-\\([0-9][0-9]\\)\
+       \\( \\([0-9][0-9]\\):\\([0-9][0-9]\\)\\(:\\([0-9][0-9]\\)\\)?\\)?\
+       \\(\\([-+][0-9][0-9]\\):\\([0-9][0-9]\\)\\)?"
+  in
+  if not (Re_str.string_match re d 0) then
+    OpamGlobals.error_and_exit "Invalid date %S in %s"
+      d
+      (OpamFilename.to_string filename);
+  let t =
+    let ios i =
+      try int_of_string (Re_str.matched_group i d)
+      with Not_found | Invalid_argument _ -> 0 in
+    Unix.({
+        tm_year = ios 1 - 1900;
+        tm_mon  = ios 2 - 1;
+        tm_mday = ios 3;
+        tm_hour = ios 5 - ios 10;
+        tm_min  = (ios 6 - if ios 10 > 0 then ios 11 else 0 - ios 11);
+        tm_sec  = ios 8;
+        (* Initial dummy values *)
+        tm_wday  = 0;
+        tm_yday  = 0;
+        tm_isdst = false;
+      })
+  in
+  fst (Unix.mktime t)
+
+let short_date timestamp =
+  let open Unix in
+  let d = gmtime timestamp in
+  Printf.sprintf "%04d-%02d-%02d"
+    (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
+
+let to_entry ~content_dir filename =
+  let name = Filename.chop_extension filename in
+  let filename = OpamFilename.OP.(content_dir//filename) in
+  let content = OpamFilename.read filename in
+  match Re_str.bounded_split (Re_str.regexp_string header_separator) content 2 with
+  | [] | [_] | _::_::_::_ ->
+      OpamGlobals.note "Skipping %s: no header found"
+        (OpamFilename.to_string filename);
+      None
+  | [header; body] ->
+      let title, authors, date =
+        let lexbuf = Lexing.from_string header in
+        let s_filename = OpamFilename.to_string filename in
+        lexbuf.Lexing.lex_curr_p <- { lexbuf.Lexing.lex_curr_p with
+                                      Lexing.pos_fname = s_filename };
+        let {OpamTypes.file_contents=s} = OpamParser.main OpamLexer.token lexbuf s_filename in
+        let invalid = OpamFormat.invalid_fields s ["title";"authors";"date"] in
+        if invalid <> [] then
+          OpamGlobals.error_and_exit "Invalid fields %s in %s"
+            (String.concat "," invalid) s_filename;
+        let title = OpamFormat.assoc s "title" OpamFormat.parse_string in
+        let authors =
+          OpamFormat.(
+            assoc_list s "authors"
+              (parse_list (parse_option parse_string (fun x -> parse_string (List.hd x))))
+          ) in
+        let date = OpamFormat.assoc s "date" (fun f ->
+            parse_date filename (OpamFormat.parse_string f)) in
+        title, authors, date
+      in
+      let html_body =
+        if OpamFilename.ends_with ".html" filename then
+          Cow.Html.of_string body
+        else if OpamFilename.ends_with ".md" filename then
+          let md_content = Omd.of_string body in
+          Cow.Html.of_string (Omd.to_html md_content)
+        else OpamGlobals.error_and_exit "Unknown file extension for %s"
+            (OpamFilename.to_string filename)
+      in
+      let html_authors =
+        let to_html = function
+          | author, Some url ->
+              <:html< <a class="author" href="$str:url$">$str:author$</a> >>
+          | author, None ->
+              <:html< <a class="author">$str:author$</a> >>
+        in
+        match List.rev authors with
+        | [] -> <:html< >>
+        | [single] -> to_html single
+        | last::secondlast::others ->
+            List.fold_left (fun h a -> <:html< $to_html a$, $h >>)
+              <:html< $to_html secondlast$ and $to_html last$ >>
+              others
+      in
+      let html_date =
+        (* iso8601 format, for the html5 <date> tag ?
+        let d = Unix.(
+            let d = gmtime date in
+            Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02d"
+              (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
+              d.tm_hour d.tm_min d.tm_sec
+          ) in
+        *)
+        <:html< <span>$str:short_date date$</span> >>
+      in
+      let html =
+        <:html<
+          <div class="blog_head">
+            <span class="date">$html_date$</span>,
+            by <span class="authors">$html_authors$</span>.
+          </div>
+          $html_body$
+        >>
+      in
+      Some {
+        blog_title = title;
+        blog_authors = authors;
+        blog_date = date;
+        blog_body = html;
+        blog_name = name;
+      }
+
 (* Generate the HTML corresponding to a blog page in the <content>/blog
    directory *)
-let to_menu ~content_dir ~pages =
+let get_entries ~content_dir ~pages =
 
-  (* Convert a content page to html *)
-  let to_html doc_menu kind filename: Cow.Html.t =
-    if not (OpamFilename.exists filename) then (
-      OpamGlobals.warning "%s is not available." (OpamFilename.to_string filename);
-      <:html< >>
-    ) else
-      let content = OpamFilename.read filename in
-      match kind with
-      | "html" -> Cow.Html.of_string content
-      | "md" ->
-        let md_content = Omd.of_string content in
-        (* let md_toc = Omd.toc md_content in *)
-        (* let html_toc = Cow.Html.of_string (Omd.to_html md_toc) in *)
-        <:html<
-          <div class="row">
-            <div class="span3">
-          <span> </span>
-          <div class="bs-docs-menu"
-              data-spy="affix"
-              data-offset-top="0" data-offset-bottom="140">
-            $doc_menu$
-          </div>
-          </div>
-          <div class="span9">
-          $Cow.Html.of_string (Omd.to_html md_content)$
-          </div>
-        </div>
-      >>
-    | _ -> <:html< >>
-  in
+  let entries = List.map (to_entry ~content_dir:OpamFilename.OP.(OpamFilename.Dir.of_string content_dir / "blog")) pages in
+  let entries = OpamMisc.filter_map (fun x -> x) entries in
+  let entries =
+    List.sort (fun {blog_date=a} {blog_date=b} -> compare b a) entries in
 
-  (* Documentation menu and links creation *)
-  let aux_menu page =
-    let title, extension = split_filename page in
-    let human_title = Str.global_replace (Str.regexp "_") " " title in
-    if String.length extension = 0 then
-      let empty_filename = OpamFilename.of_string "" in
-      if  String.length title > 0 then
-        (empty_filename, "", { text=human_title; href="" }, Nav_header)
-      else
-        (empty_filename, "", { text=""; href="" }, Divider)
-    else
-      let source_file =
-        Printf.sprintf "%s/blog/%s.%s" content_dir title extension
-      in
-      let source_filename = OpamFilename.of_string source_file in
-      let dest_file = Printf.sprintf "%s.html" title in
-      (source_filename, extension,
-       { text=human_title; href=dest_file },
-       Internal (1, Template.serialize Cow.Html.nil))
-  in
+  OpamGlobals.msg "Correctly parsed %d blog entries:\n  - %s\n"
+    (List.length entries)
+    (String.concat "\n  - " (List.map (fun e -> e.blog_name) entries));
+  entries
 
-  let menu_pages = List.map aux_menu pages in
+let make_pages entries =
 
-  let documentation_menu active_src =
-    let menu_items = List.map (fun (src, _, lnk, kind) -> match kind with
-        | Submenu _ | No_menu _ -> Cow.Html.nil
-        | Nav_header ->
+  let nav_menu active_entry =
+    let items =
+      List.map (fun entry ->
+          let classes = if active_entry = entry then "active" else "" in
           <:html<
-            <li class="disabled">
-              <a href="#"><strong>$str: lnk.text$</strong></a>
+            <li class="$str:classes$">
+              <a href="$str:entry.blog_name^".html"$">$str: entry.blog_title$</a>
             </li>
-          >>
-        | Divider ->
-          <:html<<li class="disabled divider"><a href="#"> </a></li>&>>
-        | External | Internal _ ->
-          let classes = if active_src = src then "active" else "" in
-          <:html<<li class="$str: classes$">
-            <a href="$str: lnk.href$"> $str: lnk.text$</a>
-          </li>&>>
-      ) menu_pages
+          >>)
+        entries
     in
     <:html<
       <ul class="nav nav-pills nav-stacked">
-        $list: menu_items$
+        $list:items$
       </ul>
     >>
   in
-
   (* Pages creation *)
-  let aux_page (source_filename, extension, lnk, page) =
-    match page with
-    | Submenu _ | Nav_header | Divider | External ->
-        {
-          menu_link = lnk;
-          menu_item = page
-        }
-    | Internal (level, _) | No_menu (level, _) ->
-        let doc_menu = documentation_menu source_filename in
-        let html_page = to_html doc_menu extension source_filename in
-        {
-          menu_link = { lnk with href = "blog/" ^ lnk.href };
-          menu_item = Internal (level, Template.serialize html_page);
-        }
+  let aux_page entry =
+    let page =
+      <:html<
+        <div class="row">
+          <div class="span3">
+            <span> </span>
+            <div class="bs-docs-menu" data-spy="affix"
+                 data-offset-top="0" data-offset-bottom="140">
+              $nav_menu entry$
+            </div>
+          </div>
+          <div class="span9">
+            $entry.blog_body$
+          </div>
+        </div>
+      >>
+    in
+    Template.serialize page
   in
 
-  List.map aux_page menu_pages
+  List.map aux_page entries
+
+let make_menu entries =
+  let pages = make_pages entries in
+  let link ?text entry = {
+    text = OpamMisc.Option.default entry.blog_title text;
+    href = "blog/" ^ entry.blog_name ^ ".html";
+  } in
+  let menu =
+    List.map2 (fun entry page ->
+        { menu_link = link entry;
+          menu_item = No_menu (1, page) })
+      entries pages
+  in
+  let latest =
+    let entry, page = List.hd entries, List.hd pages in
+    { menu_link = link ~text:"Blog" entry;
+      menu_item = Internal (1, page) }
+  in
+  latest, menu
+
+let make_news entries =
+  let oldest = Unix.time() -. 3600.*.24.*.365. in
+  let news = List.filter (fun e -> e.blog_date > oldest ) entries in
+  let mk entry =
+    let link = "blog/" ^ entry.blog_name ^ ".html" in
+    <:html<
+      <p>
+        <i class="icon-ok"> </i>
+        <strong>$str: short_date entry.blog_date$</strong>
+        <a href="$str:link$">$str:entry.blog_title$</a>
+        <br/>
+      </p>
+    >>
+  in
+  List.fold_left (fun h e -> <:html< $h$ $mk e$ >>) <:html< >> news
+
+let make_feed entries =
+  let open Cow.Atom in
+  let to_atom_date date =
+    let d = Unix.gmtime date in
+    Unix.(d.tm_year + 1900, d.tm_mon + 1, d.tm_mday, d.tm_hour, d.tm_min)
+  in
+
+  let to_atom_entry entry = {
+      entry = {
+        id = entry.blog_name;
+        title = entry.blog_title;
+        subtitle = None;
+        author = Some {
+            name = OpamMisc.pretty_list (List.map fst entry.blog_authors);
+            uri = snd (List.hd entry.blog_authors);
+            email = None;
+          };
+        rights = None;
+        updated = to_atom_date entry.blog_date;
+        links = [ mk_link (Uri.of_string (entry.blog_name ^ ".html")) ];
+      };
+      summary = None;
+      content = entry.blog_body;
+      base = None;
+  }
+  in
+
+  let feed =
+    let meta = {
+      id = "ocaml-platform-blog";
+      title = "The OCaml Platform Blog";
+      subtitle = None;
+      author = Some {
+          name = "The OCaml Platform Team";
+          uri = Some ("http://opam.ocaml.org");
+          email = None;
+        };
+      rights = None;
+      updated =
+        to_atom_date (List.fold_left max 0. (List.map (fun e -> e.blog_date) entries));
+      links = [ mk_link (Uri.of_string "http://opam.ocaml.org") ];
+    } in
+    {
+      feed = meta;
+      entries = List.map to_atom_entry entries;
+    }
+  in
+  Cow.Atom.xml_of_feed feed
+
