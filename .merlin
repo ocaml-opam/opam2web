@@ -1,0 +1,7 @@
+PKG cmdliner
+PKG cow
+PKG opam-lib
+PKG opamfu
+
+B src/_build
+S src
