@@ -34,5 +34,5 @@ val make_menu: post list -> menu * menu list
 val make_news: post list -> Cow.Xml.t
 
 (** Atom feed *)
-val make_feed: post list -> Cow.Xml.t
+val make_feed: root:string -> post list -> Cow.Xml.t
 

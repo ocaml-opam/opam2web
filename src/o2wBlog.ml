@@ -91,6 +91,15 @@ let short_date timestamp =
   Printf.sprintf "%04d-%02d-%02d"
     (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
 
+let html_date timestamp =
+  let d = Unix.(
+      let d = gmtime timestamp in
+      Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02d"
+        (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
+        d.tm_hour d.tm_min d.tm_sec
+    ) in
+  <:html< <time datetime="$str:d$">$str:short_date timestamp$</time> >>
+
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
   let filename = OpamFilename.OP.(content_dir//filename) in
@@ -130,46 +139,11 @@ let to_entry ~content_dir filename =
         else OpamGlobals.error_and_exit "Unknown file extension for %s"
             (OpamFilename.to_string filename)
       in
-      let html_authors =
-        let to_html = function
-          | author, Some url ->
-              <:html< <a class="author" href="$str:url$">$str:author$</a> >>
-          | author, None ->
-              <:html< <a class="author">$str:author$</a> >>
-        in
-        match List.rev authors with
-        | [] -> <:html< >>
-        | [single] -> to_html single
-        | last::secondlast::others ->
-            List.fold_left (fun h a -> <:html< $to_html a$, $h >>)
-              <:html< $to_html secondlast$ and $to_html last$ >>
-              others
-      in
-      let html_date =
-        (* iso8601 format, for the html5 <date> tag ?
-        let d = Unix.(
-            let d = gmtime date in
-            Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02d"
-              (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
-              d.tm_hour d.tm_min d.tm_sec
-          ) in
-        *)
-        <:html< <span>$str:short_date date$</span> >>
-      in
-      let html =
-        <:html<
-          <div class="blog_head">
-            <span class="date">$html_date$</span>,
-            by <span class="authors">$html_authors$</span>.
-          </div>
-          $html_body$
-        >>
-      in
       Some {
         blog_title = title;
         blog_authors = authors;
         blog_date = date;
-        blog_body = html;
+        blog_body = html_body;
         blog_name = name;
       }
 
@@ -208,6 +182,32 @@ let make_pages entries =
   in
   (* Pages creation *)
   let aux_page entry =
+    let html_authors =
+      let to_html = function
+        | author, Some url ->
+            <:html< <a class="author" href="$str:url$">$str:author$</a> >>
+        | author, None ->
+            <:html< <a class="author">$str:author$</a> >>
+      in
+      match List.rev entry.blog_authors with
+      | [] -> <:html< >>
+      | [single] -> to_html single
+      | last::secondlast::others ->
+          List.fold_left (fun h a -> <:html< $to_html a$, $h >>)
+            <:html< $to_html secondlast$ and $to_html last$ >>
+            others
+    in
+    let html_body =
+      <:html<
+        <div class="page-header"><h3>
+          $str:entry.blog_title$
+          <div class="text-right"><small>
+            On $html_date entry.blog_date$, by <span class="authors">$html_authors$</span>
+          </small></div>
+        </h3></div>
+        $entry.blog_body$
+      >>
+    in
     let page =
       <:html<
         <div class="row">
@@ -219,7 +219,7 @@ let make_pages entries =
             </div>
           </div>
           <div class="span9">
-            $entry.blog_body$
+            $html_body$
           </div>
         </div>
       >>
@@ -256,7 +256,7 @@ let make_news entries =
     <:html<
       <p>
         <i class="icon-ok"> </i>
-        <strong>$str: short_date entry.blog_date$</strong>
+        <strong>$html_date entry.blog_date$</strong>
         <a href="$str:link$">$str:entry.blog_title$</a>
         <br/>
       </p>
@@ -264,7 +264,7 @@ let make_news entries =
   in
   List.fold_left (fun h e -> <:html< $h$ $mk e$ >>) <:html< >> news
 
-let make_feed entries =
+let make_feed ~root entries =
   let open Cow.Atom in
   let to_atom_date date =
     let d = Unix.gmtime date in
@@ -283,7 +283,7 @@ let make_feed entries =
           };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link (Uri.of_string (entry.blog_name ^ ".html")) ];
+        links = [ mk_link (Uri.of_string (root ^ "/blog/" ^ entry.blog_name ^ ".html")) ];
       };
       summary = None;
       content = entry.blog_body;
@@ -298,7 +298,7 @@ let make_feed entries =
       subtitle = None;
       author = Some {
           name = "The OCaml Platform Team";
-          uri = Some ("http://opam.ocaml.org");
+          uri = Some root;
           email = None;
         };
       rights = None;
@@ -312,4 +312,3 @@ let make_feed entries =
     }
   in
   Cow.Atom.xml_of_feed feed
-

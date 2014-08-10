@@ -64,8 +64,8 @@ let make_website user_options universe =
   in
   let blog_entries = O2wBlog.get_entries ~content_dir ~pages:blog_pages in
   let news = (O2wBlog.make_news blog_entries) in
-  let feed = O2wBlog.make_feed blog_entries in
   let blog_latest, blog_links = O2wBlog.make_menu blog_entries in
+  let blog_feed = O2wBlog.make_feed ~root:"http://opam.ocaml.org" blog_entries in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links = match statistics with
@@ -139,6 +139,9 @@ let make_website user_options universe =
     ] @ package_links
       @ blog_links)
     pages;
+  OpamFilename.write
+    (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "feed.xml"))
+    (Cow.Xml.to_string blog_feed);
   match statistics with
   | None   -> ()
   | Some s ->
