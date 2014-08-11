@@ -36,3 +36,5 @@ val make_news: post list -> Cow.Xml.t
 (** Atom feed *)
 val make_feed: root:Uri.t -> post list -> Cow.Xml.t
 
+(** Generate an html redirect to the latest post *)
+val make_redirect: root:Uri.t -> post list -> Cow.Xml.t

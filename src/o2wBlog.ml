@@ -235,19 +235,19 @@ let make_menu entries =
     text = OpamMisc.Option.default entry.blog_title text;
     href = "blog/" ^ entry.blog_name ^ "/";
   } in
-  let menu =
-    List.map2 (fun entry page ->
-        { menu_link = link entry;
-          menu_item = No_menu (2, page) })
-      entries pages
-  in
-  let latest = match entries, pages with
-    | [], _ | _, [] -> []
-    | first_entry::_, first_page::_ ->
-      [{ menu_link = link ~text:"Blog" first_entry;
-         menu_item = Internal (2, first_page) }]
-  in
-  latest, menu
+  match entries, pages with
+  | [], _ | _, [] -> [], []
+  | first_entry::entries, first_page::pages ->
+      let first =
+        [{ menu_link = link ~text:"Blog" first_entry;
+           menu_item = Internal (2, first_page) }] in
+      let others =
+        List.map2 (fun entry page ->
+            { menu_link = link entry;
+              menu_item = No_menu (2, page) })
+          entries pages
+      in
+      first, others
 
 let make_news entries =
   let oldest = Unix.time() -. 3600.*.24.*.365. in
@@ -264,6 +264,24 @@ let make_news entries =
     >>
   in
   List.fold_left (fun h e -> <:html< $h$ $mk e$ >>) <:html< >> news
+
+let make_redirect ~root entries =
+  match entries with
+  | [] -> <:html< No blog pages >>
+  | first_entry::_ ->
+      let blog_uri =
+        Uri.(resolve "http" root (of_string "blog/"))
+      in
+      let post_uri =
+        Uri.(resolve "http" blog_uri (of_string (first_entry.blog_name^"/")))
+      in
+      let redirect = Printf.sprintf "0;url=%s" (Uri.to_string post_uri) in
+      <:html<
+        <html><head>
+          <title>Latest blog entry (redirect)</title>
+          <meta http-equiv="refresh" content="$str:redirect$" />
+        </head><body></body></html>
+      >>
 
 let make_feed ~root entries =
   let open Cow.Atom in
