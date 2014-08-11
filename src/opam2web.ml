@@ -143,6 +143,9 @@ let make_website user_options universe =
   OpamFilename.write
     (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "feed.xml"))
     (Cow.Xml.to_string blog_feed);
+  OpamFilename.write
+    (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "index.html"))
+    (Cow.Xml.to_string (O2wBlog.make_redirect ~root:user_options.root_uri blog_entries));
   match statistics with
   | None   -> ()
   | Some s ->
