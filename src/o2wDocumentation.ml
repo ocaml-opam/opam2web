@@ -133,6 +133,7 @@ let to_menu ~content_dir ~pages =
     match page with
     | Submenu _ | Nav_header | Divider | External ->
         {
+          menu_source = OpamFilename.to_string source_filename;
           menu_link = lnk;
           menu_item = page
         }
@@ -140,6 +141,7 @@ let to_menu ~content_dir ~pages =
         let doc_menu = documentation_menu source_filename in
         let html_page = to_html doc_menu extension source_filename in
         {
+          menu_source = OpamFilename.to_string source_filename;
           menu_link = { lnk with href = "doc/" ^ lnk.href };
           menu_item = Internal (level, Template.serialize html_page);
         }

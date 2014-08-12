@@ -160,6 +160,55 @@ let make_footer depth =
     </div>
   >>
 
+let rec extract_links ~content_dir ~out_dir page =
+  let srcdir = Filename.dirname page.page_source in
+  let dstdir = Filename.concat out_dir page.page_link.href in
+  let dstdir =
+    if Sys.is_directory dstdir then dstdir else Filename.dirname dstdir
+  in
+  let file = page.page_link.href in
+
+  let rec get_links acc = function
+    | [] -> acc
+    | `El_start (_,attrs)::rest ->
+      let acc =
+        OpamMisc.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
+          attrs
+        @ acc
+      in
+      get_links acc rest
+    | _::rest -> get_links acc rest
+  in
+  let rec find_id id = function
+    | [] -> false
+    | `El_start (_,attrs)::rest -> List.mem (("","id"),id) attrs || find_id id rest
+    | _::rest -> find_id id rest
+  in
+  let links = get_links [] page.page_contents in
+  List.iter (fun link ->
+      let (/) = Filename.concat in
+      if Re_str.string_match (Re_str.regexp ".*://") link 0 then ()
+      else
+        let addr,id =
+          OpamMisc.Option.default (link,"") (OpamMisc.cut_at link '#')
+        in
+        if addr = "" then
+          if id = "" || find_id id page.page_contents then ()
+          else OpamGlobals.error "In %s: Broken self-reference to %s" file link
+        else
+          let target =
+            if Filename.is_relative addr then dstdir / addr
+            else out_dir / addr
+          in
+          if Sys.file_exists target then ()
+          else if Sys.file_exists (srcdir / addr) then (
+            OpamGlobals.msg "%s: Add resource %s to %s\n" file (srcdir / addr) target;
+            OpamSystem.copy (srcdir / addr) target;
+          ) else
+            OpamGlobals.error "In %s: Reference to resource %s not found" file link
+    )
+    links
+
 let generate ~content_dir ~out_dir menu pages =
   Printf.printf "++ Generating html files:\n%!";
   (* Filter out external links from the menu pages to generate *)
@@ -169,7 +218,8 @@ let generate ~content_dir ~out_dir menu pages =
       | [] -> acc
       | m :: t ->
         let mk page_depth page_contents =
-          { page_link = m.menu_link;
+          { page_source = m.menu_source;
+            page_link = m.menu_link;
             page_depth;
             page_contents } in
         match m.menu_item with
@@ -224,4 +274,5 @@ let generate ~content_dir ~out_dir menu pages =
   in
   List.iter aux menu_pages;
   List.iter aux pages;
-  Printf.printf "\r[%-5d/%d]\n%!" n n
+  Printf.printf "\r[%-5d/%d]\n%!" n n;
+  List.iter (extract_links ~content_dir ~out_dir) menu_pages

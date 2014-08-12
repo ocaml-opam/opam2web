@@ -27,6 +27,7 @@ let to_page ~statistics universe pkg pkg_info acc =
   | Some pkg_info ->
     try
       let page = {
+        page_source   = pkg_info.OpamfUniverse.name;
         page_link     = { Cow.Html.text=pkg_info.title;
                           href=Uri.to_string pkg_info.OpamfUniverse.href };
         page_depth    = 3;

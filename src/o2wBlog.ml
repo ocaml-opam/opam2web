@@ -47,6 +47,7 @@ let split_filename (file: string): (string * string) =
 let header_separator = "^--BODY--$"
 
 type post = {
+  blog_source: string;
   blog_title: string;
   blog_authors: (string * string option) list; (* name, url *)
   blog_date: float;
@@ -140,6 +141,7 @@ let to_entry ~content_dir filename =
             (OpamFilename.to_string filename)
       in
       Some {
+        blog_source = OpamFilename.to_string filename;
         blog_title = title;
         blog_authors = authors;
         blog_date = date;
@@ -239,11 +241,13 @@ let make_menu entries =
   | [], _ | _, [] -> [], []
   | first_entry::entries, first_page::pages ->
       let first =
-        [{ menu_link = link ~text:"Blog" first_entry;
+        [{ menu_source = first_entry.blog_source;
+           menu_link = link ~text:"Blog" first_entry;
            menu_item = Internal (2, first_page) }] in
       let others =
         List.map2 (fun entry page ->
-            { menu_link = link entry;
+            { menu_source = entry.blog_source;
+              menu_link = link entry;
               menu_item = No_menu (2, page) })
           entries pages
       in

@@ -86,6 +86,7 @@ let make_website user_options universe =
       O2wPackage.compare_date ~reverse:true universe.OpamfUniverse.pkgs_dates
     in
     let date = {
+      menu_source = content_dir;
       menu_link = { text="Packages"; href=packages_prefix^"/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
     } in
@@ -94,6 +95,7 @@ let make_website user_options universe =
     | Some s ->
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
+        menu_source = content_dir;
         menu_link = { text="Packages";
                       href=packages_prefix^"/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg universe);
@@ -123,16 +125,20 @@ let make_website user_options universe =
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
-      { menu_link = { text="Home"; href="." };
+      { menu_source = content_dir;
+        menu_link = { text="Home"; href="." };
         menu_item = Internal (0, home_index) };
 
-      { menu_link = { text="Packages"; href=packages_prefix^"/" };
+      { menu_source = content_dir;
+        menu_link = { text="Packages"; href=packages_prefix^"/" };
         menu_item = Internal (1, package_index) };
 
-      { menu_link = { text="Documentation"; href="doc/" };
+      { menu_source = content_dir^"/doc";
+        menu_link = { text="Documentation"; href="doc/" };
         menu_item = Submenu doc_menu; };
 
-      { menu_link = { text="About"; href="about.html" };
+      { menu_source = content_dir;
+        menu_link = { text="About"; href="about.html" };
         menu_item = Internal (0, Template.serialize about_page) };
 
      ]
