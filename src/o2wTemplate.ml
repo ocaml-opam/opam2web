@@ -32,13 +32,6 @@ let prepend_root (depth: int) (src: string): string =
 
 let create ~title ~header ~body ~footer ~depth =
   let title = <:html< $str:title$ >> in
-  let css_files = [
-    "ext/css/bootstrap.css";
-    "ext/css/bootstrap-responsive.css";
-    "ext/css/docs.css";
-    "ext/js/google-code-prettify/prettify.css";
-    "ext/css/site.css";
-  ] in
   let js_files = [
     "ext/js/jquery.js";
     "ext/js/google-code-prettify/prettify.js";
@@ -50,10 +43,7 @@ let create ~title ~header ~body ~footer ~depth =
   let head_html =
     <:html<
       <meta name="generator" content=$str: "opam2web " ^ Version.string$ />
-      <link rel="icon" type="image/png" href="/ext/img/favicon.png" />
-    >>@(List.flatten (List.map (fun f ->
-      <:html< <link href="$str: prepend_root f$" rel="stylesheet" /> >>
-    ) css_files))
+    >>
   in
   let js_html =
     <:html<
