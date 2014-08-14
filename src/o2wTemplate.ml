@@ -161,6 +161,9 @@ let make_footer depth =
   >>
 
 let rec extract_links ~content_dir ~out_dir page =
+  let pagedir =
+    try Filename.chop_extension page.page_source
+    with Invalid_argument _ -> page.page_source in
   let srcdir = Filename.dirname page.page_source in
   let dstdir = Filename.concat out_dir page.page_link.href in
   let dstdir =
@@ -201,11 +204,18 @@ let rec extract_links ~content_dir ~out_dir page =
             else out_dir / addr
           in
           if Sys.file_exists target then ()
-          else if Sys.file_exists (srcdir / addr) then (
-            OpamGlobals.msg "%s: Add resource %s to %s\n" file (srcdir / addr) target;
-            OpamSystem.copy (srcdir / addr) target;
-          ) else
-            OpamGlobals.error "In %s: Reference to resource %s not found" file link
+          else
+            let find f = if Sys.file_exists f then Some f else None in
+            let src =
+              match find (pagedir/addr) with
+              | None -> find (srcdir/addr)
+              | some -> some in
+            match src with
+            | Some src ->
+                OpamGlobals.msg "%s: Add resource %s to %s\n" file src target;
+                OpamSystem.copy src target;
+            | None ->
+                OpamGlobals.error "In %s: Reference to resource %s not found" file link
     )
     links
 
