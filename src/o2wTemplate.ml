@@ -259,7 +259,8 @@ let generate ~content_dir ~out_dir menu pages =
       if is_dir dir
       then (OpamFilename.(mkdir (Dir.of_string dir));
             Uri.with_path empty_uri "index.html")
-      else empty_uri
+      else (OpamFilename.(mkdir (Dir.of_string (Filename.dirname dir)));
+            empty_uri)
     in
     let path = Uri.(to_string (resolve "http" uri_dir suffix)) in
     let template = Template.({ path="template.xhtml"; fields=[

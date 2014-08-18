@@ -39,14 +39,47 @@ let kind_of_extension: string -> doc_kind = function
 let split_filename (file: string): (string * string) =
   try
     let dot_index = String.rindex file '.' in
-    (String.sub file 0 dot_index,
-     String.sub file (dot_index + 1) (String.length file - dot_index - 1))
+    let base = String.sub file 0 dot_index in
+    let ext =
+      String.sub file (dot_index + 1) (String.length file - dot_index - 1)
+    in
+    if String.contains ext ' ' then raise Not_found
+    else base, ext
   with
     Not_found -> file, ""
 
+(* Returns [(source_file, extension, link, menu_entry); ...] *)
+let read_menu ~dir f =
+  let lines = OpamProcess.read_lines f in
+  let lines =
+    List.filter (fun s -> String.length s = 0 || s.[0] <> '#') lines
+  in
+  (* Documentation menu and links creation *)
+  let aux_menu page =
+    let title, extension = split_filename page in
+    let human_title = Str.global_replace (Str.regexp "_") " " title in
+    if String.length extension = 0 then
+      let empty_filename = OpamFilename.of_string "" in
+      if  String.length title > 0 then
+        (empty_filename, "", { text=human_title; href="" }, Nav_header)
+      else
+        (empty_filename, "", { text=""; href="" }, Divider)
+    else
+      let source_file =
+        Printf.sprintf "%s/%s.%s" dir title extension
+      in
+      let source_filename = OpamFilename.of_string source_file in
+      let dest_file = Printf.sprintf "%s.html" title in
+      (source_filename, extension,
+       { text=human_title; href=dest_file },
+       Internal (1, Template.serialize Cow.Html.nil))
+  in
+  List.map aux_menu lines
+
+
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_menu ~content_dir ~pages =
+let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
 
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
@@ -73,35 +106,13 @@ let to_menu ~content_dir ~pages =
           </div>
           </div>
           <div class="span9">
+          $header$
           $Cow.Html.of_string (Omd.to_html md_content)$
           </div>
         </div>
       >>
     | _ -> <:html< >>
   in
-
-  (* Documentation menu and links creation *)
-  let aux_menu page =
-    let title, extension = split_filename page in
-    let human_title = Str.global_replace (Str.regexp "_") " " title in
-    if String.length extension = 0 then
-      let empty_filename = OpamFilename.of_string "" in
-      if  String.length title > 0 then
-        (empty_filename, "", { text=human_title; href="" }, Nav_header)
-      else
-        (empty_filename, "", { text=""; href="" }, Divider)
-    else
-      let source_file =
-        Printf.sprintf "%s/doc/%s.%s" content_dir title extension
-      in
-      let source_filename = OpamFilename.of_string source_file in
-      let dest_file = Printf.sprintf "%s.html" title in
-      (source_filename, extension,
-       { text=human_title; href=dest_file },
-       Internal (1, Template.serialize Cow.Html.nil))
-  in
-
-  let menu_pages = List.map aux_menu pages in
 
   let documentation_menu active_src =
     let menu_items = List.map (fun (src, _, lnk, kind) -> match kind with
@@ -142,9 +153,50 @@ let to_menu ~content_dir ~pages =
         let html_page = to_html doc_menu extension source_filename in
         {
           menu_source = OpamFilename.to_string source_filename;
-          menu_link = { lnk with href = "doc/" ^ lnk.href };
+          menu_link = { lnk with href = subdir ^ "/" ^ lnk.href };
           menu_item = Internal (level, Template.serialize html_page);
         }
   in
 
   List.map aux_page menu_pages
+
+let to_menu ~content_dir =
+  let (/) = Filename.concat in
+  let get_header name =
+    Cow.Html.of_string @@
+    Omd.to_html @@
+    Omd.of_string @@
+    OpamFilename.read @@
+    OpamFilename.of_string name
+  in
+  let menu_pages_11 =
+    read_menu ~dir:(content_dir / "doc")
+      (content_dir / "doc" / "index.menu")
+  in
+  let menu_11 =
+    to_menu_aux ~content_dir ~subdir:"doc" ~menu_pages:menu_pages_11
+      ~header:(get_header (content_dir / "doc" / "opam11_note.md"))
+  in
+  let menu_pages_12 =
+    read_menu ~dir:(content_dir / "doc" / "1.2")
+      (content_dir / "doc" / "1.2" / "index.menu")
+  in
+  let menu_12 =
+    to_menu_aux ~content_dir ~subdir:("doc" / "1.2") ~menu_pages:menu_pages_12
+      ~header:(get_header (content_dir / "doc" / "opam12_note.md"))
+  in
+  let menu_12 =
+    OpamMisc.filter_map (function
+        | {menu_item = Internal (_, html)} as m ->
+            Some {m with menu_item = No_menu (2, html)}
+        | _ -> None)
+      menu_12
+  in
+  menu_11 @
+  menu_12 @
+  [{
+    menu_source = "1.2";
+    menu_link = { text = "OPAM 1.2 BETA";
+                  href = "doc/1.2/" };
+    menu_item = Internal (2, Template.serialize Cow.Html.nil);
+  }]

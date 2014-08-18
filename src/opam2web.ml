@@ -53,7 +53,7 @@ let make_website user_options universe =
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wUniverse.to_pages ~statistics universe in
   Printf.printf "++ Building the documentation pages.\n%!";
-  let menu_of_doc = O2wDocumentation.to_menu ~content_dir in
+  let menu_of_doc () = O2wDocumentation.to_menu ~content_dir in
   Printf.printf "++ Building the blog.\n%!";
   let blog_pages =
     let files =
@@ -117,7 +117,7 @@ let make_website user_options universe =
     with _ ->
       OpamGlobals.warning "%s is not available." filename;
       <:html< >> in
-  let doc_menu = menu_of_doc ~pages:O2wGlobals.documentation_pages in
+  let doc_menu = menu_of_doc () in
   let home_index = O2wHome.to_html
     ~content_dir ~statistics ~popularity ~news universe in
   let package_index =
