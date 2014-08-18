@@ -65,7 +65,7 @@ let to_menu ~content_dir ~pages =
           <div class="row">
             <div class="span3">
           <span> </span>
-          <div class="bs-docs-menu"
+          <div class="bs-docs-menu hidden-phone"
               data-spy="affix"
               data-offset-top="0" data-offset-bottom="140">
             $doc_menu$
