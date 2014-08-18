@@ -18,13 +18,6 @@
 
 open O2wTypes
 
-(** The list contains elements with this syntax :
-    <string> without extension -> A menu title
-    <string> with 'md' extension -> A markdown page in content/doc
-    empty <string> -> A menu divider
-*)
-val documentation_pages: string list
-
 (** Statistics related global values *)
 val default_log_filter: log_filter
 
