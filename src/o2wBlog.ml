@@ -215,7 +215,7 @@ let make_pages entries =
         <div class="row">
           <div class="span3">
             <span> </span>
-            <div class="bs-docs-menu" data-spy="affix"
+            <div class="bs-docs-menu hidden-phone" data-spy="affix"
                  data-offset-top="0" data-offset-bottom="140">
               $nav_menu entry$
             </div>
