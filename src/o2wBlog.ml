@@ -260,6 +260,25 @@ let make_redirect ~root entries =
         </head><body></body></html>
       >>
 
+(*
+let resolve_urls_in_attr base rewrites attrs =
+  List.map (fun ((attr,v) as a) ->
+    if List.mem attr rewrites
+    then (attr,Uri.(to_string (resolve "http" base (of_string v))))
+    else a
+  ) attrs
+
+let resolve_urls_in_tag base = function
+  | (("","img"),attrs) ->
+    (("","img"),resolve_urls_in_attr base ["","src"] attrs)
+  | tag -> tag
+
+let rec resolve_urls base = function
+  | `Data d -> `Data d
+  | `El (tag, body) ->
+    `El (resolve_urls_in_tag base tag, List.map (resolve_urls base) body)
+*)
+
 let make_feed ~root entries =
   let open Cow.Atom in
   let to_atom_date date =
@@ -271,7 +290,8 @@ let make_feed ~root entries =
   let feed_uri = Uri.(resolve "http" blog_uri (of_string "feed.xml")) in
   let to_atom_entry entry =
     let entry_path = Uri.of_string (entry.blog_name ^ "/") in
-    let id = Uri.(to_string (resolve "http" blog_uri entry_path)) in
+    let entry_abs = Uri.resolve "http" blog_uri entry_path in
+    let id = Uri.to_string entry_abs in
     {
       entry = {
         id;
@@ -284,11 +304,11 @@ let make_feed ~root entries =
         };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link entry_path ];
+        links = [ mk_link entry_abs ];
       };
       summary = None;
       content = entry.blog_body;
-      base = Some (Uri.to_string entry_path);
+      base = Some id;
     }
   in
 
