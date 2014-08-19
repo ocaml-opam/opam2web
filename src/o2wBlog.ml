@@ -315,7 +315,7 @@ let make_feed ~root entries =
       };
       summary = None;
       content = entry.blog_body;
-      base = None;
+      base = Some (Uri.to_string entry_path);
     }
   in
 
