@@ -17,33 +17,6 @@
 open Cow.Html
 open O2wTypes
 
-type doc_kind =
-  | Html
-  | Markdown
-  | Unknown of string
-  | No_extension
-
-let extension_of_kind: doc_kind -> string = function
-  | Html -> "html"
-  | Markdown -> "md"
-  | Unknown ext -> ext
-  | No_extension -> ""
-
-let kind_of_extension: string -> doc_kind = function
-  | "html" -> Html
-  | "md" -> Markdown
-  | "" -> No_extension
-  | ext -> Unknown ext
-
-(* Returns a pair (basename, extension) of the given filename *)
-let split_filename (file: string): (string * string) =
-  try
-    let dot_index = String.rindex file '.' in
-    (String.sub file 0 dot_index,
-     String.sub file (dot_index + 1) (String.length file - dot_index - 1))
-  with
-    Not_found -> file, ""
-
 let header_separator = "^--BODY--$"
 
 type post = {
@@ -103,6 +76,8 @@ let html_date timestamp =
 
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
+  let extension = OpamMisc.remove_prefix ~prefix:name filename in
+  if extension <> ".md" && extension <> ".html" then None else
   let filename = OpamFilename.OP.(content_dir//filename) in
   let content = OpamFilename.read filename in
   match Re_str.bounded_split (Re_str.regexp header_separator) content 2 with
@@ -131,14 +106,12 @@ let to_entry ~content_dir filename =
             parse_date filename (OpamFormat.parse_string f)) in
         title, authors, date
       in
-      let html_body =
-        if OpamFilename.ends_with ".html" filename then
-          Cow.Html.of_string body
-        else if OpamFilename.ends_with ".md" filename then
-          let md_content = Omd.of_string body in
-          Cow.Html.of_string (Omd.to_html md_content)
-        else OpamGlobals.error_and_exit "Unknown file extension for %s"
-            (OpamFilename.to_string filename)
+      let html_body = match extension with
+        | ".html" -> Cow.Html.of_string body
+        | ".md" ->
+            let md_content = Omd.of_string body in
+            Cow.Html.of_string (Omd.to_html md_content)
+        | _ -> assert false
       in
       Some {
         blog_source = OpamFilename.to_string filename;
