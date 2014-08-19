@@ -19,8 +19,8 @@ test-prepare:
 	cp -r ../content . && \
 	git clone git@github.com:ocaml/opam.wiki git-doc -b 1.2 --depth 1 && \
 	cp -r git-doc/* content/doc/ && \
-	git clone git@github.com:amirmc/platform git-blog -b overview --depth 1 && \
-	cp -r git-blog/blog/* content/blog/
+	git clone git@github.com:ocaml/platform-blog git-blog --depth 1 && \
+	cp -r git-blog/* content/blog/
 
 test: build test-prepare
 	cd www && \
