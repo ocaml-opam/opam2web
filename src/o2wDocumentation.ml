@@ -97,10 +97,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
         <:html<
           <div class="row">
             <div class="span3">
-          <span> </span>
-          <div class="bs-docs-menu hidden-phone"
-              data-spy="affix"
-              data-offset-top="0" data-offset-bottom="140">
+          <div class="bs-docs-menu hidden-phone">
             $doc_menu$
             $html_toc$
           </div>
