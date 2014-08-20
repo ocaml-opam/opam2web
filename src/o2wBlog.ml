@@ -242,7 +242,7 @@ let make_menu entries =
   | first_entry::entries, first_page::pages ->
       let first =
         [{ menu_source = first_entry.blog_source;
-           menu_link = link ~text:"Blog" first_entry;
+           menu_link = link ~text:"Platform Blog" first_entry;
            menu_item = Internal (2, first_page) }] in
       let others =
         List.map2 (fun entry page ->

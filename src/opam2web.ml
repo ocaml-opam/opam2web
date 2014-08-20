@@ -126,11 +126,11 @@ let make_website user_options universe =
     ~content_dir ~out_dir:user_options.out_dir
     ([
       { menu_source = content_dir;
-        menu_link = { text="Home"; href="." };
+        menu_link = { text="OPAM"; href="." };
         menu_item = Internal (0, home_index) };
 
       { menu_source = content_dir;
-        menu_link = { text="Packages"; href=packages_prefix^"/" };
+        menu_link = { text="Repository"; href=packages_prefix^"/" };
         menu_item = Internal (1, package_index) };
 
       { menu_source = content_dir^"/doc";
@@ -138,7 +138,7 @@ let make_website user_options universe =
         menu_item = Submenu doc_menu; };
 
       { menu_source = content_dir;
-        menu_link = { text="About"; href="about.html" };
+        menu_link = { text="About OPAM"; href="about.html" };
         menu_item = Internal (0, Template.serialize about_page) };
 
      ]
