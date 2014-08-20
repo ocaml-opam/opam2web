@@ -34,8 +34,6 @@ let create ~title ~header ~body ~footer ~depth =
   let title = <:html< $str:title$ >> in
   let js_files = [
     "ext/js/jquery.js";
-    "ext/js/google-code-prettify/prettify.js";
-    "ext/js/bootstrap.min.js";
     "ext/js/site.js";
     "ext/js/search.js";
   ] in
