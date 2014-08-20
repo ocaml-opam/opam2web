@@ -35,6 +35,24 @@ let serialize xml =
 let default html = Default (serialize html)
 let mandatory () = Mandatory
 
+let html_void_elements = [
+  "img";
+  "input";
+  "link";
+  "meta";
+  "br";
+  "hr";
+  "source";
+  "wbr";
+  "param";
+  "embed";
+  "base";
+  "area";
+  "col";
+  "track";
+  "keygen";
+]
+
 (* TODO: cache template *)
 let generate content_dir template parameters =
   let tt = template.fields in
@@ -54,7 +72,15 @@ let generate content_dir template parameters =
         prerr_endline (Xmlm.error_message e);
         exit 1 in
   let signals = ref [] in
-  let output signal = signals := signal :: !signals in
+  (* TODO: This assumes HTML *)
+  let output signal = match signal with
+    | `Data _ | `Dtd _ | `El_start _ -> signals := signal :: !signals
+    | `El_end -> match !signals with
+      | `El_start ((_,tag),_) :: _ when List.mem tag html_void_elements ->
+        signals := signal :: !signals
+      | [] | (`Data _ | `Dtd _ | `El_end)::_ -> signals := signal :: !signals
+      | `El_start _ :: _ -> signals := signal :: `Data "" :: !signals
+  in
 
   let rsub s v = v - s in
   let consumep = function 0::_ -> true | _ -> false in
