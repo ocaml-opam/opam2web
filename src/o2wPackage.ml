@@ -117,8 +117,8 @@ let to_html ~statistics universe pkg_info =
   let pkg_issues = links "Issue Tracker" (OpamFile.OPAM.bug_reports pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
   let pkg_published = O2wMisc.string_of_timestamp pkg_info.published in
-  let html_conj = <:html<&#x2227;>> in
-  let html_disj = <:html<&#x2228;>> in
+  let html_conj = <:html<&amp;>> in
+  let html_disj = <:html<|>> in
   let vset_of_name name =
     try
       OpamPackage.Name.Map.find name universe.versions
