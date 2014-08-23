@@ -244,7 +244,7 @@ let make_news entries =
 
 let make_redirect ~root entries =
   match entries with
-  | [] -> <:html< No blog pages >>
+  | [] -> <:html<<p>No blog pages.</p>&>>
   | first_entry::_ ->
       let blog_uri =
         Uri.(resolve "http" root (of_string "blog/"))
