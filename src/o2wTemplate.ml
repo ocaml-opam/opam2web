@@ -38,8 +38,10 @@ let create ~title ~header ~body ~footer ~depth =
     "ext/js/search.js";
   ] in
   let prepend_root = prepend_root depth in
+  let css = "ext/css/opam2web.css" in
   let head_html =
     <:html<
+      <link href=$str: prepend_root css$ type="text/css" rel="stylesheet" />
       <meta name="generator" content=$str: "opam2web " ^ Version.string$ />
     >>
   in

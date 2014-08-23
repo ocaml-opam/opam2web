@@ -19,7 +19,6 @@
   clear: both;
   text-align: center;
   padding-top:20px;
-  border-top: 10px #EBEBEB solid;
 } 
 
 .footer .copyright {
@@ -103,14 +102,4 @@ tr.embedded-formula > th, tr.embedded-formula > td {
 tr.embedded-formula > td:last-child {
   width: 100%;
   text-align: right;
-}
-
-
-h2 {
-  border-bottom: 1px solid lightgrey;
-  padding-top: 5px;
-}
-
-h2, h3, h4 {
-  margin-top: 1ex;
 }
