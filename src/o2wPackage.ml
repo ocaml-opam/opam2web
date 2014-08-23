@@ -117,8 +117,8 @@ let to_html ~statistics universe pkg_info =
   let pkg_issues = links "Issue Tracker" (OpamFile.OPAM.bug_reports pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
   let pkg_published = O2wMisc.string_of_timestamp pkg_info.published in
-  let html_conj = <:html<&#x2227;>> in
-  let html_disj = <:html<&#x2228;>> in
+  let html_conj = <:html<&amp;>> in
+  let html_disj = <:html<|>> in
   let vset_of_name name =
     try
       OpamPackage.Name.Map.find name universe.versions
@@ -274,14 +274,14 @@ let to_html ~statistics universe pkg_info =
     with Not_found -> OpamPackage.Name.Map.empty in
   let requiredby_deps = OpamPackage.Name.Map.bindings requiredby in
   let requiredby_html =
-    html_of_revdeps "Required by" requiredby_deps in
+    html_of_revdeps "Necessary for" requiredby_deps in
 
   let usedby =
     try OpamPackage.Map.find pkg universe.rev_depopts
     with Not_found -> OpamPackage.Name.Map.empty in
   let usedby_deps = OpamPackage.Name.Map.bindings usedby in
   let usedby_html =
-    html_of_revdeps "Used by" usedby_deps in
+    html_of_revdeps "Optional for" usedby_deps in
 
   let norevdeps = <:html< <tr><td>No package is dependent</td></tr>&>> in
 

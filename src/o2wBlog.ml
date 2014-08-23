@@ -17,33 +17,6 @@
 open Cow.Html
 open O2wTypes
 
-type doc_kind =
-  | Html
-  | Markdown
-  | Unknown of string
-  | No_extension
-
-let extension_of_kind: doc_kind -> string = function
-  | Html -> "html"
-  | Markdown -> "md"
-  | Unknown ext -> ext
-  | No_extension -> ""
-
-let kind_of_extension: string -> doc_kind = function
-  | "html" -> Html
-  | "md" -> Markdown
-  | "" -> No_extension
-  | ext -> Unknown ext
-
-(* Returns a pair (basename, extension) of the given filename *)
-let split_filename (file: string): (string * string) =
-  try
-    let dot_index = String.rindex file '.' in
-    (String.sub file 0 dot_index,
-     String.sub file (dot_index + 1) (String.length file - dot_index - 1))
-  with
-    Not_found -> file, ""
-
 let header_separator = "^--BODY--$"
 
 type post = {
@@ -103,6 +76,8 @@ let html_date timestamp =
 
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
+  let extension = OpamMisc.remove_prefix ~prefix:name filename in
+  if extension <> ".md" && extension <> ".html" then None else
   let filename = OpamFilename.OP.(content_dir//filename) in
   let content = OpamFilename.read filename in
   match Re_str.bounded_split (Re_str.regexp header_separator) content 2 with
@@ -131,14 +106,12 @@ let to_entry ~content_dir filename =
             parse_date filename (OpamFormat.parse_string f)) in
         title, authors, date
       in
-      let html_body =
-        if OpamFilename.ends_with ".html" filename then
-          Cow.Html.of_string body
-        else if OpamFilename.ends_with ".md" filename then
-          let md_content = Omd.of_string body in
-          Cow.Html.of_string (Omd.to_html md_content)
-        else OpamGlobals.error_and_exit "Unknown file extension for %s"
-            (OpamFilename.to_string filename)
+      let html_body = match extension with
+        | ".html" -> Cow.Html.of_string body
+        | ".md" ->
+            let md_content = Omd.of_string body in
+            Cow.Html.of_string (Omd.to_html md_content)
+        | _ -> assert false
       in
       Some {
         blog_source = OpamFilename.to_string filename;
@@ -269,7 +242,7 @@ let make_news entries =
 
 let make_redirect ~root entries =
   match entries with
-  | [] -> <:html< No blog pages >>
+  | [] -> <:html<<p>No blog pages.</p>&>>
   | first_entry::_ ->
       let blog_uri =
         Uri.(resolve "http" root (of_string "blog/"))
@@ -285,6 +258,25 @@ let make_redirect ~root entries =
         </head><body></body></html>
       >>
 
+(*
+let resolve_urls_in_attr base rewrites attrs =
+  List.map (fun ((attr,v) as a) ->
+    if List.mem attr rewrites
+    then (attr,Uri.(to_string (resolve "http" base (of_string v))))
+    else a
+  ) attrs
+
+let resolve_urls_in_tag base = function
+  | (("","img"),attrs) ->
+    (("","img"),resolve_urls_in_attr base ["","src"] attrs)
+  | tag -> tag
+
+let rec resolve_urls base = function
+  | `Data d -> `Data d
+  | `El (tag, body) ->
+    `El (resolve_urls_in_tag base tag, List.map (resolve_urls base) body)
+*)
+
 let make_feed ~root entries =
   let open Cow.Atom in
   let to_atom_date date =
@@ -296,7 +288,8 @@ let make_feed ~root entries =
   let feed_uri = Uri.(resolve "http" blog_uri (of_string "feed.xml")) in
   let to_atom_entry entry =
     let entry_path = Uri.of_string (entry.blog_name ^ "/") in
-    let id = Uri.(to_string (resolve "http" blog_uri entry_path)) in
+    let entry_abs = Uri.resolve "http" blog_uri entry_path in
+    let id = Uri.to_string entry_abs in
     {
       entry = {
         id;
@@ -309,11 +302,11 @@ let make_feed ~root entries =
         };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link entry_path ];
+        links = [ mk_link entry_abs ];
       };
       summary = None;
       content = entry.blog_body;
-      base = None;
+      base = Some id;
     }
   in
 
