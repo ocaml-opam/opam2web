@@ -15,16 +15,99 @@
  *
  *)
 
+let pkg_href = OpamfUniverse.Pkg.href ~href_base:Uri.(of_string "../")
+
+module Field = struct
+  type t = Author | License | Homepage | Maintainer
+
+  let to_string = function
+    | Author -> "authorship"
+    | License -> "license"
+    | Homepage -> "homepage"
+    | Maintainer -> "maintainership"
+end
+
+module Change = struct
+  type change =
+  | Add of (Field.t * string)
+  | Remove of (Field.t * string)
+  | Change of (Field.t * string * string)
+  type t = {
+    change : change;
+  }
+
+  let to_html = Field.(function
+    | { change = Add ((Author | Maintainer) as p,a) } ->
+      <:html<<strong>$str:a$</strong> gained <em>$str:to_string p$</em>.>>
+    | { change = Remove ((Author | Maintainer) as p,a) } ->
+      <:html<<strong>$str:a$</strong> lost <em>$str:to_string p$</em>.>>
+    | { change = Change ((Author | Maintainer) as p,a,a') } ->
+      <:html<<strong>$str:a$</strong> assumed <em>$str:to_string p$</em>
+             from <strong>$str:a'$</strong>.>>
+    | { change = Add (License,a) } ->
+      <:html<Now <em>licensed</em> under <strong>$str:a$</strong>.>>
+    | { change = Remove (License,a) } ->
+      <:html<No longer <em>licensed</em> under <strong>$str:a$</strong>.>>
+    | { change = Change (License,a,a') } ->
+      <:html<<em>License</em> changed to <strong>$str:a$</strong>
+             from <strong>$str:a'$</strong>.>>
+    | { change = Add (Homepage,a) } ->
+      <:html<<strong><a href=$str:a$>$str:a$</a></strong> added as
+             <em>homepage</em>.>>
+    | { change = Remove (Homepage,a) } ->
+      <:html<<strong><a href=$str:a$>$str:a$</a></strong> removed as
+             <em>homepage</em>.>>
+    | { change = Change (Homepage,a,a') } ->
+      <:html<<em>Homepage</em> changed to
+             <strong><a href=$str:a$>$str:a$</a></strong>
+             from <strong><a href=$str:a'$>$str:a'$</a></strong>.>>
+  )
+end
+
+module Event = struct
+  type event =
+  | Published of (OpamPackage.Name.t * OpamPackage.Version.t * Change.t list)
+  type t = {
+    timestamp : float;
+    event     : event;
+  }
+
+  let to_html name = function
+    | { timestamp; event = Published (name, version, changes) } ->
+      let href = pkg_href name version in
+      let v = OpamPackage.Version.to_string version in
+      let changes_html = match changes with
+        | [] -> <:html<&>>
+        | _ ->
+          let changes_list = List.map (fun c ->
+            <:html<<li>$Change.to_html c$</li>&>>
+          ) changes in
+          <:html<<ul>$list:changes_list$</ul>&>>
+      in
+      <:html<
+        <h4>
+          $str:O2wMisc.string_of_timestamp timestamp$
+        </h4>
+        <p><strong>Published</strong>
+           version <a href=$uri:href$>$str: v$</a>
+           $changes_html$
+        </p>
+      >>
+end
+
 let to_html ~statistics universe name vset =
   let open OpamfUniverse in
   let pname = OpamPackage.Name.of_string name in
-  let href = Pkg.href ~href_base:Uri.(of_string "../") in
 
   let versions = OpamPackage.Version.(List.sort compare (Set.elements vset)) in
   let packages = List.rev_map (OpamPackage.create pname) versions in
 
   let opams = List.rev_map (fun pkg ->
     OpamPackage.version pkg, OpamPackage.Map.find pkg universe.pkgs_opams
+  ) packages in
+
+  let infos = List.rev_map (fun pkg ->
+    OpamPackage.version pkg, OpamPackage.Map.find pkg universe.pkgs_infos
   ) packages in
 
   let versions_from_newest = List.rev versions in
@@ -44,7 +127,7 @@ let to_html ~statistics universe name vset =
   let version_links =
     List.map
       (fun version ->
-         let href = href pname version in
+         let href = pkg_href pname version in
          let version = OpamPackage.Version.to_string version in
          if latest.version = version then
          <:html<
@@ -75,7 +158,7 @@ let to_html ~statistics universe name vset =
   let v_after_link v = match previous_version v with
     | None -> <:html<&>>
     | Some v ->
-      let v_href = href pname v in
+      let v_href = pkg_href pname v in
       let v_str = OpamPackage.Version.to_string v in
       <:html< (after <a href=$uri: v_href$>$str: v_str$</a>)>>
   in
@@ -168,11 +251,61 @@ let to_html ~statistics universe name vset =
 
   let proj_os = opam_os "OS" OpamFile.OPAM.os in
 
+  let module StringSet = Set.Make(String) in
+
+  let set_of_list =
+    List.fold_left (fun set v -> StringSet.add v set) StringSet.empty
+  in
+
+  let list_diff field_t field field' = match field, field' with
+    | [], [] -> []
+    | _, _ ->
+      let a = set_of_list field in
+      let b = set_of_list field' in
+      let removes = StringSet.(elements (diff b a)) in
+      let adds = StringSet.(elements (diff a b)) in
+      match adds, removes with
+      | [a], [r] -> [Change.({ change = Change (field_t, a, r)})]
+      | _, _ ->
+        (List.map
+           (fun v -> Change.({ change = Add (field_t, v) }))
+           adds)
+        @(List.map
+            (fun v -> Change.({ change = Remove (field_t, v) }))
+            removes)
+  in
+
+  let opam_list_diff pkg pkg' field_t field_fn =
+    let opam  = OpamPackage.Map.find pkg  universe.pkgs_opams in
+    let opam' = OpamPackage.Map.find pkg' universe.pkgs_opams in
+    list_diff field_t (field_fn opam) (field_fn opam')
+  in
+
+  let events = List.fold_left OpamfUniverse.(fun l -> function
+    | _, { published = None }           -> l
+    | v, { published = Some timestamp } ->
+      let p = OpamPackage.create pname v in
+      let changes = match previous_version v with
+        | None -> []
+        | Some prev ->
+          let prev = OpamPackage.create pname prev in
+          (opam_list_diff p prev Field.Author OpamFile.OPAM.author)
+          @(opam_list_diff p prev Field.License OpamFile.OPAM.license)
+          @(opam_list_diff p prev Field.Maintainer OpamFile.OPAM.maintainer)
+          @(opam_list_diff p prev Field.Homepage OpamFile.OPAM.homepage)
+      in
+      Event.({ timestamp; event=Published (pname, v, changes) }::l)
+  ) [] infos in
+
+  let proj_events = List.map (fun ev ->
+    <:html<<div class="well">$Event.to_html name ev$</div>&>>
+  ) events in
+
   <:html<
     <h2>$str: name$</h2>
 
     <div class="row">
-      <div class="span9">
+      <div class="span12">
         <div>
           <ul class="nav nav-pills">
             $list: version_links$
@@ -194,6 +327,10 @@ let to_html ~statistics universe name vset =
             $mk_tr proj_os$
           </tbody>
         </table>
+
+        <h3>Events</h3>
+
+        $list:proj_events$
       </div>
     </div>
   >>
