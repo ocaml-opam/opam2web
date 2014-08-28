@@ -151,7 +151,7 @@ let to_html ~statistics universe name vset =
   let rec pretty_html_list ?(last="and") = function
     | []    -> <:html<&>>
     | [a]   -> a
-    | [a;b] -> <:html<$a$, $str: last$ $b$>>
+    | [a;b] -> <:html<$a$ $str: last$ $b$>>
     | h::t  -> <:html<$h$, $pretty_html_list ~last t$>>
   in
 
