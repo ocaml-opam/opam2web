@@ -50,6 +50,6 @@ make
 make PREFIX=$OPAMPREFIX install
 
 # Test installation
-echo "let x = O2wProject.pkg_href" > foo.ml
-ocamlfind ocamlc -package opam2web -predicates byte -linkpkg foo.ml
-./a.out
+#echo "let x = O2wProject.pkg_href" > foo.ml
+#ocamlfind ocamlc -package opam2web -predicates byte -linkpkg foo.ml
+#./a.out
