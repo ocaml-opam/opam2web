@@ -1,6 +1,5 @@
 # Install OCaml and OPAM PPAs
 case "$OCAML_VERSION" in
-  4.00.1) ppa=avsm/ocaml40+opam11 ;;
   4.01.0) ppa=avsm/ocaml41+opam11 ;;
   4.02.0) ppa=avsm/ocaml41+opam11 ;;
   *) echo Unknown $OCAML_VERSION; exit 1 ;;
@@ -42,6 +41,12 @@ cd opamfu
 make build
 make install
 cd ..
+
+case "$OCAML_VERSION" in
+  4.01.0) echo "Pinning js_of_ocaml is not needed." ;;
+  4.02.0) opam pin js_of_ocaml https://github.com/ocsigen/js_of_ocaml.git ;;
+  *) echo Unknown $OCAML_VERSION; exit 1 ;;
+esac
 
 opam install cow js_of_ocaml
 make
