@@ -4,6 +4,7 @@ all: build
 
 build:
 	cd src && $(MAKE)
+	cp src/search.js ext/js/
 
 install:
 	cd src && $(MAKE) install
