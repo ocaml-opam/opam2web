@@ -24,6 +24,7 @@ case "$OCAML_VERSION" in
 esac
 
 eval `opam config env`
+export OPAMPREFIX=`opam config var prefix`
 
 # opam-lib
 opam install ocamlgraph cmdliner dose.3.2.2+opam cudf re ocamlfind
@@ -31,7 +32,7 @@ git clone https://github.com/ocaml/opam.git
 cd opam
 ./configure
 make
-opam-installer --prefix=`opam config var prefix` opam-lib.install
+opam-installer --prefix=$OPAMPREFIX opam-lib.install
 cd ..
 
 # opamfu
@@ -46,4 +47,9 @@ opam install cow js_of_ocaml
 make
 #make test
 #make fulltest
-make install
+make PREFIX=$OPAMPREFIX install
+
+# Test installation
+echo "let x = O2wProject.pkg_href" > foo.ml
+ocamlfind ocamlc -package opam2web -predicates byte -linkpkg foo.ml
+./a.out
