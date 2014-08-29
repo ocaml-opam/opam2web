@@ -1,0 +1,8 @@
+language: c
+script: bash -e .travis-ci.sh
+os:
+- linux
+env:
+  matrix:
+    - OCAML_VERSION=4.02.0
+    - OCAML_VERSION=4.01.0
