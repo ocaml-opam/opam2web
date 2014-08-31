@@ -36,3 +36,6 @@ val html_descr : string * string -> Cow.Html.t
 (** Returns a HTML description of the given package info *)
 val to_html: statistics:statistics_set option ->
   Cow.Html.t OpamfUniverse.t -> Cow.Html.t OpamfUniverse.pkg -> Cow.Html.t
+
+val version_links:
+  Cow.Html.t OpamfUniverse.t -> name -> version option -> Cow.Html.t

@@ -168,6 +168,35 @@ let html_of_revdeps universe title revdeps =
              <tr class="well"><th colspan='3'>$str: title$</th></tr>
            >> :: deps
 
+let version_links universe name version =
+  let open OpamfUniverse in
+  let versions =
+    try OpamPackage.Version.Set.elements
+          (OpamPackage.Name.Map.find name universe.versions)
+    with Not_found -> match version with
+      | None   -> []
+      | Some v -> [v]
+  in
+  let versions = List.map
+      (fun v ->
+         let href = href name v in
+         let v_str = OpamPackage.Version.to_string v in
+         if Some v = version then
+           <:html<
+             <span class="version">
+               <strong>$str: v_str$</strong>
+             </span>
+           >>
+         else
+           <:html<
+             <span class="version">
+               <a href=$uri: href$>$str: v_str$</a>
+             </span> >>)
+      versions
+  in
+  let versions = O2wMisc.intercalate <:html<, >> versions in
+  <:html<$list:versions$>>
+
 (* Returns a HTML description of the given package *)
 let to_html ~statistics universe pkg_info =
   let open OpamfUniverse in
@@ -175,27 +204,7 @@ let to_html ~statistics universe pkg_info =
   let version = OpamPackage.Version.of_string pkg_info.version in
   let pkg = OpamPackage.create name version in
   let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
-  let version_links =
-    let versions =
-      try OpamPackage.Version.Set.elements
-            (OpamPackage.Name.Map.find name universe.versions)
-      with Not_found -> [version] in
-    List.map
-      (fun version ->
-         let href = href name version in
-         let version = OpamPackage.Version.to_string version in
-         if pkg_info.version = version then
-           <:html<
-             <span class="version">
-               <strong>$str: version$</strong>
-             </span>
-           >>
-         else
-           <:html<
-             <span class="version">
-               <a href=$uri: href$>$str: version$</a>
-             </span> >>)
-      versions in
+  let version_links = version_links universe name (Some version) in
   let pkg_url = match pkg_info.url with
     | None          -> <:html< >>
     | Some url_file ->
@@ -225,7 +234,7 @@ let to_html ~statistics universe pkg_info =
       let urls = List.map (fun e -> <:html< <a href="$str:e$">$str:e$</a> >>) l in
       let name = match t with [] -> name | _ -> name  ^ "s" in
       Some(name, <:html< $list:urls$ >>) in
-  let pkg_versions = Some ("Versions", <:html<$list:version_links$>>) in
+  let pkg_versions = Some ("Versions", version_links) in
   let pkg_author = list "Author" (OpamFile.OPAM.author pkg_opam) in
   let pkg_maintainer = list "Maintainer" (OpamFile.OPAM.maintainer pkg_opam) in
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in

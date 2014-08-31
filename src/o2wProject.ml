@@ -115,7 +115,7 @@ let to_html ~statistics universe name vset =
     let rec prev = function
       | version::pv::_ when version = v -> Some pv
       | _::vs -> prev vs
-      | [_] | [] -> None
+      | [] -> None
     in
     prev versions_from_newest
   in
@@ -124,18 +124,8 @@ let to_html ~statistics universe name vset =
   let latest_p = OpamPackage.create pname latest_v in
   let latest = OpamPackage.Map.find latest_p universe.pkgs_infos in
 
-  let version_links =
-    List.map
-      (fun version ->
-         let href = pkg_href pname version in
-         let version = OpamPackage.Version.to_string version in
-         if latest.version = version then
-         <:html<
-           <li class="active"><a href=$uri: href$>latest $str: version$</a></li>
-         >>
-         else
-           <:html<<li><a href=$uri: href$>$str: version$</a></li>&>>)
-      versions
+  let proj_versions =
+    Some ("Versions", O2wPackage.version_links universe pname None)
   in
 
   let mk_tr = function
@@ -298,7 +288,7 @@ let to_html ~statistics universe name vset =
   ) [] infos in
 
   let proj_events = List.map (fun ev ->
-    <:html<<div class="well">$Event.to_html name ev$</div>&>>
+    <:html<<div class="event">$Event.to_html name ev$</div>&>>
   ) events in
 
   <:html<
@@ -306,16 +296,12 @@ let to_html ~statistics universe name vset =
 
     <div class="row">
       <div class="span12">
-        <div>
-          <ul class="nav nav-pills">
-            $list: version_links$
-          </ul>
-        </div>
 
         <div class="well">$latest.descr$</div>
 
         <table class="table">
           <tbody>
+            $mk_tr proj_versions$
             $mk_tr proj_author$
             $mk_tr proj_license$
             $mk_tr proj_homepage$

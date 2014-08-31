@@ -71,3 +71,12 @@ let ident_of_timestamp time =
   let month_str = string_of_month tm.tm_mon in
   let year = 1900 + tm.tm_year in
   Printf.sprintf "%d%s%d" year month_str tm.tm_mday
+
+let intercalate x l =
+  let rec aux acc = function
+    | [] -> List.rev acc
+    | h::t -> aux (h :: x :: acc) t
+  in
+  match l with
+  | [] | [_] as x -> x
+  | h::t -> h :: aux [] t
