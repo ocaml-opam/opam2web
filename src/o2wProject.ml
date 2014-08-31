@@ -125,7 +125,7 @@ let to_html ~statistics universe name vset =
   let latest = OpamPackage.Map.find latest_p universe.pkgs_infos in
 
   let proj_versions =
-    Some ("Versions", O2wPackage.version_links universe pname None)
+    Some ("Versions", O2wPackage.version_links ~pkg_href universe pname None)
   in
 
   let mk_tr = function

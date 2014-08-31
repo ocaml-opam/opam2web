@@ -61,7 +61,7 @@ let vset_of_name universe name =
   try OpamPackage.Name.Map.find name universe.versions
   with Not_found -> OpamPackage.Version.Set.empty
 
-let href =
+let pkg_href =
   let open OpamfUniverse in
   Pkg.href ~href_base:Uri.(of_string "../../")
 
@@ -75,7 +75,7 @@ let html_of_name name vset =
   then <:html< $str:name_str$&>>
   else
     let v = OpamPackage.Version.Set.max_elt vset in
-    <:html< <a href=$uri: href name v$>$str:name_str$</a>&>>
+    <:html< <a href=$uri: pkg_href name v$>$str:name_str$</a>&>>
 
 (* Formulas *)
 
@@ -84,7 +84,7 @@ let html_of_vc name vset ((relop,v) as vc) =
   let rhtml = <:html<$str:OpamFormula.string_of_relop relop$&nbsp;>> in
   match OpamfuFormula.extremum_of_version_constraint vset vc with
   | Some v ->
-    let vhtml = <:html<<a href=$uri: href name v$>$str:vstr$</a>&>> in
+    let vhtml = <:html<<a href=$uri: pkg_href name v$>$str:vstr$</a>&>> in
     <:html<$rhtml$<span class="version">$vhtml$</span>&>>
   | None   -> <:html<$rhtml$$str:vstr$&>>
 
@@ -168,7 +168,7 @@ let html_of_revdeps universe title revdeps =
              <tr class="well"><th colspan='3'>$str: title$</th></tr>
            >> :: deps
 
-let version_links universe name version =
+let version_links universe ~pkg_href name version =
   let open OpamfUniverse in
   let versions =
     try OpamPackage.Version.Set.elements
@@ -179,7 +179,7 @@ let version_links universe name version =
   in
   let versions = List.map
       (fun v ->
-         let href = href name v in
+         let href = pkg_href name v in
          let v_str = OpamPackage.Version.to_string v in
          if Some v = version then
            <:html<
@@ -204,7 +204,7 @@ let to_html ~statistics universe pkg_info =
   let version = OpamPackage.Version.of_string pkg_info.version in
   let pkg = OpamPackage.create name version in
   let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
-  let version_links = version_links universe name (Some version) in
+  let version_links = version_links ~pkg_href universe name (Some version) in
   let pkg_url = match pkg_info.url with
     | None          -> <:html< >>
     | Some url_file ->

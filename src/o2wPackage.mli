@@ -38,4 +38,5 @@ val to_html: statistics:statistics_set option ->
   Cow.Html.t OpamfUniverse.t -> Cow.Html.t OpamfUniverse.pkg -> Cow.Html.t
 
 val version_links:
-  Cow.Html.t OpamfUniverse.t -> name -> version option -> Cow.Html.t
+  Cow.Html.t OpamfUniverse.t -> pkg_href:(name -> version -> Uri.t) ->
+  name -> version option -> Cow.Html.t
