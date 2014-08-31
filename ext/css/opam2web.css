@@ -1,3 +1,13 @@
+@media (max-width: 978px) {
+  body {
+    padding-top:0;
+  }
+}
+
+body {
+  padding-bottom: 0px;
+}
+
 .contribute-element, .table td.btn-more {
   text-align: center;
 }
