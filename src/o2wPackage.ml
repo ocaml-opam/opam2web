@@ -77,8 +77,6 @@ let html_of_name name vset =
     let v = OpamPackage.Version.Set.max_elt vset in
     <:html< <a href=$uri: pkg_href name v$>$str:name_str$</a>&>>
 
-(* Formulas *)
-
 let html_of_vc name vset ((relop,v) as vc) =
   let vstr = OpamPackage.Version.to_string v in
   let rhtml = <:html<$str:OpamFormula.string_of_relop relop$&nbsp;>> in
@@ -110,20 +108,15 @@ let html_of_namevdisj universe name lo hi =
   let hi = html_of_vc name vset hi in
   <:html<$html_of_name name vvset$ ($lo$ $html_disj$ $hi$)>>
 
-let rec html_of_operator k ophtml hd = function
-  | []   -> <:html<$k hd$>>
-  | h::t -> <:html<$k hd$ $ophtml$ $html_of_operator k ophtml h t$>>
-
-let rec html_of_formula html_of_atom f =
+let html_of_formula html_of_atom f =
   let open OpamfuFormula in
-  match f with
-  | Atom x -> html_of_atom x
-  | And []  | Or []  -> <:html<&>>
-  | And [x] | Or [x] -> html_of_formula html_of_atom x
-  | And (hd::conjl)  ->
-    html_of_operator (html_of_formula html_of_atom) html_conj hd conjl
-  | Or  (hd::disjl)  ->
-    html_of_operator (html_of_formula html_of_atom) html_disj hd disjl
+  let rec aux = function
+    | Atom x -> html_of_atom x
+    | And []  | Or []  -> <:html<&>>
+    | And l -> <:html<$list:O2wMisc.intercalate html_conj (List.map aux l)$>>
+    | Or  l -> <:html<$list:O2wMisc.intercalate html_disj (List.map aux l)$>>
+  in
+  aux f
 
 let html_of_namevf universe namevf =
   let open OpamfuFormula in
@@ -132,21 +125,21 @@ let html_of_namevf universe namevf =
     <:html<$html_of_name name (vset_of_name universe name)$>>
   | (name,Some (Atom vc)) -> html_of_namevc universe name vc
   | (name,Some (And [Atom x; Atom y])) -> html_of_namevconj universe name x y
-  | (name,((Some (And (c::cl))) as vf)) ->
+  | (name,((Some (And l)) as vf)) ->
     let vset = vset_of_name universe name in
     let vvset = OpamfuFormula.filter_versions vf vset in
-    let ophtml = html_of_operator
-        (html_of_formula (html_of_vc name vset)) html_conj c cl
+    let ophtml = O2wMisc.intercalate html_conj
+        (List.map (html_of_formula (html_of_vc name vset)) l)
     in
-    <:html<$html_of_name name vvset$ $ophtml$>>
+    <:html<$html_of_name name vvset$ $list:ophtml$>>
   | (name,Some (Or [Atom x; Atom y])) -> html_of_namevdisj universe name x y
-  | (name,((Some (Or (d::dl))) as vf)) ->
+  | (name,((Some (Or l)) as vf)) ->
     let vset = vset_of_name universe name in
     let vvset = OpamfuFormula.filter_versions vf vset in
-    let ophtml = html_of_operator
-        (html_of_formula (html_of_vc name vset)) html_disj d dl
+    let ophtml = O2wMisc.intercalate html_disj
+        (List.map (html_of_formula (html_of_vc name vset)) l)
     in
-    <:html<$html_of_name name vvset$ $ophtml$>>
+    <:html<$html_of_name name vvset$ $list:ophtml$>>
 
 let mk_formula universe pkg_opam name f =
   let f = OpamfuFormula.of_opam_formula (f pkg_opam) in
