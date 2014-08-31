@@ -338,6 +338,7 @@ let to_html ~statistics universe pkg_info =
 
     <div class="row">
       <div class="span9">
+        <div class="well">$pkg_info.descr$</div>
         <table class="table">
           <tbody>
             $mk_tr pkg_versions$
@@ -357,11 +358,7 @@ let to_html ~statistics universe pkg_info =
             $pkg_edit$
           </tbody>
         </table>
-
-        <div class="well">$pkg_info.descr$</div>
-
       </div>
-
       <div class="span3">
         <table class="table table-bordered">
           <tbody>
