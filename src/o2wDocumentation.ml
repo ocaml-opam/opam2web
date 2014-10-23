@@ -187,33 +187,33 @@ let to_menu ~content_dir =
     OpamFilename.of_string name
   in
   let menu_pages_11 =
+    read_menu ~dir:(content_dir / "doc" / "1.1")
+      (content_dir / "doc" / "1.1" / "index.menu")
+  in
+  let menu_11 =
+    to_menu_aux ~content_dir ~subdir:("doc" / "1.1") ~menu_pages:menu_pages_11
+      ~header:(get_header (content_dir / "doc" / "1.1" / "opam11_note.md"))
+  in
+  let menu_pages_12 =
     read_menu ~dir:(content_dir / "doc")
       (content_dir / "doc" / "index.menu")
   in
+  let menu_12 =
+    to_menu_aux ~content_dir ~subdir:"doc" ~menu_pages:menu_pages_12
+      ?header:None
+  in
   let menu_11 =
-    to_menu_aux ~content_dir ~subdir:"doc" ~menu_pages:menu_pages_11
-      ~header:(get_header (content_dir / "doc" / "opam11_note.md"))
-  in
-  let menu_pages_12 =
-    read_menu ~dir:(content_dir / "doc" / "1.2")
-      (content_dir / "doc" / "1.2" / "index.menu")
-  in
-  let menu_12 =
-    to_menu_aux ~content_dir ~subdir:("doc" / "1.2") ~menu_pages:menu_pages_12
-      ~header:(get_header (content_dir / "doc" / "opam12_note.md"))
-  in
-  let menu_12 =
     OpamMisc.filter_map (function
         | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
-      menu_12
+      menu_11
   in
   menu_11 @
   menu_12 @
   [{
-    menu_source = "1.2";
-    menu_link = { text = "OPAM 1.2 BETA";
-                  href = "doc/1.2/" };
+    menu_source = "1.1";
+    menu_link = { text = "Archives (OPAM 1.1)";
+                  href = "/doc/1.1/" };
     menu_item = External;
   }]
