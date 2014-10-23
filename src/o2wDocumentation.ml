@@ -155,7 +155,27 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
         }
   in
 
-  List.map aux_page menu_pages
+  let menu = List.map aux_page menu_pages in
+  if List.exists (fun (src, _, _, _) ->
+      OpamFilename.(Base.to_string (basename (chop_extension src)))
+      = "index")
+      menu_pages
+    then menu
+    else
+      let doc_menu = documentation_menu (OpamFilename.of_string "index") in
+      let html_index =
+        <:html<
+          <div class="row"><div class="span4 offset4">
+            $doc_menu$
+          </div></div>
+        >>
+      in
+      {
+        menu_source = "index.html";
+        menu_link = { text = "Documentation index"; href = subdir ^ "/" };
+        menu_item = No_menu (List.length (OpamMisc.split subdir '/'),
+                             Template.serialize html_index)
+      } :: menu
 
 let to_menu ~content_dir =
   let (/) = Filename.concat in
@@ -184,7 +204,7 @@ let to_menu ~content_dir =
   in
   let menu_12 =
     OpamMisc.filter_map (function
-        | {menu_item = Internal (_, html)} as m ->
+        | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
       menu_12
@@ -195,5 +215,5 @@ let to_menu ~content_dir =
     menu_source = "1.2";
     menu_link = { text = "OPAM 1.2 BETA";
                   href = "doc/1.2/" };
-    menu_item = Internal (2, Template.serialize Cow.Html.nil);
+    menu_item = External;
   }]
