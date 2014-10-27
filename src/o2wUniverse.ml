@@ -19,32 +19,39 @@ open OpamfUniverse
 open Cow.Html
 open O2wTypes
 
-let to_page ~statistics universe pkg pkg_info acc =
-  match pkg_info with
-  | None  ->
-    Printf.printf "Skipping %s\n%!" (OpamPackage.to_string pkg);
+let pkg_to_page ~statistics universe pkg pkg_info acc =
+  try
+    let page = {
+      page_source   = pkg_info.OpamfUniverse.name;
+      page_link     = { Cow.Html.text=pkg_info.title;
+                        href=Uri.to_string pkg_info.OpamfUniverse.href };
+      page_depth    = 3;
+      page_contents = Template.serialize
+        (O2wPackage.to_html ~statistics universe pkg_info)
+    } in
+    page :: acc
+  with e ->
+    Printf.printf "Skipping %s (%s)\n%!" (OpamPackage.to_string pkg)
+      (Printexc.to_string e);
+    Printexc.print_backtrace stdout;
     acc
-  | Some pkg_info ->
-    try
-      let page = {
-        page_source   = pkg_info.OpamfUniverse.name;
-        page_link     = { Cow.Html.text=pkg_info.title;
-                          href=Uri.to_string pkg_info.OpamfUniverse.href };
-        page_depth    = 3;
-        page_contents = Template.serialize
-            (O2wPackage.to_html ~statistics universe pkg_info)
-      } in
-      page :: acc
-    with e ->
-      Printf.printf "Skipping %s (%s)\n%!" (OpamPackage.to_string pkg)
-        (Printexc.to_string e);
-      Printexc.print_backtrace stdout;
-      acc
 
-(* Create a list of package pages to generate for a universe *)
-let to_pages ~statistics universe =
+(* Create a list of project and package pages to generate for a universe *)
+let to_pages ~statistics ~prefix universe =
+  let projects = OpamPackage.Name.Map.fold (fun name vset acc ->
+    let name = OpamPackage.Name.to_string name in
+    let href = Filename.(concat prefix (concat name "")) in
+    let page = {
+      page_source   = name;
+      page_link     = { Cow.Html.text=name; href; };
+      page_depth    = 2;
+      page_contents = Template.serialize
+        (O2wProject.to_html ~statistics universe name vset)
+    } in
+    page :: acc
+  ) universe.versions [] in
   OpamPackage.Map.fold
-    (to_page ~statistics universe) universe.pkgs_infos []
+    (pkg_to_page ~statistics universe) universe.pkgs_infos projects
 
 let sortby_links ~links ~default ~active =
   let mk_item title =
@@ -89,7 +96,7 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
-          try OpamPackage.Map.find pkg universe.pkgs_infos
+          try Some (OpamPackage.Map.find pkg universe.pkgs_infos)
           with Not_found -> None in
         match info with
         | None          -> acc
@@ -98,22 +105,31 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
             try
               let d = OpamPackage.Name.Map.find (OpamPackage.name pkg)
                 popularity in
-              Printf.sprintf "Downloads: %Ld | Published: %s"
-                d (O2wMisc.string_of_timestamp pkg_info.published)
-            with Not_found ->
-              Printf.sprintf "Published: %s"
-                (O2wMisc.string_of_timestamp pkg_info.published)
+              [Printf.sprintf "Downloads: %Ld" d]
+            with Not_found -> []
           in
+          let pkg_published = match pkg_info.published with
+            | Some timestamp -> [
+              Printf.sprintf "Published: %s"
+                (O2wMisc.string_of_timestamp timestamp)
+            ]
+            | None -> []
+          in
+          let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published) in
           let pkg_href = Uri.(resolve "http"
                                 (of_string "../") pkg_info.OpamfUniverse.href) in
           <:html<
             <tr>
-              <td title=$str:pkg_download$>
-               <a href=$uri:pkg_href$>
+              <td title=$str:pkg_tooltip$>
+               <a href=$str:pkg_info.name^"/"$>
                  $str: pkg_info.name$
                </a>
               </td>
-              <td>$str: pkg_info.version$</td>
+              <td>
+               <a href=$uri:pkg_href$>
+                 $str: pkg_info.version$
+               </a>
+              </td>
               <td>$str: pkg_info.synopsis$</td>
             </tr>
           >> :: acc)

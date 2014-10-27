@@ -1,3 +1,13 @@
+@media (max-width: 978px) {
+  body {
+    padding-top:0;
+  }
+}
+
+body {
+  padding-bottom: 0px;
+}
+
 .contribute-element, .table td.btn-more {
   text-align: center;
 }
@@ -19,7 +29,7 @@
   clear: both;
   text-align: center;
   padding-top:20px;
-} 
+}
 
 .footer .copyright {
   clear: both;
@@ -102,4 +112,8 @@ tr.embedded-formula > th, tr.embedded-formula > td {
 tr.embedded-formula > td:last-child {
   width: 100%;
   text-align: right;
+}
+
+.version {
+ font-size: 12px;
 }
