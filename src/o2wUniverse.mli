@@ -20,7 +20,7 @@ open OpamTypes
 open O2wTypes
 
 (** Create a list of package pages to generate for a repository *)
-val to_pages: statistics:statistics_set option ->
+val to_pages: statistics:statistics_set option -> prefix:string ->
   Cow.Html.t OpamfUniverse.t -> page list
 
 (** Generate the list of HTML links for a list of page names *)

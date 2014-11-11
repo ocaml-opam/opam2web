@@ -27,3 +27,6 @@ val string_of_month: int -> string
 
 (** Return the string representation of a timestamp *)
 val string_of_timestamp: ?short:bool -> float -> string
+
+(** Return a fragment identifier for a timestamp *)
+val ident_of_timestamp: float -> string
