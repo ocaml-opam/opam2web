@@ -1,3 +1,11 @@
+1.4.0 (2015-01-21):
+* Update for opam 1.2.0
+* Update for opamfu 0.1.3
+* Update for omd >= 0.8.2
+* Improve log parsing in presence of bad package names
+* Include basic blog
+* Support embedding into other web sites
+
 1.3.1 (2014-03-09):
 * Expose a number of modules in an installed ocamlfind archive
 * Display OS constraints on package pages (#83)
