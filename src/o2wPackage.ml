@@ -116,7 +116,11 @@ let to_html ~statistics universe pkg_info =
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_issues = links "Issue Tracker" (OpamFile.OPAM.bug_reports pkg_opam) in
   let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
-  let pkg_published = O2wMisc.string_of_timestamp pkg_info.published in
+  let pkg_published = match pkg_info.published with
+    | None -> None
+    | Some timestamp ->
+      Some ("Published",<:html<$str:O2wMisc.string_of_timestamp timestamp$>>)
+  in
   let html_conj = <:html<&amp;>> in
   let html_disj = <:html<|>> in
   let vset_of_name name =
@@ -376,12 +380,7 @@ let to_html ~statistics universe pkg_info =
             $mk_tr pkg_depopts$
             $mk_tr pkg_compiler$
             $mk_tr pkg_os$
-            <tr>
-              <th>Published</th>
-              <td>
-                $str: pkg_published$
-              </td>
-            </tr>
+            $mk_tr pkg_published$
             $pkg_url$
             $pkg_stats$
             $pkg_edit$
