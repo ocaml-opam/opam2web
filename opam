@@ -27,4 +27,4 @@ depends: [
   "js_of_ocaml" {>= "2.4.1"}
   "cmdliner"
 ]
-available: [ocaml-version >= "4.00.0"]
+available: [ocaml-version >= "4.01.0"]
