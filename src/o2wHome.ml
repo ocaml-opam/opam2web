@@ -60,9 +60,7 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
             $list: updated_items$
             <tr>
               <td class="btn-more" colspan="2">
-                <a href=$str:packages_prefix^"/index-date.html"$>
-                  <button class="btn btn-small">all packages</button>
-                </a>
+                <a class="btn btn-small" href=$str:packages_prefix^"/index-date.html"$>all packages</a>
               </td>
             </tr>
           </tbody>
@@ -107,9 +105,7 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
               $list: top10_items$
               <tr>
                 <td class="btn-more" colspan="2">
-                  <a href=$str:packages_prefix^"/index-popularity.html"$>
-                   <button class="btn btn-small" type="button">all packages</button>
-                  </a>
+                  <a class="btn btn-small" href=$str:packages_prefix^"/index-popularity.html"$>all packages</a>
                 </td>
               </tr>
             </tbody>
