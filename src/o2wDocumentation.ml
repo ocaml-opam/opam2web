@@ -77,6 +77,46 @@ let read_menu ~dir f =
   List.map aux_menu lines
 
 
+let doc_toc md_content =
+  let module O = Omd_representation in
+  let toc = Omd.toc ~depth:4 md_content in
+  (* Remove nested links *)
+  let rec remove_links md =
+    O.visit (function
+        | O.Url (_,o,_) -> Some (remove_links o)
+        | _ -> None)
+      md
+  in
+  let toc =
+    O.visit (function
+        | O.Url (href,o,title) -> Some [O.Url (href, remove_links o, title)]
+        | _ -> None)
+      toc
+  in
+  (* Strip main title and what is before *)
+  let toc = match toc with
+    | [O.Ul first_level] ->
+      (let rec skip_head = function
+          | [] -> first_level
+          | [O.Ul _] :: r -> skip_head r
+          | h1 -> h1
+       in
+       match skip_head first_level with
+       | [] -> []
+       | [second_level] ->
+         List.filter (function O.Ul _ -> true | _ -> false) second_level
+       | _ -> [O.Ul first_level])
+    | toc -> toc
+  in
+  (* Strip empty intermediate levels *)
+  let toc =
+    O.visit (function
+        | O.Ul [[O.Ul _] as sub] -> Some sub
+        | _ -> None)
+      toc
+  in
+  toc
+
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
 let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
@@ -92,14 +132,16 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
       | "html" -> Cow.Html.of_string content
       | "md" ->
         let md_content = Omd.of_string content in
-        let md_toc = Omd.toc md_content in
+        let md_toc = doc_toc md_content in
         let html_toc = Cow.Html.of_string (Omd.to_html md_toc) in
         <:html<
           <div class="row">
             <div class="span3">
           <div class="bs-docs-menu hidden-phone">
             $doc_menu$
-            $html_toc$
+            <div class="bs-docs-toc">
+              $html_toc$
+            </div>
           </div>
           </div>
           <div class="span9">

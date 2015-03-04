@@ -1,5 +1,5 @@
 body {
-  /* padding-top: 60px; */
+  padding-top: 60px;
   padding-bottom: 40px;
 }
 
@@ -85,6 +85,27 @@ code {
   position: absolute;
   top: auto;
   bottom: 140px;
+}
+
+.bs-docs-toc > ul {
+  margin-left: 0;
+}
+
+.bs-docs-toc > ul ul {
+  margin-left: 10px;
+}
+
+.bs-docs-toc > ul > li {
+  padding-top: 5px;
+  margin-top: 5px;
+  border-top: 1px solid #ccc;
+}
+
+.bs-docs-toc li li {
+  padding-left: 5px;
+  border-left: 1px solid #ccc;
+  list-style-type: none;
+  font-size: small;
 }
 
 html, body {
