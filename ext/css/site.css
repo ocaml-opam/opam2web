@@ -87,12 +87,23 @@ code {
   bottom: 140px;
 }
 
+div.bs-docs-toc {
+  border: 3px solid #ccc;
+  padding: 5px;
+  box-shadow: 5 5 inlet;
+}
+
 .bs-docs-toc > ul {
   margin-left: 0;
+  margin-bottom: 0;
 }
 
 .bs-docs-toc > ul ul {
   margin-left: 10px;
+}
+
+.bs-docs-toc li {
+  list-style-type: none;
 }
 
 .bs-docs-toc > ul > li {
@@ -101,10 +112,15 @@ code {
   border-top: 1px solid #ccc;
 }
 
+.bs-docs-toc > ul > :first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
 .bs-docs-toc li li {
   padding-left: 5px;
   border-left: 1px solid #ccc;
-  list-style-type: none;
   font-size: small;
 }
 
