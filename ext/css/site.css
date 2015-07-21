@@ -140,3 +140,16 @@ h2 {
 h2, h3, h4 {
   margin-top: 1ex;
 }
+
+:target, :target code {
+  background-color: #ff9;
+}
+
+/* Fix anchors positionning below top bar */
+:target:before {
+  content:"";
+  display:block;
+  background-color:white;
+  height:50px;
+  margin:-50px 0 0;
+}
