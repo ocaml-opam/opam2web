@@ -12,5 +12,9 @@
       e.preventDefault();
     });
 
+    $('a,h2,h3,h4').filter(':not([href])[id]').click(function() {
+      location.hash = $( this ).attr('id');
+    });
+
   })
 }(window.jQuery)
