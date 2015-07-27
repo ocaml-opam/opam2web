@@ -302,7 +302,8 @@ let make_feed ~root entries =
         };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link entry_abs ];
+        links = [mk_link entry_abs;
+                 mk_link ~rel:`alternate ~typ:"text/html" entry_abs];
       };
       summary = None;
       content = entry.blog_body;
