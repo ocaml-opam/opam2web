@@ -121,8 +121,12 @@ let make_nav (active, depth) pages =
     </ul>
   >>
 
-let make_footer depth =
+let make_footer srcurl depth =
   let icon file = prepend_root depth ("ext/img/" ^ file) in
+  let srcurl = match srcurl with
+    | None -> <:html< >>
+    | Some u -> <:html<from <a href=$str:u$>$str:Filename.basename u$</a> >>
+  in
   Template.serialize <:html<
     <div class="icons">
     <div class="icon">
@@ -143,7 +147,8 @@ let make_footer depth =
     </div>
     <div class="copyright">
       <small>
-      Generated using <a href="http://github.com/ocaml/opam2web">opam2web</a>,
+      Generated $srcurl$
+      using <a href="http://github.com/ocaml/opam2web">opam2web</a>,
       courtesy of <a href="http://ocamlpro.com">OCamlPro</a>.
       <a href="http://opam.ocamlpro.com">Commercial support</a>.
       </small>
@@ -221,7 +226,8 @@ let generate ~content_dir ~out_dir menu pages =
           { page_source = m.menu_source;
             page_link = m.menu_link;
             page_depth;
-            page_contents } in
+            page_contents;
+            page_srcurl = m.menu_srcurl; } in
         match m.menu_item with
         | External | Divider | Nav_header -> aux acc t
         | Submenu sub -> aux acc (sub @ t)
@@ -239,7 +245,7 @@ let generate ~content_dir ~out_dir menu pages =
   let aux page =
     Printf.printf "\r[%-5d/%d] %s %40s%!" !c n page.page_link.href ""; incr c;
     let header = make_nav (page.page_link, page.page_depth) menu in
-    let footer = make_footer page.page_depth in
+    let footer = make_footer (page.page_srcurl) page.page_depth in
     let uri_dir = Uri.(
       resolve "http"
         (of_string out_dir) (with_path empty_uri page.page_link.href)

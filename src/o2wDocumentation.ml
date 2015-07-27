@@ -51,6 +51,13 @@ let split_filename (file: string): (string * string) =
 (* Returns [(source_file, extension, link, menu_entry); ...] *)
 let read_menu ~dir f =
   let lines = OpamProcess.read_lines f in
+  let srcurl =
+    let prefix = "#source:" in
+    try
+      let s = List.find (OpamMisc.starts_with ~prefix) lines in
+      Some (String.trim (OpamMisc.remove_prefix ~prefix s))
+    with Not_found -> None
+  in
   let lines =
     List.filter (fun s -> String.length s = 0 || s.[0] <> '#') lines
   in
@@ -72,9 +79,10 @@ let read_menu ~dir f =
       let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
        { text=human_title; href=dest_file },
-       Internal (1, Template.serialize Cow.Html.nil))
+       Internal (1, Template.serialize Cow.Html.nil)
+      )
   in
-  List.map aux_menu lines
+  List.map aux_menu lines, srcurl
 
 
 let doc_toc md_content =
@@ -119,7 +127,7 @@ let doc_toc md_content =
 
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
+let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl =
 
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
@@ -185,15 +193,23 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
         {
           menu_source = OpamFilename.to_string source_filename;
           menu_link = lnk;
-          menu_item = page
+          menu_item = page;
+          menu_srcurl = None;
         }
     | Internal (level, _) | No_menu (level, _) ->
         let doc_menu = documentation_menu source_filename in
         let html_page = to_html doc_menu extension source_filename in
+        let srcurl = match srcurl with
+          | None -> None
+          | Some d ->
+            Some (d ^ "/" ^
+                  OpamFilename.(Base.to_string (basename source_filename)))
+        in
         {
           menu_source = OpamFilename.to_string source_filename;
           menu_link = { lnk with href = subdir ^ "/" ^ lnk.href };
           menu_item = Internal (level, Template.serialize html_page);
+          menu_srcurl = srcurl;
         }
   in
 
@@ -212,11 +228,16 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages =
           </div></div>
         >>
       in
+      let srcurl = match srcurl with
+        | None -> None
+        | Some src -> Some (src ^"/"^ "index.menu")
+      in
       {
         menu_source = "index.html";
         menu_link = { text = "Documentation index"; href = subdir ^ "/" };
         menu_item = No_menu (List.length (OpamMisc.split subdir '/'),
-                             Template.serialize html_index)
+                             Template.serialize html_index);
+        menu_srcurl = srcurl;
       } :: menu
 
 let to_menu ~content_dir =
@@ -228,20 +249,22 @@ let to_menu ~content_dir =
     OpamFilename.read @@
     OpamFilename.of_string name
   in
-  let menu_pages_11 =
+  let menu_pages_11, srcurl_11 =
     read_menu ~dir:(content_dir / "doc" / "1.1")
       (content_dir / "doc" / "1.1" / "index.menu")
   in
   let menu_11 =
     to_menu_aux ~content_dir ~subdir:("doc" / "1.1") ~menu_pages:menu_pages_11
+      ~srcurl:srcurl_11
       ~header:(get_header (content_dir / "doc" / "1.1" / "opam11_note.md"))
   in
-  let menu_pages_12 =
+  let menu_pages_12, srcurl_12 =
     read_menu ~dir:(content_dir / "doc")
       (content_dir / "doc" / "index.menu")
   in
   let menu_12 =
     to_menu_aux ~content_dir ~subdir:"doc" ~menu_pages:menu_pages_12
+      ~srcurl:srcurl_12
       ?header:None
   in
   let menu_11 =
@@ -258,4 +281,8 @@ let to_menu ~content_dir =
     menu_link = { text = "Archives (OPAM 1.1)";
                   href = "/doc/1.1/" };
     menu_item = External;
+    menu_srcurl =
+      match srcurl_11 with
+      | None -> None
+      | Some u -> Some (u ^ "/index.menu");
   }]

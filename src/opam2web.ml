@@ -27,6 +27,7 @@ type options = {
   logfiles: filename list;
   repositories: OpamfUniverse.repository list;
   root_uri: Uri.t;
+  blog_source_uri: string;
 }
 
 let version = Version.string
@@ -65,7 +66,9 @@ let make_website user_options universe =
   in
   let blog_entries = O2wBlog.get_entries ~content_dir ~pages:blog_pages in
   let news = (O2wBlog.make_news blog_entries) in
-  let blog_latest, blog_links = O2wBlog.make_menu blog_entries in
+  let blog_latest, blog_links =
+    O2wBlog.make_menu ~srcurl:user_options.blog_source_uri blog_entries
+  in
   let blog_feed = O2wBlog.make_feed ~root:user_options.root_uri blog_entries in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
@@ -89,6 +92,7 @@ let make_website user_options universe =
       menu_source = content_dir;
       menu_link = { text="Packages"; href=packages_prefix^"/index-date.html" };
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
+      menu_srcurl = None;
     } in
     match statistics with
     | None -> [ date ]
@@ -99,6 +103,7 @@ let make_website user_options universe =
         menu_link = { text="Packages";
                       href=packages_prefix^"/index-popularity.html" };
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg universe);
+        menu_srcurl = None;
       } in
       [ popularity; date ]
   in
@@ -127,19 +132,23 @@ let make_website user_options universe =
     ([
       { menu_source = content_dir;
         menu_link = { text="OPAM"; href="." };
-        menu_item = Internal (0, home_index) };
+        menu_item = Internal (0, home_index);
+        menu_srcurl = None; };
 
       { menu_source = content_dir;
         menu_link = { text="Repository"; href=packages_prefix^"/" };
-        menu_item = Internal (1, package_index) };
+        menu_item = Internal (1, package_index);
+        menu_srcurl = None; };
 
       { menu_source = content_dir^"/doc";
         menu_link = { text="Documentation"; href="doc/" };
-        menu_item = Submenu doc_menu; };
+        menu_item = Submenu doc_menu;
+        menu_srcurl = None; };
 
       { menu_source = content_dir;
         menu_link = { text="About OPAM"; href="about.html" };
-        menu_item = Internal (0, Template.serialize about_page) };
+        menu_item = Internal (0, Template.serialize about_page);
+        menu_srcurl = None; };
 
      ]
      @ blog_latest
@@ -186,7 +195,12 @@ let root_uri = Arg.(
       ~docv:"URI"
       ~doc:"The root URI from which we'll be serving pages (e.g. 'http://opam.ocaml.org/')")
 
-let build logfiles out_dir content_dir repositories preds index root_uri =
+let blog_source_uri = Arg.(
+    value & opt string "https://github.com/ocaml/platform-blog/blob/master" & info ["blog"]
+      ~docv:"URI"
+      ~doc:"The base address to point to blog source files")
+
+let build logfiles out_dir content_dir repositories preds index root_uri blog_source_uri =
   let () = List.iter (function
     | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
     | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
@@ -202,6 +216,7 @@ let build logfiles out_dir content_dir repositories preds index root_uri =
     logfiles;
     repositories;
     root_uri;
+    blog_source_uri;
   } in
   make_website user_options
     (O2wUniverse.of_repositories ~preds index repositories)
@@ -215,7 +230,8 @@ let default_cmd =
     `P "Report bugs on the web at <https://github.com/ocaml/opam2web>.";
   ] in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index $ root_uri),
+          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index $ root_uri
+          $ blog_source_uri),
   Term.info "opam2web" ~version ~doc ~man
 
 ;;
