@@ -22,12 +22,14 @@ type page = {
   page_link    : Cow.Html.link;
   page_depth   : int;
   page_contents: Cow.Xml.signal list;
+  page_srcurl  : string option;
 }
 
 type menu = {
   menu_link: Cow.Html.link;
   menu_item: menu_item;
   menu_source: string;
+  menu_srcurl: string option;
 }
 
 and menu_item =

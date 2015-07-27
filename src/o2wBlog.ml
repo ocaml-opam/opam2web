@@ -202,24 +202,30 @@ let make_pages entries =
 
   List.map aux_page entries
 
-let make_menu entries =
+let make_menu ?srcurl entries =
   let pages = make_pages entries in
   let link ?text entry = {
     text = OpamMisc.Option.default entry.blog_title text;
     href = "blog/" ^ entry.blog_name ^ "/";
   } in
+  let srcurl entry = match srcurl with
+    | None -> None
+    | Some u -> Some (u ^"/"^ Filename.basename entry.blog_source)
+  in
   match entries, pages with
   | [], _ | _, [] -> [], []
   | first_entry::entries, first_page::pages ->
       let first =
         [{ menu_source = first_entry.blog_source;
            menu_link = link ~text:"Platform Blog" first_entry;
-           menu_item = Internal (2, first_page) }] in
+           menu_item = Internal (2, first_page);
+           menu_srcurl = srcurl first_entry; }] in
       let others =
         List.map2 (fun entry page ->
             { menu_source = entry.blog_source;
               menu_link = link entry;
-              menu_item = No_menu (2, page) })
+              menu_item = No_menu (2, page);
+              menu_srcurl = srcurl entry; })
           entries pages
       in
       first, others
@@ -302,7 +308,8 @@ let make_feed ~root entries =
         };
         rights = None;
         updated = to_atom_date entry.blog_date;
-        links = [ mk_link entry_abs ];
+        links = [mk_link entry_abs;
+                 mk_link ~rel:`alternate ~typ:"text/html" entry_abs];
       };
       summary = None;
       content = entry.blog_body;
