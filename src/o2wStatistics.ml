@@ -70,11 +70,16 @@ let request_of_entry e =
   let update_regexp =
     Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
   let open Logentry in
+  let package_of_string str =
+    try OpamPackage.of_string (Filename.basename str)
+    with OpamGlobals.Exit e ->
+      failwith ("opam exit with code " ^ string_of_int e)
+  in
   try
     if Re_str.string_match html_regexp e.request 0 then
       Html_req (Re_str.matched_group 1 e.request)
     else if Re_str.string_match archive_regexp e.request 0 then
-      Archive_req (OpamPackage.of_string (Re_str.matched_group 1 e.request))
+      Archive_req (package_of_string (Re_str.matched_group 1 e.request))
     else if Re_str.string_match update_regexp e.request 0 then
       Update_req
     else
