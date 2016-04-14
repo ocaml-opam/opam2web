@@ -249,23 +249,22 @@ let to_menu ~content_dir =
     OpamFilename.read @@
     OpamFilename.of_string name
   in
-  let menu_pages_11, srcurl_11 =
-    read_menu ~dir:(content_dir / "doc" / "1.1")
-      (content_dir / "doc" / "1.1" / "index.menu")
+  let mk_menu ?header subdir =
+    let menu_pages, srcurl =
+      read_menu ~dir:(content_dir / subdir)
+        (content_dir / subdir / "index.menu")
+    in
+    let menu = to_menu_aux ~content_dir ~subdir ~menu_pages ~srcurl ?header in
+    menu, srcurl
   in
-  let menu_11 =
-    to_menu_aux ~content_dir ~subdir:("doc" / "1.1") ~menu_pages:menu_pages_11
-      ~srcurl:srcurl_11
+  (* Main (current) 1.2 help menu *)
+  let menu_12, srcurl_12 =
+    mk_menu "doc" ?header:None
+  in
+  (* Old (legacy) 1.1 help menu *)
+  let menu_11, srcurl_11 =
+    mk_menu ("doc" / "1.1")
       ~header:(get_header (content_dir / "doc" / "1.1" / "opam11_note.md"))
-  in
-  let menu_pages_12, srcurl_12 =
-    read_menu ~dir:(content_dir / "doc")
-      (content_dir / "doc" / "index.menu")
-  in
-  let menu_12 =
-    to_menu_aux ~content_dir ~subdir:"doc" ~menu_pages:menu_pages_12
-      ~srcurl:srcurl_12
-      ?header:None
   in
   let menu_11 =
     OpamMisc.filter_map (function
@@ -274,7 +273,19 @@ let to_menu ~content_dir =
         | _ -> None)
       menu_11
   in
+  (* New (work in progress) 2.0 help menu *)
+  let menu_20, srcurl_20 =
+    mk_menu ("doc" / "2.0")
+  in
+  let menu_20 =
+    OpamMisc.filter_map (function
+        | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
+            Some {m with menu_item = No_menu (2, html)}
+        | _ -> None)
+      menu_20
+  in
   menu_11 @
+  menu_20 @
   menu_12 @
   [{
     menu_source = "1.1";
@@ -283,6 +294,16 @@ let to_menu ~content_dir =
     menu_item = External;
     menu_srcurl =
       match srcurl_11 with
+      | None -> None
+      | Some u -> Some (u ^ "/index.menu");
+  };
+  {
+    menu_source = "2.0";
+    menu_link = { text = "Development version (OPAM 2.0)";
+                  href = "/doc/2.0/" };
+    menu_item = External;
+    menu_srcurl =
+      match srcurl_20 with
       | None -> None
       | Some u -> Some (u ^ "/index.menu");
   }]
