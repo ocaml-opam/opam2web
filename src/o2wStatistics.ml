@@ -87,7 +87,7 @@ let request_of_entry e =
   with Failure _ -> Unknown_req e.request
 
 let internal_regexp =
-  Re_str.regexp "http://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
+  Re_str.regexp "https?://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
 
 let referrer_of_entry e =
   let open Logentry in
@@ -153,7 +153,7 @@ open Readcombinedlog
    unique count per string key if the 'unique' optional argument is true *)
 let sum_strmap ?(unique = false) map =
   if unique then
-    StringMap.fold (fun _ _ acc -> Int64.succ acc) map Int64.zero
+    Int64.of_int (StringMap.cardinal map)
   else
     StringMap.fold (fun _ n acc -> Int64.add n acc) map Int64.zero
 
@@ -162,13 +162,13 @@ let incr_strmap key map =
   let n =
     try StringMap.find key map
     with Not_found -> Int64.zero in
-  StringMap.add key (Int64.succ n) (StringMap.remove key map)
+  StringMap.add key (Int64.succ n) map
 
 let incr_hostmap pkg host map =
   let m =
     try OpamPackage.Map.find pkg map
     with Not_found -> StringMap.empty in
-  OpamPackage.Map.add pkg (incr_strmap host m) (OpamPackage.Map.remove pkg map)
+  OpamPackage.Map.add pkg (incr_strmap host m) map
 
 let apply_log_filter log_filter e =
   e.log_timestamp >= log_filter.log_start_time
@@ -190,16 +190,13 @@ let count_updates ?(log_filter = O2wGlobals.default_log_filter) entries =
 
 (* Count the number of downloads for each OPAM archive *)
 let count_archive_downloads log_filter entries =
-  let rec aux stats = function
-    | []       -> stats
-    | hd :: tl ->
-      match hd.log_request with
-      | Archive_req pkg -> aux (incr_hostmap pkg hd.log_host stats) tl
-      |_                -> aux stats tl
-  in
   OpamPackage.Map.map
     (sum_strmap ~unique:log_filter.log_per_ip)
-    (aux OpamPackage.Map.empty entries)
+    (List.fold_left (fun stats entry ->
+         match entry.log_request with
+         | Archive_req pkg -> incr_hostmap pkg entry.log_host stats
+         | _ -> stats)
+        OpamPackage.Map.empty entries)
 
 (* Count hosts with at least 10 requests within the last week *)
 let count_users entries =
@@ -208,8 +205,7 @@ let count_users entries =
       (fun map elt -> incr_strmap elt.log_host map)
       StringMap.empty entries
   in
-  StringMap.fold (fun _ _ n -> Int64.succ n) users 0L
-
+  Int64.of_int (StringMap.cardinal users)
 
 (* Generate basic statistics on log entries *)
 let stats_of_entries log_filter entries =
@@ -226,50 +222,40 @@ let stats_of_entries log_filter entries =
     users_stats;
   }
 
-let day_filter, week_filter, month_filter, alltime =
-  let now = O2wGlobals.default_log_filter.log_end_time in
-  let one_day = 3600. *. 24. in
-  let one_day_ago = now -. one_day in
-  let one_week_ago = now -. (one_day *. 7.) in
-  let one_month_ago = now -. (one_day *. 30.) in
-  let day = {
-    O2wGlobals.default_log_filter with log_start_time = one_day_ago;
-                                       filter_name = "day"
-  } in
-  let week = {
-    O2wGlobals.default_log_filter with log_start_time = one_week_ago;
-                                       filter_name = "week"
-  } in
-  let month = {
-    O2wGlobals.default_log_filter with log_start_time = one_month_ago;
-                                       filter_name = "month"
-  } in
-  let alltime = { O2wGlobals.default_log_filter with filter_name = "alltime" } in
-  day, week, month, alltime
+module FloatMap = Map.Make(struct type t = float let compare = compare end)
+
+type entry_map = log_entry list FloatMap.t (** indexed by timestamp *)
+let add_entry e m =
+  let existing = try FloatMap.find e.log_timestamp m with Not_found -> [] in
+  FloatMap.add e.log_timestamp (e::existing) m
+let entries_after ts m = match FloatMap.split ts m with
+  | _, Some e, m -> FloatMap.add ts e m
+  | _, None, m -> m
+let entries_list m =
+  FloatMap.fold (fun _ -> List.rev_append) m []
+
+let now = O2wGlobals.default_log_filter.log_end_time
+let one_day = 3600. *. 24.
+let one_day_ago = now -. one_day
+let one_week_ago = now -. (one_day *. 7.)
+let one_month_ago = now -. (one_day *. 30.)
+let two_months_ago = now -. (one_day *. 60.)
 
 let stats_set_of_entries entries =
-  let alltime_stats = empty_stats in
-  let day_stats = stats_of_entries day_filter entries in
-  let week_stats = stats_of_entries week_filter entries in
-  let month_stats = stats_of_entries month_filter entries in
+  let month_entries = entries_after one_month_ago entries in
+  let week_entries =  entries_after one_week_ago month_entries in
+  let day_entries = entries_after one_day_ago week_entries in
+  let filter filter_name log_start_time entries =
+    stats_of_entries
+      { O2wGlobals.default_log_filter with log_start_time; filter_name }
+      (entries_list entries)
+  in
   {
-    day_stats     = day_stats;
-    week_stats    = week_stats;
-    month_stats   = month_stats;
-    alltime_stats = alltime_stats;
+    day_stats     = filter "day" one_day_ago day_entries;
+    week_stats    = filter "week" one_week_ago week_entries;
+    month_stats   = filter "month" one_month_ago month_entries;
+    alltime_stats = empty_stats;
   }
-
-let stats_of_lines current_size total_size lines =
-  let entries = List.fold_left (fun acc e ->
-    mk_entry e :: acc
-    ) [] lines in
-  let stats = stats_set_of_entries entries in
-  stats
-
-let stats_of_lines_l c n lines_l =
-  List.fold_left (fun acc lines ->
-      stats_of_lines c n lines
-    ) empty_stats_set lines_l
 
 let add_stats s1 s2 = {
   pkg_stats    = OpamPackage.Map.union Int64.add s1.pkg_stats s2.pkg_stats;
@@ -285,35 +271,125 @@ let add_stats_set s1 s2 = {
   month_stats   = add_stats s1.month_stats s2.month_stats;
 }
 
-let statistics_set = function
+type cache_elt = {
+  cache_size: int;
+  cache_hash: Digest.t; (* first 10k only *)
+  cache_entries: entry_map;
+  cache_only_since: float;
+}
+type cache = cache_elt OpamFilename.Map.t
+let cache_file = OpamFilename.of_string "~/.cache/opam2web/stats_cache"
+let version_id =
+  Digest.string (OpamVersion.(to_string (full ())) ^" "^Version.commit)
+let write_cache (cache: cache) =
+  OpamFilename.mkdir (OpamFilename.dirname cache_file);
+  let oc = open_out_bin (OpamFilename.to_string cache_file) in
+  Digest.output oc version_id;
+  Marshal.to_channel oc cache [Marshal.No_sharing];
+  close_out oc
+let read_cache () : cache =
+  try
+    let ic = open_in_bin (OpamFilename.to_string cache_file) in
+    let cache =
+      if Digest.input ic = version_id then
+        (Printf.printf "Reading logs cache from %s... %!"
+           (OpamFilename.to_string cache_file);
+         let c = Marshal.from_channel ic in
+         Printf.printf "done.\n%!";
+         c)
+      else
+        (Printf.printf "Skipping mismatching logs cache %s\n%!"
+           (OpamFilename.to_string cache_file);
+         OpamFilename.Map.empty)
+    in
+    close_in ic;
+    cache
+  with _ -> OpamFilename.Map.empty
+let partial_digest ic len =
+  seek_in ic 0;
+  let len = max 10_000 len in
+  try Digest.channel ic len with End_of_file ->
+    Digest.channel ic (-1)
+
+let statistics_set files =
+  let cache = read_cache () in
+  let skip_before = two_months_ago in
+  match files with
   | [] -> None
   | files ->
-    let logs =
-      let filter e =
-        timestamp_of_entry e > month_filter.log_start_time in
+    let cache_and_logs =
       List.rev_map (fun f ->
-        Readcombinedlog.create filter (OpamFilename.to_string f)
+          let ic = OpamFilename.open_in f in
+          let cached, offset =
+            try
+              let partial = OpamFilename.Map.find f cache in
+              let len = in_channel_length ic in
+              if
+                len >= partial.cache_size &&
+                partial_digest ic partial.cache_size = partial.cache_hash &&
+                partial.cache_only_since <= skip_before
+              then
+                (Printf.printf "%s: cache found (%d out of %d KB new)\n%!"
+                   (OpamFilename.to_string f)
+                   ((len - partial.cache_size)/1024) (len/1024);
+                partial.cache_entries, partial.cache_size)
+              else
+                (Printf.printf "%s: dropping invalid cache\n%!"
+                   (OpamFilename.to_string f);
+                 FloatMap.empty, 0)
+            with Not_found ->
+              Printf.printf "%s: no cache found\n"
+                (OpamFilename.to_string f);
+              FloatMap.empty, 0
+          in
+          close_in ic;
+          let reader =
+            Readcombinedlog.create
+              (fun e -> timestamp_of_entry e > skip_before)
+              (OpamFilename.to_string f)
+          in
+          seek_in reader.Readcombinedlog.ic offset;
+          let reader =
+            { reader with
+              Readcombinedlog.size = reader.Readcombinedlog.size - offset }
+          in
+          f, (cached, reader)
       ) files in
-    let total_size =
-      List.fold_left (fun acc t -> acc + Readcombinedlog.size t) 0 logs in
-    let current_size = ref 0 in
     let chunk_size = 10_000 in
-    let stats = ref empty_stats_set in
-    let rec read l =
-      let percent = 100 * l.reads / l.size in
-      Printf.printf "\rBuilding entries: %3d%% (%s)%!" percent l.name;
-      begin match Readcombinedlog.read l chunk_size with
-      | []    -> ()
-      | lines ->
-	let new_stats = stats_of_lines current_size total_size lines in
-	stats := add_stats_set !stats new_stats
-      end;
+    let rec read entries l =
+      let percent = if l.size = 0 then 100 else 100 * l.reads / l.size in
+      Printf.printf "\rReading new entries from %s: %3d%%%!" l.name percent;
+      let entries =
+        List.fold_left (fun entries line -> add_entry (mk_entry line) entries)
+          entries (Readcombinedlog.read l chunk_size)
+      in
       if Readcombinedlog.is_empty l then
-        Printf.printf "\rBuilding entries: %3d%% (%s)\n%!" 100 l.name
+        (Printf.printf "\rReading new entries from %s: %3d%%\n%!" l.name 100;
+         entries)
       else
-        read l in
-    List.iter read logs;
-    Some !stats
+        read entries l
+    in
+    let cache, stats =
+      List.fold_left (fun (cache, stats) (file,(cached_entries,log)) ->
+          let entries = read cached_entries log in
+          let ic = open_in (OpamFilename.to_string file) in
+          let cache_size = in_channel_length ic in
+          let cache_hash = partial_digest ic cache_size in
+          close_in ic;
+          let cache =
+            OpamFilename.Map.add file
+              { cache_size; cache_hash;
+                cache_only_since = skip_before;
+                cache_entries = entries_after skip_before entries }
+              cache
+          in
+          let stats = add_stats_set stats (stats_set_of_entries entries) in
+          cache, stats)
+        (cache, empty_stats_set)
+        cache_and_logs
+    in
+    write_cache cache;
+    Some stats
 
 let aggregate_package_popularity pkg_stats pkg_idx =
   OpamPackage.Map.fold (fun pkg pkg_count acc ->
