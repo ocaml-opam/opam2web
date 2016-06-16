@@ -279,8 +279,10 @@ type cache_elt = {
 }
 type cache = cache_elt OpamFilename.Map.t
 let cache_file = OpamFilename.of_string "~/.cache/opam2web/stats_cache"
+let cache_format_version = 1
 let version_id =
-  Digest.string (OpamVersion.(to_string (full ())) ^" "^Version.commit)
+  Digest.string (OpamVersion.(to_string (full ())) ^" "^
+                 string_of_int cache_format_version)
 let write_cache (cache: cache) =
   OpamFilename.mkdir (OpamFilename.dirname cache_file);
   let oc = open_out_bin (OpamFilename.to_string cache_file) in
