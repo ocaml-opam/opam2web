@@ -218,8 +218,12 @@ let build logfiles out_dir content_dir repositories preds index root_uri blog_so
     root_uri;
     blog_source_uri;
   } in
-  make_website user_options
-    (O2wUniverse.of_repositories ~preds index repositories)
+  Printf.printf "Loading universe... %!";
+  let universe =
+    O2wUniverse.of_repositories ~preds index repositories
+  in
+  Printf.printf "done.\n%!";
+  make_website user_options universe
 
 let default_cmd =
   let doc = "generate a web site from an opam universe" in
