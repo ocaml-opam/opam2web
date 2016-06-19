@@ -52,7 +52,9 @@ let make_website user_options universe =
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
-  let pages = O2wUniverse.to_pages ~statistics universe in
+  let pages = O2wUniverse.to_pages
+    ~statistics ~prefix:packages_prefix universe
+  in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc () = O2wDocumentation.to_menu ~content_dir in
   Printf.printf "++ Building the blog.\n%!";

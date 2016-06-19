@@ -38,9 +38,24 @@ let to_page ~statistics universe pkg pkg_info acc =
     acc
 
 (* Create a list of package pages to generate for a universe *)
-let to_pages ~statistics universe =
+let to_pages ~statistics ~prefix universe =
+  let projects = OpamPackage.Name.Map.fold (fun name max_v acc ->
+    let pkg  = OpamPackage.create name max_v in
+    let info = OpamPackage.Map.find pkg universe.pkgs_infos in
+    let name = OpamPackage.Name.to_string name in
+    let href = Filename.(concat prefix (concat name "")) in
+    let page = {
+      page_source   = name;
+      page_link     = { Cow.Html.text=name; href; };
+      page_depth    = 2;
+      page_contents = Template.serialize
+        (O2wPackage.to_html ~statistics universe info);
+      page_srcurl = None;
+    } in
+    page :: acc
+  ) universe.max_versions [] in
   OpamPackage.Map.fold
-    (to_page ~statistics universe) universe.pkgs_infos []
+    (to_page ~statistics universe) universe.pkgs_infos projects
 
 let sortby_links ~links ~default ~active =
   let mk_item title =
