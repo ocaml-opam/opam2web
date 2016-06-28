@@ -56,9 +56,9 @@ let html_descr (short,long) =
   >> end
 
 (* Returns a HTML description of the given package *)
-let to_html ~statistics universe pkg_info =
+let to_html ~statistics ~prefix universe pkg_info =
   let open OpamfUniverse in
-  let href = Pkg.href ~href_base:Uri.(of_string "../../") in
+  let href = Pkg.href ~href_base:Uri.(of_string prefix) in
   let name = OpamPackage.Name.of_string pkg_info.name in
   let version = OpamPackage.Version.of_string pkg_info.version in
   let pkg = OpamPackage.create name version in

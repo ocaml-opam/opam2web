@@ -27,7 +27,7 @@ let to_page ~statistics universe pkg pkg_info acc =
                         href=Uri.to_string pkg_info.OpamfUniverse.href };
       page_depth    = 3;
       page_contents = Template.serialize
-        (O2wPackage.to_html ~statistics universe pkg_info);
+        (O2wPackage.to_html ~statistics ~prefix:"../../" universe pkg_info);
       page_srcurl = None;
     } in
     page :: acc
@@ -49,7 +49,7 @@ let to_pages ~statistics ~prefix universe =
       page_link     = { Cow.Html.text=name; href; };
       page_depth    = 2;
       page_contents = Template.serialize
-        (O2wPackage.to_html ~statistics universe info);
+        (O2wPackage.to_html ~statistics ~prefix:"../" universe info);
       page_srcurl = None;
     } in
     page :: acc
