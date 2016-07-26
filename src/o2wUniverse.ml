@@ -105,10 +105,10 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
         match info with
         | None          -> acc
         | Some pkg_info ->
+          let pkg_name = OpamPackage.name pkg in
           let pkg_download =
             try
-              let d = OpamPackage.Name.Map.find (OpamPackage.name pkg)
-                popularity in
+              let d = OpamPackage.Name.Map.find pkg_name popularity in
               [Printf.sprintf "Downloads: %Ld" d]
             with Not_found -> []
           in
@@ -120,8 +120,8 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
             | None -> []
           in
           let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published) in
-          let pkg_href = Uri.(resolve "http"
-                                (of_string "../") pkg_info.OpamfUniverse.href) in
+          let name = OpamPackage.Name.to_string pkg_name in
+          let pkg_href = Uri.(resolve "http" (of_string "../packages/") (of_string name)) in
           <:html<
             <tr>
               <td title=$str:pkg_tooltip$>
