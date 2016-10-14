@@ -298,6 +298,14 @@ let to_html ~statistics ~prefix universe pkg_info =
       Some ("OCaml",<:html<$str:formula_str$>>)
   in
 
+  let pkg_available =
+    match OpamFile.OPAM.available pkg_opam with
+    | FBool true -> None
+    | filter     ->
+      let filter_str = OpamFilter.to_string filter in
+      Some ("Available", <:html<$str:filter_str$>>)
+  in
+
   let pkg_os = OpamFormula.(
     match OpamFile.OPAM.os pkg_opam with
     | Empty -> None
@@ -379,6 +387,7 @@ let to_html ~statistics ~prefix universe pkg_info =
             $mk_tr pkg_depends$
             $mk_tr pkg_depopts$
             $mk_tr pkg_compiler$
+            $mk_tr pkg_available$
             $mk_tr pkg_os$
             $mk_tr pkg_published$
             $pkg_url$
