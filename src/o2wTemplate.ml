@@ -171,7 +171,7 @@ let rec extract_links ~content_dir ~out_dir page =
     | [] -> acc
     | `El_start (_,attrs)::rest ->
       let acc =
-        OpamMisc.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
+        OpamStd.List.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
           attrs
         @ acc
       in
@@ -189,11 +189,11 @@ let rec extract_links ~content_dir ~out_dir page =
       if Re_str.string_match (Re_str.regexp ".*://") link 0 then ()
       else
         let addr,id =
-          OpamMisc.Option.default (link,"") (OpamMisc.cut_at link '#')
+          OpamStd.Option.default (link,"") (OpamStd.String.cut_at link '#')
         in
         if addr = "" then
           if id = "" || find_id id page.page_contents then ()
-          else OpamGlobals.error "In %s: Broken self-reference to %s" file link
+          else OpamConsole.error "In %s: Broken self-reference to %s" file link
         else
           let target =
             if Filename.is_relative addr then dstdir / addr
@@ -208,10 +208,10 @@ let rec extract_links ~content_dir ~out_dir page =
               | some -> some in
             match src with
             | Some src ->
-               OpamGlobals.msg "%s: Add resource %s to %s\n" file src target;
+               OpamConsole.msg "%s: Add resource %s to %s\n" file src target;
                OpamSystem.copy src target;
             | None ->
-               OpamGlobals.error "In %s: Reference to resource %s not found"
+               OpamConsole.error "In %s: Reference to resource %s not found"
                  file link
     )
     links

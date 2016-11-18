@@ -92,8 +92,17 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
   in
   let repos_html =
     let repos = OpamRepository.sort universe.repos in
-    Html.Create.table repos
-      ~row:(fun r -> [Html.string (OpamRepository.to_string r)])
+    let row r =
+      let s =
+        Printf.sprintf "%s(%d %s %s)"
+          (OpamRepositoryName.to_string r.repo_name)
+          r.repo_priority
+          (OpamTypesBase.string_of_repository_kind r.repo_kind)
+          (OpamTypesBase.string_of_address r.repo_address)
+      in
+      [Html.string s]
+    in
+    Html.Create.table repos ~row
   in
   let packages_html =
     List.fold_left (fun acc pkg ->

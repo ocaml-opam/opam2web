@@ -54,8 +54,8 @@ let read_menu ~dir f =
   let srcurl =
     let prefix = "#source:" in
     try
-      let s = List.find (OpamMisc.starts_with ~prefix) lines in
-      Some (String.trim (OpamMisc.remove_prefix ~prefix s))
+      let s = List.find (OpamStd.String.starts_with ~prefix) lines in
+      Some (String.trim (OpamStd.String.remove_prefix ~prefix s))
     with Not_found -> None
   in
   let lines =
@@ -132,7 +132,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
     if not (OpamFilename.exists filename) then (
-      OpamGlobals.warning "%s is not available." (OpamFilename.to_string filename);
+      OpamConsole.warning "%s is not available." (OpamFilename.to_string filename);
       Html.empty
     ) else
       let content = OpamFilename.read filename in
@@ -221,7 +221,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         menu_source = "index.html";
         menu_link = subdir ^ "/";
         menu_link_text = "Documentation index";
-        menu_item = No_menu (List.length (OpamMisc.split subdir '/'),
+        menu_item = No_menu (List.length (OpamStd.String.split subdir '/'),
                              Template.serialize html_index);
         menu_srcurl = srcurl;
       } :: menu
@@ -253,7 +253,7 @@ let to_menu ~content_dir =
       ~header:(get_header (content_dir / "doc" / "1.1" / "opam11_note.md"))
   in
   let menu_11 =
-    OpamMisc.filter_map (function
+    OpamStd.List.filter_map (function
         | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
@@ -264,7 +264,7 @@ let to_menu ~content_dir =
     mk_menu ("doc" / "2.0")
   in
   let menu_20 =
-    OpamMisc.filter_map (function
+    OpamStd.List.filter_map (function
         | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
