@@ -14,6 +14,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Cow
 open OpamfUniverse
 open O2wTypes
 
@@ -34,14 +35,12 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
       let pkg_href = Pkg.href ~href_base:Uri.(of_string (packages_prefix^"/"))
         (OpamPackage.name pkg) (OpamPackage.version pkg) in
       let pkg_date = O2wMisc.string_of_timestamp ~short:true update_tm in
-      <:html<
-        <tr>
-          <td>
-            <a href=$uri: pkg_href$>$str: pkg_name$ $str: pkg_version$</a>
-          </td>
-          <td>$str: pkg_date$</td>
-        </tr>
-      >>
+      Html.tag "tr"
+        (Html.tag "td"
+           (Html.a ~href:pkg_href (Html.string pkg_name
+                                   @ Html.string " "
+                                   @ Html.string pkg_version))
+         @ Html.tag "td" (Html.string pkg_date))
     in
     let dates_fn pkg =
       try OpamPackage.Map.find pkg universe.pkgs_dates
@@ -50,42 +49,33 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
       O2wStatistics.top_packages ~reverse:true ~ntop:10
         dates_fn universe.max_packages in
     let updated_items = List.map mk_update_li last_updates in
-    <:html<
-      <div class="span4">
-        <table class="table table-striped">
-          <thead>
-            <tr><th colspan="2">New packages</th></tr>
-          </thead>
-          <tbody>
-            $list: updated_items$
-            <tr>
-              <td class="btn-more" colspan="2">
-                <a class="btn btn-small" href=$str:packages_prefix^"/index-date.html"$>all packages</a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    >>
+    Html.div ~cls:"span4"
+      (Html.tag "table" ~cls:"table table-striped"
+         (Html.tag "thead"
+            (Html.tag "tr" (Html.tag "th" ~attrs:["colspan", "2"]
+                              (Html.string "New packages")))
+          @ Html.tag "tbody"
+              (List.concat updated_items
+               @ Html.tag "tr"
+                   (Html.tag "td" ~cls:"btn-more" ~attrs:["colspan","2"]
+                      (let h = packages_prefix^"/index-date.html" in
+                        Html.a ~cls:"btn btn-small" ~href:(Uri.of_string h)
+                          (Html.string "all packages"))))))
   in
 
   let nb_packages, packages_top10 = match statistics with
-    | None      -> OpamPackage.Set.cardinal universe.max_packages, <:html< >>
+    | None      -> OpamPackage.Set.cardinal universe.max_packages, Html.empty
     | Some sset ->
       let mk_top_li (pkg, pkg_count) =
         let name = OpamPackage.name pkg in
         let version = OpamPackage.version pkg in
         let pkg_name = OpamPackage.Name.to_string name in
         let pkg_href = Pkg.href ~href_base:Uri.(of_string (packages_prefix^"/"))
-          name version in
-        <:html<
-          <tr>
-            <td>
-              <a href=$uri: pkg_href$>$str: pkg_name$</a>
-            </td>
-            <td>$str: Int64.to_string pkg_count$</td>
-          </tr>
-        >>
+                         name version in
+        Html.tag "tr"
+          (Html.tag "td"
+             (Html.a ~href:pkg_href (Html.string pkg_name))
+           @ Html.tag "td" (Html.string(Int64.to_string pkg_count)))
       in
       let popularity_fn pkg =
         try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity
@@ -95,56 +85,49 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
       let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
       let top10_items = List.map mk_top_li top10_pkgs in
       nb_packages,
-      <:html<
-        <div class="span4">
-          <table class="table table-striped">
-            <thead>
-              <tr><th colspan="2">Most Downloaded Packages (this month)</th></tr>
-            </thead>
-            <tbody>
-              $list: top10_items$
-              <tr>
-                <td class="btn-more" colspan="2">
-                  <a class="btn btn-small" href=$str:packages_prefix^"/index-popularity.html"$>all packages</a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      >>
+      Html.div ~cls:"span4"
+        (Html.tag "table" ~cls:"table table-striped"
+           (Html.tag "thead"
+              (Html.tag "tr"
+                 (Html.tag "th" ~attrs:["colspan","2"]
+                    (Html.string "Most Downloaded Packages (this month)")))
+            @ Html.tag "tbody"
+                (List.concat top10_items
+                 @ Html.tag "tr"
+                     (Html.tag "td" ~cls:"btn-more" ~attrs:["colspan","2"]
+                        (let h = packages_prefix^"/index-popularity.html" in
+                         Html.a ~cls:"btn btn-small" ~href:(Uri.of_string h)
+                           (Html.string "all packages"))))))
   in
 
   let mk_stats (title: string) (stats: statistics): Cow.Html.t =
-    <:html<
-      <table class="table table-condensed">
-        <thead>
-          <tr><th>$str: title$</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <i class="icon-user"> </i> <strong>$str: Int64.to_string stats.users_stats$</strong> users
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <i class="icon-th-large"> </i> <strong>$str: Int64.to_string stats.global_stats$</strong> package installations
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <i class="icon-refresh"> </i> <strong>$str: Int64.to_string stats.update_stats$</strong> repository updates
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    >>
+    let space = Html.string " " in
+    let strong_int64 n = Html.strong (Html.string (Int64.to_string n)) in
+    Html.tag "table" ~cls:"table table-condensed"
+      (Html.tag "thead"
+         (Html.tag "tr" (Html.tag "th" (Html.string title)))
+       @ Html.tag "tbody"
+           (Html.tag "tr"
+              (Html.tag "td" (Html.i ~cls:"icon-user" space
+                              @ space
+                              @ strong_int64 stats.users_stats
+                              @ Html.string " users"))
+            @ Html.tag "tr" (Html.tag "td"
+                               (Html.i ~cls:"icon-th-large" space
+                                @ space
+                                @ strong_int64 stats.global_stats
+                                @ Html.string " package installations"))
+            @ Html.tag "tr" (Html.tag "td"
+                               (Html.i ~cls:"icon-refresh" space
+                                @ space
+                                @ strong_int64 stats.update_stats
+                                @ Html.string " repository updates"))))
   in
 
   (*let tag_cloud = *)
 
   let stats_html = match statistics with
-    | None -> [ <:html< &>> ]
+    | None -> [ Html.empty ]
     | Some s -> [
         mk_stats "Last week" s.week_stats;
         mk_stats "Last month" s.month_stats;
@@ -153,11 +136,9 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
   in
 
   let number_of_packages nb packages =
-    <:html<
-      <div class="page-header text-center">
-      <h2 class="text-error">$int:nb$ <small>$str:packages$</small></h2>
-      </div>
-    >> in
+    Html.div ~cls:"page-header text-center"
+      (Html.h2 ~cls:"text-error" (Html.int nb @ Html.string " "
+                                  @ Html.small (Html.string packages))) in
   let number_of_packages =
     let packages = match nb_packages with
       | 0
@@ -165,12 +146,8 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
       | _ -> "packages" in
     number_of_packages nb_packages packages in
 
-  let stats = <:html<
-                <div class="span4">
-                  $number_of_packages$
-                  $list: stats_html$
-                </div>
-              >> in
+  let stats = Html.div ~cls:"span4"
+                (number_of_packages @ List.concat stats_html) in
 
   let template = Template.({ path="home.xhtml"; fields=[
     "news",           (mandatory (), Optional);

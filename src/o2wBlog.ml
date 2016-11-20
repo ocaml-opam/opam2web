@@ -14,7 +14,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Cow.Html
+open Cow
 open O2wTypes
 
 let header_separator = "^--BODY--$"
@@ -72,7 +72,7 @@ let html_date timestamp =
         (d.tm_year + 1900) (d.tm_mon + 1) d.tm_mday
         d.tm_hour d.tm_min d.tm_sec
     ) in
-  <:html< <time datetime="$str:d$">$str:short_date timestamp$</time>&>>
+  Html.time ~datetime:d (Html.string (short_date timestamp))
 
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
@@ -142,60 +142,49 @@ let make_pages entries =
     let items =
       List.map (fun entry ->
           let classes = if active_entry = entry then "active" else "" in
-          <:html<
-            <li class=$str:classes$>
-              <a href=$str:"../"^entry.blog_name^"/"$>$str: entry.blog_title$</a>
-            </li>
-          >>)
+          Html.li ~cls:classes
+            (Html.a ~href:(Uri.of_string("../"^entry.blog_name^"/"))
+               (Html.string entry.blog_title)))
         entries
     in
-    <:html<
-      <ul class="nav nav-pills nav-stacked">
-        $list:items$
-      </ul>
-    >>
+    Html.ul items ~cls:"nav nav-pills nav-stacked"
   in
   (* Pages creation *)
   let aux_page entry =
     let html_authors =
       let to_html = function
         | author, Some url ->
-            <:html< <a class="author" href="$str:url$">$str:author$</a> >>
+           Html.a ~cls:"author" ~href:(Uri.of_string url) (Html.string author)
         | author, None ->
-            <:html< <a class="author">$str:author$</a> >>
+           Html.a ~cls:"author" (Html.string author)
+             ~href:Uri.empty (* FIXME: remove with new version of Cow *)
       in
       match List.rev entry.blog_authors with
-      | [] -> <:html< >>
+      | [] -> Html.empty
       | [single] -> to_html single
       | last::secondlast::others ->
-          List.fold_left (fun h a -> <:html< $to_html a$, $h >>)
-            <:html< $to_html secondlast$ and $to_html last$ >>
-            others
+         List.fold_left (fun h a -> to_html a @ Html.string ", " @ h)
+           (to_html secondlast @ Html.string " and " @ to_html last)
+           others
     in
     let html_body =
-      <:html<
-        <div class="page-header"><h3>
-          $str:entry.blog_title$
-          <div class="text-right"><small>
-            On $html_date entry.blog_date$, by <span class="authors">$html_authors$</span>
-          </small></div>
-        </h3></div>
-        $entry.blog_body$
-      >>
+      Html.div ~cls:"page-header"
+        (Html.h3
+           (Html.string entry.blog_title
+            @ Html.div ~cls:"text-right"
+                (Html.small (Html.string "On "
+                             @ html_date entry.blog_date
+                             @ Html.string ", by "
+                             @ Html.span ~cls:"authors" html_authors))))
+      @ entry.blog_body
     in
     let page =
-      <:html<
-        <div class="row">
-          <div class="span3">
-            <div class="bs-docs-menu hidden-phone">
-              $nav_menu entry$
-            </div>
-          </div>
-          <div class="span9">
-            $html_body$
-          </div>
-        </div>
-      >>
+      Html.div ~cls:"row"
+        (Html.div ~cls:"span3"
+           (Html.div ~cls:"bs-docs-menu hidden-phone"
+              (nav_menu entry))
+         @ Html.div ~cls:"span9"
+             html_body)
     in
     Template.serialize page
   in
@@ -204,10 +193,7 @@ let make_pages entries =
 
 let make_menu ?srcurl entries =
   let pages = make_pages entries in
-  let link ?text entry = {
-    text = OpamMisc.Option.default entry.blog_title text;
-    href = "blog/" ^ entry.blog_name ^ "/";
-  } in
+  let blog_link entry = "blog/" ^ entry.blog_name ^ "/" in
   let srcurl entry = match srcurl with
     | None -> None
     | Some u -> Some (u ^"/"^ Filename.basename entry.blog_source)
@@ -217,13 +203,15 @@ let make_menu ?srcurl entries =
   | first_entry::entries, first_page::pages ->
       let first =
         [{ menu_source = first_entry.blog_source;
-           menu_link = link ~text:"Platform Blog" first_entry;
+           menu_link = blog_link first_entry;
+           menu_link_text = "Platform Blog";
            menu_item = Internal (2, first_page);
            menu_srcurl = srcurl first_entry; }] in
       let others =
         List.map2 (fun entry page ->
             { menu_source = entry.blog_source;
-              menu_link = link entry;
+              menu_link = blog_link entry;
+              menu_link_text = entry.blog_title;
               menu_item = No_menu (2, page);
               menu_srcurl = srcurl entry; })
           entries pages
@@ -234,21 +222,18 @@ let make_news entries =
   let oldest = Unix.time() -. 3600.*.24.*.365. in
   let news = List.filter (fun e -> e.blog_date > oldest ) entries in
   let mk entry =
-    let link = "blog/" ^ entry.blog_name ^ "/" in
-    <:html<
-      <p>
-        <i class="icon-ok"> </i>
-        <strong>$html_date entry.blog_date$</strong>
-        <a href="$str:link$">$str:entry.blog_title$</a>
-        <br/>
-      </p>
-    >>
+    let link = Uri.of_string("blog/" ^ entry.blog_name ^ "/") in
+    Html.p
+      (Html.i ~cls:"icon-ok" (Html.string " ")
+       @ Html.strong (html_date entry.blog_date)
+       @ Html.a ~href:link (Html.string entry.blog_title)
+       @ Html.br Html.empty)
   in
-  List.fold_left (fun h e -> <:html< $h$ $mk e$ >>) <:html< >> news
+  List.fold_left (fun h e -> h @Html.string " " @ mk e) Html.empty news
 
 let make_redirect ~root entries =
   match entries with
-  | [] -> <:html<<p>No blog pages.</p>&>>
+  | [] -> Html.p (Html.string "No blog pages.")
   | first_entry::_ ->
       let blog_uri =
         Uri.(resolve "http" root (of_string "blog/"))
@@ -257,12 +242,12 @@ let make_redirect ~root entries =
         Uri.(resolve "http" blog_uri (of_string (first_entry.blog_name^"/")))
       in
       let redirect = Printf.sprintf "0;url=%s" (Uri.to_string post_uri) in
-      <:html<
-        <html><head>
-          <title>Latest blog entry (redirect)</title>
-          <meta http-equiv="refresh" content="$str:redirect$" />
-        </head><body></body></html>
-      >>
+      Html.html
+        (Html.head
+           (Html.title (Html.string "Latest blog entry (redirect)")
+            @ Html.meta ~attrs:["http-equiv", "refresh"; "content", redirect]
+                Html.empty)
+        @ Html.body Html.empty)
 
 (*
 let resolve_urls_in_attr base rewrites attrs =

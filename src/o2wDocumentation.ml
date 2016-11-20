@@ -14,7 +14,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Cow.Html
+open Cow
 open O2wTypes
 
 type doc_kind =
@@ -48,7 +48,7 @@ let split_filename (file: string): (string * string) =
   with
     Not_found -> file, ""
 
-(* Returns [(source_file, extension, link, menu_entry); ...] *)
+(* Returns [(source_file, extension, link, link_text, menu_entry); ...] *)
 let read_menu ~dir f =
   let lines = OpamProcess.read_lines f in
   let srcurl =
@@ -68,9 +68,9 @@ let read_menu ~dir f =
     if String.length extension = 0 then
       let empty_filename = OpamFilename.of_string "" in
       if  String.length title > 0 then
-        (empty_filename, "", { text=human_title; href="" }, Nav_header)
+        (empty_filename, "", (* href *) "", (* text *) human_title, Nav_header)
       else
-        (empty_filename, "", { text=""; href="" }, Divider)
+        (empty_filename, "", (* href *) "", (* text *) "", Divider)
     else
       let source_file =
         Printf.sprintf "%s/%s.%s" dir title extension
@@ -78,7 +78,7 @@ let read_menu ~dir f =
       let source_filename = OpamFilename.of_string source_file in
       let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
-       { text=human_title; href=dest_file },
+       (* href *) dest_file, (* text *) human_title,
        Internal (1, Template.serialize Cow.Html.nil)
       )
   in
@@ -133,7 +133,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
   let to_html doc_menu kind filename: Cow.Html.t =
     if not (OpamFilename.exists filename) then (
       OpamGlobals.warning "%s is not available." (OpamFilename.to_string filename);
-      <:html< >>
+      Html.empty
     ) else
       let content = OpamFilename.read filename in
       match kind with
@@ -142,57 +142,46 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         let md_content = Omd.of_string content in
         let md_toc = doc_toc md_content in
         let html_toc = Cow.Html.of_string (Omd.to_html md_toc) in
-        <:html<
-          <div class="row">
-            <div class="span3">
-          <div class="bs-docs-menu hidden-phone">
-            $doc_menu$
-            <div class="bs-docs-toc">
-              $html_toc$
-            </div>
-          </div>
-          </div>
-          <div class="span9">
-          $header$
-          $Cow.Html.of_string (Omd.to_html md_content)$
-          </div>
-        </div>
-      >>
-    | _ -> <:html< >>
+        Html.div ~cls:"row"
+          (Html.div ~cls:"span3"
+             (Html.div ~cls:"bs-docs-menu hidden-phone"
+                (doc_menu
+                 @ Html.div ~cls:"bs-docs-toc" html_toc))
+           @ Html.div ~cls:"span9"
+               (header
+                @ Html.string (Omd.to_html md_content)))
+    | _ -> Html.empty
   in
 
   let documentation_menu active_src =
-    let menu_items = List.map (fun (src, _, lnk, kind) -> match kind with
+    let menu_items =
+      List.map (fun (src, _, lnk, lnk_text, kind) -> match kind with
         | Submenu _ | No_menu _ -> Cow.Html.nil
         | Nav_header ->
-          <:html<
-            <li class="disabled">
-              <a href="#"><strong>$str: lnk.text$</strong></a>
-            </li>
-          >>
+           Html.li ~cls:"disabled"
+             (Html.a ~href:(Uri.of_string "#")
+                (Html.strong (Html.string lnk_text)))
         | Divider ->
-          <:html<<li class="disabled divider"><a href="#"> </a></li>&>>
+           Html.li ~cls:"disabled divider"
+             (Html.a ~href:(Uri.of_string "#") (Html.string " "))
         | External | Internal _ ->
-          let classes = if active_src = src then "active" else "" in
-          <:html<<li class="$str: classes$">
-            <a href="$str: lnk.href$"> $str: lnk.text$</a>
-          </li>&>>
+           let classes = if active_src = src then "active" else "" in
+           Html.li ~cls:classes
+             (Html.a ~href:(Uri.of_string lnk)
+                (Html.string (" " ^ lnk_text)))
       ) menu_pages
     in
-    <:html<
-      <ul class="nav nav-pills nav-stacked">
-        $list: menu_items$
-      </ul>
-    >>
+    Html.ul ~cls:"nav nav-pills nav-stacked" menu_items
   in
 
   (* Pages creation *)
-  let aux_page (source_filename, extension, lnk, page) =
+  let aux_page (source_filename, extension, lnk, lnk_text, page) =
     match page with
     | Submenu _ | Nav_header | Divider | External ->
         {
           menu_source = OpamFilename.to_string source_filename;
           menu_link = lnk;
+          menu_link_text = lnk_text;
           menu_item = page;
           menu_srcurl = None;
         }
@@ -207,34 +196,31 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         in
         {
           menu_source = OpamFilename.to_string source_filename;
-          menu_link = { lnk with href = subdir ^ "/" ^ lnk.href };
+          menu_link = subdir ^ "/" ^ lnk;
+          menu_link_text = lnk_text;
           menu_item = Internal (level, Template.serialize html_page);
           menu_srcurl = srcurl;
         }
   in
 
   let menu = List.map aux_page menu_pages in
-  if List.exists (fun (src, _, _, _) ->
+  if List.exists (fun (src, _, _, _, _) ->
       OpamFilename.(Base.to_string (basename (chop_extension src)))
       = "index")
       menu_pages
     then menu
     else
       let doc_menu = documentation_menu (OpamFilename.of_string "index") in
-      let html_index =
-        <:html<
-          <div class="row"><div class="span4 offset4">
-            $doc_menu$
-          </div></div>
-        >>
-      in
+      let html_index = Html.div ~cls:"row"
+                         (Html.div ~cls:"span4 offset4" doc_menu) in
       let srcurl = match srcurl with
         | None -> None
         | Some src -> Some (src ^"/"^ "index.menu")
       in
       {
         menu_source = "index.html";
-        menu_link = { text = "Documentation index"; href = subdir ^ "/" };
+        menu_link = subdir ^ "/";
+        menu_link_text = "Documentation index";
         menu_item = No_menu (List.length (OpamMisc.split subdir '/'),
                              Template.serialize html_index);
         menu_srcurl = srcurl;
@@ -289,8 +275,8 @@ let to_menu ~content_dir =
   menu_12 @
   [{
     menu_source = "1.1";
-    menu_link = { text = "Archives (OPAM 1.1)";
-                  href = "/doc/1.1/" };
+    menu_link = "/doc/1.1/";
+    menu_link_text = "Archives (OPAM 1.1)";
     menu_item = External;
     menu_srcurl =
       match srcurl_11 with
@@ -299,8 +285,8 @@ let to_menu ~content_dir =
   };
   {
     menu_source = "2.0";
-    menu_link = { text = "Development version (OPAM 2.0)";
-                  href = "/doc/2.0/" };
+    menu_link = "/doc/2.0/";
+    menu_link_text = "Development version (OPAM 2.0)";
     menu_item = External;
     menu_srcurl =
       match srcurl_20 with
