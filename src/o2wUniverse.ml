@@ -16,15 +16,15 @@
 
 open OpamTypes
 open OpamfUniverse
-open Cow.Html
+open Cow
 open O2wTypes
 
 let to_page ~statistics universe pkg pkg_info acc =
   try
     let page = {
       page_source   = pkg_info.OpamfUniverse.name;
-      page_link     = { Cow.Html.text=pkg_info.title;
-                        href=Uri.to_string pkg_info.OpamfUniverse.href };
+      page_link     = Uri.to_string pkg_info.OpamfUniverse.href;
+      page_link_text = pkg_info.OpamfUniverse.title;
       page_depth    = 3;
       page_contents = Template.serialize
         (O2wPackage.to_html ~statistics ~prefix:"../../" universe pkg_info);
@@ -46,7 +46,8 @@ let to_pages ~statistics ~prefix universe =
     let href = Filename.(concat prefix (concat name "")) in
     let page = {
       page_source   = name;
-      page_link     = { Cow.Html.text=name; href; };
+      page_link     = href;
+      page_link_text = name;
       page_depth    = 2;
       page_contents = Template.serialize
         (O2wPackage.to_html ~statistics ~prefix:"../" universe info);
@@ -65,11 +66,9 @@ let sortby_links ~links ~default ~active =
       else Uri.of_string ("index-"^(String.lowercase title)^".html")
     in
     let ahref =
-      <:html< <a href=$uri: href$>sort by $str: title$</a> >>
+      Html.a ~href (Html.string "sort by " @ Html.string title)
     in
-    if title = active
-    then <:html< <li class="active">$ahref$</li> >>
-    else <:html< <li>$ahref$</li> >>
+    Html.li ahref ?cls:(if title = active then Some "active" else None)
   in
   List.map mk_item links
 
@@ -93,9 +92,8 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
   in
   let repos_html =
     let repos = OpamRepository.sort universe.repos in
-    List.map (fun r ->
-      <:html< <tr><td>$str:OpamRepository.to_string r$</td></tr> >>
-    ) repos
+    Html.Create.table repos
+      ~row:(fun r -> [Html.string (OpamRepository.to_string r)])
   in
   let packages_html =
     List.fold_left (fun acc pkg ->
@@ -122,29 +120,24 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
           let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published) in
           let name = OpamPackage.Name.to_string pkg_name in
           let pkg_href = Uri.(resolve "http" (of_string "../packages/") (of_string name)) in
-          <:html<
-            <tr>
-              <td title=$str:pkg_tooltip$>
-               <a href=$uri:pkg_href$>
-                 $str: pkg_info.name$
-               </a>
-              </td>
-              <td>$str: pkg_info.version$</td>
-              <td>$str: pkg_info.synopsis$</td>
-            </tr>
-          >> :: acc)
+          Html.tag "tr"
+            (Html.tag "td" ~attrs:["title", pkg_tooltip]
+               (Html.a ~href:pkg_href (Html.string pkg_info.name))
+             @ Html.tag "td" (Html.string pkg_info.version)
+             @ Html.tag "td" (Html.string pkg_info.synopsis))
+          :: acc)
       []
       (List.rev sorted_packages)
   in
   let template = Template.({ path="universe.xhtml"; fields=[
-    "nav",   (default <:html< >>, Optional);
+    "nav",   (default Html.empty, Optional);
     "repos", (mandatory (),       Optional);
     "pkgs",  (mandatory (),       Required);
   ]}) in
   Template.(generate content_dir template [
-    "nav",   serialize <:html< $list: sortby_links_html$ >>;
-    "repos", serialize <:html< <tbody> $list: repos_html$ </tbody> >>;
-    "pkgs",  serialize <:html< <tbody> $list: packages_html$ </tbody> >>;
+    "nav",   serialize (List.concat sortby_links_html);
+    "repos", serialize repos_html;
+    "pkgs",  serialize(Html.tag "tbody" (List.concat packages_html));
   ])
 
 (** Generate a universe from a list of repositories *)

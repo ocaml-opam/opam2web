@@ -10,8 +10,8 @@ WWWDIR ?= www
 BUILD=_build
 
 OCAMLBUILD=ocamlbuild -classic-display
-PACKAGES=-pkgs re,re.str,omd,cow,cow.syntax,opam-lib.client,opamfu.cli,cmdliner
-SYNTAX=-tags "syntax(camlp4o)"
+PACKAGES=-pkgs str,omd,cow,opam-lib.client,opamfu.cli,cmdliner
+SYNTAX=
 FLAGS=-use-ocamlfind -cflags "-bin-annot" -no-links -tags "debug"
 INCLUDES=-I apalog
 TARGET=opam2web
