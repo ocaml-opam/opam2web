@@ -205,8 +205,11 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
 
   let menu = List.map aux_page menu_pages in
   if List.exists (fun (src, _, _, _, _) ->
-      OpamFilename.(Base.to_string (basename (chop_extension src)))
-      = "index")
+      try
+        OpamFilename.(Base.to_string (basename
+           (chop_extension src)))
+        = "index"
+      with Invalid_argument _ -> false)
       menu_pages
     then menu
     else
