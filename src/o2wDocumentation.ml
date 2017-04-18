@@ -149,7 +149,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
                  @ Html.div ~cls:"bs-docs-toc" html_toc))
            @ Html.div ~cls:"span9"
                (header
-                @ Html.string (Omd.to_html md_content)))
+                @ Cow.Html.of_string (Omd.to_html md_content)))
     | _ -> Html.empty
   in
 
