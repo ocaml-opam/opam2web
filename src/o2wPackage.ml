@@ -118,7 +118,7 @@ let to_html ~statistics ~prefix universe pkg_info =
     | Some timestamp ->
       Some ("Published", Html.string (O2wMisc.string_of_timestamp timestamp))
   in
-  let html_conj = Html.string "&amp;" in
+  let html_conj = Html.string "&" in
   let html_disj = Html.string "|" in
   let vset_of_name name =
     try
