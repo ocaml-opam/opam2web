@@ -135,7 +135,7 @@ let to_html ~statistics ~prefix universe pkg_info =
   let html_of_vc attrs name vset ((relop,v) as vc) =
     let vstr = OpamPackage.Version.to_string v in
     let rhtml = Html.string (OpamFormula.string_of_relop relop)
-                @ Html.string "&nbsp;" in
+                @ Html.of_string "&nbsp;" in
     match OpamfuFormula.extremum_of_version_constraint vset vc with
     | Some v ->
        Html.tag "td" ~attrs
