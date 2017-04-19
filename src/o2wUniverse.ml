@@ -23,7 +23,7 @@ let to_page ~statistics universe pkg pkg_info acc =
   try
     let page = {
       page_source   = pkg_info.OpamfUniverse.name;
-      page_link     = Uri.to_string pkg_info.OpamfUniverse.href;
+      page_link     = pkg_info.OpamfUniverse.href;
       page_link_text = pkg_info.OpamfUniverse.title;
       page_depth    = 3;
       page_contents = Template.serialize
@@ -43,7 +43,7 @@ let to_pages ~statistics ~prefix universe =
     let pkg  = OpamPackage.create name max_v in
     let info = OpamPackage.Map.find pkg universe.pkgs_infos in
     let name = OpamPackage.Name.to_string name in
-    let href = Filename.(concat prefix (concat name "")) in
+    let href = Uri.make ~path:Filename.(concat prefix (concat name "")) () in
     let page = {
       page_source   = name;
       page_link     = href;

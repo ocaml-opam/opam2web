@@ -23,12 +23,14 @@ let string_of_time () =
   sprintf "%d/%d/%d" t.Unix.tm_mday (t.Unix.tm_mon + 1)
     (t.Unix.tm_year + 1900)
 
-let prepend_root (depth: int) (src: string): string =
+let prepend_root (depth: int) (src: Uri.t): Uri.t =
   let rec aux acc = function
     | 0 -> acc
     | n -> aux ("../" ^ acc) (n-1)
   in
-  if src <> "" && src.[0] = '/' then src else aux src depth
+  let path = Uri.path src in
+  if path <> "" && path.[0] = '/' then src
+  else Uri.with_path src (aux path depth)
 
 let create ~title ~header ~body ~footer ~depth =
   let title = Html.string title in
@@ -38,7 +40,7 @@ let create ~title ~header ~body ~footer ~depth =
       "ext/js/search.js";
     ] in
   let prepend_root = prepend_root depth in
-  let href_css = Uri.of_string(prepend_root "ext/css/opam2web.css") in
+  let href_css = prepend_root (Uri.make ~path:"ext/css/opam2web.css" ()) in
   let head_html =
     Html.link ~href:href_css ~attrs:["type", "text/css";
                                      "rel", "stylesheet"]
@@ -60,10 +62,12 @@ let create ~title ~header ~body ~footer ~depth =
           var s = document.getElementsByTagName('script')[0]; \
           s.parentNode.insertBefore(ga, s);
           })();")
-    @ List.flatten (List.rev_map (fun f ->
-                        Html.script ~src:(prepend_root f)
-                          Html.empty)
-                      js_files)
+    @ List.flatten
+      (List.rev_map (fun f ->
+           Html.script
+             ~src:(Uri.to_string (prepend_root (Uri.make ~path:f ())))
+             Html.empty)
+          js_files)
   in
   let js_html = List.rev js_html in [
       "title", Template.serialize title;
@@ -76,7 +80,8 @@ let create ~title ~header ~body ~footer ~depth =
 
 let make_nav (active, depth) pages =
   let category_of_href href =
-    try Some (String.sub href 0 (String.index href '/'))
+    let path = Uri.path href in
+    try Some (String.sub path 0 (String.index path '/'))
     with Not_found -> None in
   let active_category = category_of_href active in
   let rec make_item ?(subnav=false) m =
@@ -98,10 +103,10 @@ let make_nav (active, depth) pages =
     match m.menu_item with
     | External   ->
        Html.li ~cls:class_attr
-         (Html.a ~href:(Uri.of_string m.menu_link)
+         (Html.a ~href:m.menu_link
             (Html.string m.menu_link_text))
     | Internal _ ->
-      let lnk = Uri.of_string(prepend_root depth m.menu_link) in
+      let lnk = prepend_root depth m.menu_link in
       Html.li ~cls:class_attr
         (Html.a ~href:lnk (Html.string m.menu_link_text))
     | No_menu _ -> Html.empty
@@ -125,7 +130,7 @@ let make_nav (active, depth) pages =
     (Html.ul ~add_li:false ~cls:"nav" (List.map make_item pages))
 
 let make_footer srcurl depth =
-  let icon file = Uri.of_string(prepend_root depth ("ext/img/" ^ file)) in
+  let icon file = prepend_root depth (Uri.make ~path:("ext/img/" ^ file) ()) in
   let srcurl = match srcurl with
     | None -> Html.empty
     | Some u ->
@@ -162,11 +167,11 @@ let rec extract_links ~content_dir ~out_dir page =
     try Filename.chop_extension page.page_source
     with Invalid_argument _ -> page.page_source in
   let srcdir = Filename.dirname page.page_source in
-  let dstdir = Filename.concat out_dir page.page_link in
+  let dstdir = Filename.concat out_dir (Uri.path page.page_link) in
   let dstdir =
     if Sys.is_directory dstdir then dstdir else Filename.dirname dstdir
   in
-  let file = page.page_link in
+  let file = Uri.to_string page.page_link in
 
   let rec get_links acc = function
     | [] -> acc
@@ -194,7 +199,8 @@ let rec extract_links ~content_dir ~out_dir page =
         in
         if addr = "" then
           if id = "" || find_id id page.page_contents then ()
-          else OpamConsole.error "In %s: Broken self-reference to %s" file link
+          else
+            OpamConsole.error "In %s: Broken self-reference to %s" file link
         else
           let target =
             if Filename.is_relative addr then dstdir / addr
@@ -209,7 +215,8 @@ let rec extract_links ~content_dir ~out_dir page =
               | some -> some in
             match src with
             | Some src ->
-               OpamConsole.msg "%s: Add resource %s to %s\n" file src target;
+               OpamConsole.msg "%s: Add resource %s to %s\n" file
+                 src target;
                OpamSystem.copy src target;
             | None ->
                OpamConsole.error "In %s: Reference to resource %s not found"
@@ -247,13 +254,13 @@ let generate ~content_dir ~out_dir menu pages =
   in
   let empty_uri = Uri.of_string "" in
   let aux page =
-    printf "\r[%-5d/%d] %s %40s%!" !c n page.page_link "";
+    printf "\r[%-5d/%d] %s %40s%!" !c n (Uri.to_string page.page_link) "";
     incr c;
     let header = make_nav (page.page_link, page.page_depth) menu in
     let footer = make_footer (page.page_srcurl) page.page_depth in
     let uri_dir = Uri.(
       resolve "http"
-        (of_string out_dir) (with_path empty_uri page.page_link)
+        (of_string out_dir) (with_path empty_uri (Uri.path page.page_link))
     ) in
     let dir = Uri.to_string uri_dir in
     let suffix =

@@ -362,7 +362,7 @@ let to_html ~statistics ~prefix universe pkg_info =
     h2 (string pkg_info.name)
     @ div ~cls:"row"
         (div ~cls:"span9"
-           (div (ul ~cls:"nav nav-pills" version_links)
+           (div (ul ~add_li:false ~cls:"nav nav-pills" version_links)
             @ tag "table" ~cls:"table"
                 (tag "tbody" (mk_tr pkg_author
                               @ mk_tr pkg_license

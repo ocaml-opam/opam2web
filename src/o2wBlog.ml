@@ -193,7 +193,8 @@ let make_pages entries =
 
 let make_menu ?srcurl entries =
   let pages = make_pages entries in
-  let blog_link entry = "blog/" ^ entry.blog_name ^ "/" in
+  let blog_link entry =
+    Uri.make ~path:("blog/" ^ entry.blog_name ^ "/") () in
   let srcurl entry = match srcurl with
     | None -> None
     | Some u -> Some (u ^"/"^ Filename.basename entry.blog_source)
