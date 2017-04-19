@@ -241,8 +241,12 @@ let default_cmd =
           $ blog_source_uri),
   Term.info "opam2web" ~version ~doc ~man
 
-;;
-
-match Term.eval default_cmd with
-| `Error _ -> exit 1
-| _ -> exit 0
+let () =
+  OpamFormatConfig.init ();
+  OpamStd.Config.init ();
+  OpamRepositoryConfig.init ();
+  OpamSolverConfig.init ();
+  OpamStateConfig.init ();
+  match Term.eval default_cmd with
+  | `Error _ -> exit 1
+  | _ -> exit 0
