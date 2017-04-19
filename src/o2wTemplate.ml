@@ -119,8 +119,10 @@ let make_nav (active, depth) pages =
         | "" -> "dropdown"
         | _  -> sprintf "dropdown active" in
       Html.li ~cls:class_attr
-        (Html.a ~href:(Uri.of_string "#") ~cls:"dropdown-toggle"
-           (* ~attrs:["data-toggle", "dropdown"] FIXME *)
+        (Html.tag "a"
+           ~cls:"dropdown-toggle"
+           ~attrs:["href", "#";
+                   "data-toggle", "dropdown"]
            (Html.string m.menu_link_text
             @ Html.b ~cls:"caret" Html.empty)
          @ Html.ul ~add_li:false ~cls:"dropdown-menu"
@@ -134,8 +136,9 @@ let make_footer srcurl depth =
   let srcurl = match srcurl with
     | None -> Html.empty
     | Some u ->
-       Html.tag "from" (Html.a ~href:(Uri.of_string u) (* FIXME: u: uri? *)
-                          (Html.string (Filename.basename u)))
+       Html.string "from " @
+       (Html.a ~href:(Uri.of_string u) (* FIXME: u: uri? *)
+          (Html.string (Filename.basename u)))
   in
   Template.serialize
     (Html.div ~cls:"icons"
