@@ -147,7 +147,7 @@ let make_pages entries =
                (Html.string entry.blog_title)))
         entries
     in
-    Html.ul items ~cls:"nav nav-pills nav-stacked"
+    Html.ul ~add_li:false items ~cls:"nav nav-pills nav-stacked"
   in
   (* Pages creation *)
   let aux_page entry =

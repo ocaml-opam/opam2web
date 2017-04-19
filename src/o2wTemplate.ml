@@ -118,10 +118,11 @@ let make_nav (active, depth) pages =
            (* ~attrs:["data-toggle", "dropdown"] FIXME *)
            (Html.string m.menu_link_text
             @ Html.b ~cls:"caret" Html.empty)
-         @ Html.ul ~cls:"dropdown-menu"
+         @ Html.ul ~add_li:false ~cls:"dropdown-menu"
              (List.map (make_item ~subnav:true) sub_items)
         ) in
-  Template.serialize (Html.ul ~cls:"nav" (List.map make_item pages))
+  Template.serialize
+    (Html.ul ~add_li:false ~cls:"nav" (List.map make_item pages))
 
 let make_footer srcurl depth =
   let icon file = Uri.of_string(prepend_root depth ("ext/img/" ^ file)) in

@@ -171,7 +171,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
                 (Html.string (" " ^ lnk_text)))
       ) menu_pages
     in
-    Html.ul ~cls:"nav nav-pills nav-stacked" menu_items
+    Html.ul ~add_li:false ~cls:"nav nav-pills nav-stacked" menu_items in
   in
 
   (* Pages creation *)
