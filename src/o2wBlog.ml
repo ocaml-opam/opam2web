@@ -227,6 +227,7 @@ let make_news entries =
     Html.p
       (Html.i ~cls:"icon-ok" (Html.string " ")
        @ Html.strong (html_date entry.blog_date)
+       @ Html.string " "
        @ Html.a ~href:link (Html.string entry.blog_title)
        @ Html.br Html.empty)
   in
