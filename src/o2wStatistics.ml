@@ -316,6 +316,9 @@ let partial_digest ic len =
 let statistics_set files =
   let cache = read_cache () in
   let skip_before = two_months_ago in
+  let cache =
+    OpamFilename.Map.filter (fun f _ -> List.mem f files) cache
+  in
   match files with
   | [] -> None
   | files ->
