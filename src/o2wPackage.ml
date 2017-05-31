@@ -327,11 +327,11 @@ let to_html ~statistics ~prefix universe pkg_info =
         | c when c = Int64.one ->
            Html.string "Installed "
            @ Html.strong (Html.string "once")
-           @ Html.string "in last month."
+           @ Html.string " in last month."
         | c ->
            Html.string "Installed "
            @ Html.strong (Html.string (Int64.to_string c))
-           @ Html.string "times in last month."
+           @ Html.string " times in last month."
       in
       Html.tag "tr"
         (Html.tag "th" (Html.string "Statistics")
