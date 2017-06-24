@@ -48,7 +48,7 @@ let html_descr (short,long) =
   let to_html md =
     try Cow.Markdown.of_string md
     with Invalid_argument _ ->
-      OpamGlobals.error "BAD MARKDOWN in %s" short;
+      OpamConsole.error "BAD MARKDOWN in %s" short;
       Html.string md in
   Html.h4 (Html.string short)
   @ to_html long
@@ -98,7 +98,7 @@ let to_html ~statistics ~prefix universe pkg_info =
   let list name l : (string * Cow.Xml.t) option = match l with
     | []  -> None
     | [e] -> Some (name      , Html.string e)
-    | l   -> Some (name ^ "s", Html.string (OpamMisc.pretty_list l)) in
+    | l   -> Some (name ^ "s", Html.string (OpamStd.Format.pretty_list l)) in
   let links name = function
     | [] -> None
     | (_::t) as l ->
@@ -118,7 +118,7 @@ let to_html ~statistics ~prefix universe pkg_info =
     | Some timestamp ->
       Some ("Published", Html.string (O2wMisc.string_of_timestamp timestamp))
   in
-  let html_conj = Html.string "&amp;" in
+  let html_conj = Html.string "&" in
   let html_disj = Html.string "|" in
   let vset_of_name name =
     try
@@ -221,9 +221,9 @@ let to_html ~statistics ~prefix universe pkg_info =
                     (Html.tag "tr" (html_of_formula html_of_namevf f)))
   in
   let pkg_depends = mk_formula "Dependencies"
-      (fun opam -> filter_deps (OpamFile.OPAM.depends opam)) in
+      (fun opam -> filter_deps ~build:true ~test:true ~doc:true ~dev:false (OpamFile.OPAM.depends opam)) in
   let pkg_depopts = mk_formula "Optional dependencies"
-      (fun opam -> filter_deps (OpamFile.OPAM.depopts opam)) in
+      (fun opam -> filter_deps ~build:true ~test:true ~doc:true ~dev:false (OpamFile.OPAM.depopts opam)) in
   let html_of_revdeps title revdeps =
     let deps = List.map (fun (dep_name, vdnf) ->
       let vf = OpamfuFormula.(simplify_expr (expr_of_version_dnf vdnf)) in
@@ -351,7 +351,7 @@ let to_html ~statistics ~prefix universe pkg_info =
       let base = Uri.of_string url_base in
       let opam_loc = OpamFilename.remove_prefix
         repo.OpamTypes.repo_root
-        (OpamPath.Repository.opam repo prefix pkg) in
+        (OpamRepositoryPath.opam repo prefix pkg) in
       let url = Uri.(resolve "" base (of_string opam_loc)) in
       let loc = Uri.to_string url in
       mk_tr (Some ("Edit", Html.a ~title:"Edit this package description"

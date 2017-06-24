@@ -72,7 +72,7 @@ let request_of_entry e =
   let open Logentry in
   let package_of_string str =
     try OpamPackage.of_string (Filename.basename str)
-    with OpamGlobals.Exit e ->
+    with OpamStd.Sys.Exit e ->
       failwith ("opam exit with code " ^ string_of_int e)
   in
   try

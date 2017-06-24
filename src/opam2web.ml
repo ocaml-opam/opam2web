@@ -48,7 +48,7 @@ let include_files (path: string) files_path : unit =
 (* Generate a whole static website using the given repository stack *)
 let make_website user_options universe =
   Printf.printf "++ Building the new stats from %s.\n%!"
-    (OpamMisc.string_of_list OpamFilename.prettify user_options.logfiles);
+    (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
@@ -60,7 +60,7 @@ let make_website user_options universe =
   Printf.printf "++ Building the blog.\n%!";
   let blog_pages =
     let files =
-      OpamFilename.files OpamFilename.OP.(
+      OpamFilename.files OpamFilename.Op.(
           OpamFilename.Dir.of_string content_dir / "blog"
         ) in
     List.map (fun f -> OpamFilename.Base.to_string (OpamFilename.basename f))
@@ -119,7 +119,7 @@ let make_website user_options universe =
       let contents = Cow.Markdown.of_string contents in
       Html.div ~cls:"container" contents
     with _ ->
-      OpamGlobals.warning "%s is not available." filename;
+      OpamConsole.warning "%s is not available." filename;
       Html.empty in
   let doc_menu = menu_of_doc () in
   let home_index = O2wHome.to_html
@@ -159,10 +159,10 @@ let make_website user_options universe =
      @ blog_links)
     pages;
   OpamFilename.write
-    (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "feed.xml"))
+    (OpamFilename.Op.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "feed.xml"))
     (Cow.Xml.to_string blog_feed);
   OpamFilename.write
-    (OpamFilename.OP.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "index.html"))
+    (OpamFilename.Op.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "index.html"))
     (Cow.Xml.to_string (O2wBlog.make_redirect ~root:user_options.root_uri blog_entries));
   match statistics with
   | None   -> ()

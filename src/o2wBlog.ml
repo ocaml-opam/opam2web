@@ -37,7 +37,7 @@ let parse_date filename d =
        \\(\\([-+][0-9][0-9]\\):\\([0-9][0-9]\\)\\)?"
   in
   if not (Re_str.string_match re d 0) then
-    OpamGlobals.error_and_exit "Invalid date %S in %s"
+    OpamConsole.error_and_exit "Invalid date %S in %s"
       d
       (OpamFilename.to_string filename);
   let t =
@@ -76,13 +76,13 @@ let html_date timestamp =
 
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
-  let extension = OpamMisc.remove_prefix ~prefix:name filename in
+  let extension = OpamStd.String.remove_prefix ~prefix:name filename in
   if extension <> ".md" && extension <> ".html" then None else
-  let filename = OpamFilename.OP.(content_dir//filename) in
+  let filename = OpamFilename.Op.(content_dir//filename) in
   let content = OpamFilename.read filename in
   match Re_str.bounded_split (Re_str.regexp header_separator) content 2 with
   | [] | [_] | _::_::_::_ ->
-      OpamGlobals.note "Skipping %s: no header found"
+      OpamConsole.note "Skipping %s: no header found"
         (OpamFilename.to_string filename);
       None
   | [header; body] ->
@@ -94,7 +94,7 @@ let to_entry ~content_dir filename =
         let {OpamTypes.file_contents=s} = OpamParser.main OpamLexer.token lexbuf s_filename in
         let invalid = OpamFormat.invalid_fields s ["title";"authors";"date"] in
         if invalid <> [] then
-          OpamGlobals.error_and_exit "Invalid fields %s in %s"
+          OpamConsole.error_and_exit "Invalid fields %s in %s"
             (String.concat "," invalid) s_filename;
         let title = OpamFormat.assoc s "title" OpamFormat.parse_string in
         let authors =
@@ -126,12 +126,12 @@ let to_entry ~content_dir filename =
    directory *)
 let get_entries ~content_dir ~pages =
 
-  let entries = List.map (to_entry ~content_dir:OpamFilename.OP.(OpamFilename.Dir.of_string content_dir / "blog")) pages in
-  let entries = OpamMisc.filter_map (fun x -> x) entries in
+  let entries = List.map (to_entry ~content_dir:OpamFilename.Op.(OpamFilename.Dir.of_string content_dir / "blog")) pages in
+  let entries = OpamStd.List.filter_map (fun x -> x) entries in
   let entries =
     List.sort (fun {blog_date=a} {blog_date=b} -> compare b a) entries in
 
-  OpamGlobals.msg "Correctly parsed %d blog entries:\n  - %s\n"
+  OpamConsole.msg "Correctly parsed %d blog entries:\n  - %s\n"
     (List.length entries)
     (String.concat "\n  - " (List.map (fun e -> e.blog_name) entries));
   entries
@@ -287,7 +287,7 @@ let make_feed ~root entries =
         title = entry.blog_title;
         subtitle = None;
         author = Some {
-          name = OpamMisc.pretty_list (List.map fst entry.blog_authors);
+          name = OpamStd.List.to_string fst entry.blog_authors;
           uri = snd (List.hd entry.blog_authors);
           email = None;
         };
