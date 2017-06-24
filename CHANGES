@@ -1,3 +1,7 @@
+1.5.0 (2017-06-24):
+* Use opam-lib ≥ 1.3.0.
+* Many layout and package index fixes.
+
 1.4.0 (2015-01-22):
 * Update for opam 1.2.0
 * Update for opamfu 0.1.2
