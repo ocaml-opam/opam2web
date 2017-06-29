@@ -24,9 +24,23 @@ type t = {
 type entry_type_t = Host | Lname | User | Date | Cmd | Retcode | Size | Referrer | Client | All
 
 
+let make_hashconsed () =
+  let t = Hashtbl.create 437 in
+  fun s ->
+    try Hashtbl.find t s with Not_found -> Hashtbl.add t s s; s
+
 (** This function creates a record from all entrities. *)
-let create ~host:h ~lname:l ~user:u ~date:d ~request:request ~status:rc ~size:s ~referrer:rf ~client:cl =
-  { host = h; lname = l; user = u; date = d; request = request; status = rc; size = s; referrer = rf; client = cl; }
+let create =
+  let fh = make_hashconsed () in
+  let fl = make_hashconsed () in
+  let fu = make_hashconsed () in
+  let frequest = make_hashconsed () in
+  let frc = make_hashconsed () in
+  let frf = make_hashconsed () in
+  let fcl = make_hashconsed () in
+  fun ~host:h ~lname:l ~user:u ~date:d ~request:request ~status:rc ~size:s ~referrer:rf ~client:cl ->
+  { host = fh h; lname = fl l; user = fu u; date = d; request = frequest request;
+    status = frc rc; size = s; referrer = frf rf; client = fcl cl; }
 
 
 (* functions to get the contents of the record by the name of it's elements *)

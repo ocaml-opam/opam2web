@@ -68,9 +68,9 @@ let read_menu ~dir f =
     if String.length extension = 0 then
       let empty_filename = OpamFilename.of_string "" in
       if  String.length title > 0 then
-        (empty_filename, "", (* href *) "", (* text *) human_title, Nav_header)
+        (empty_filename, "", Uri.empty, human_title, Nav_header)
       else
-        (empty_filename, "", (* href *) "", (* text *) "", Divider)
+        (empty_filename, "", Uri.empty, "", Divider)
     else
       let source_file =
         Printf.sprintf "%s/%s.%s" dir title extension
@@ -78,7 +78,7 @@ let read_menu ~dir f =
       let source_filename = OpamFilename.of_string source_file in
       let dest_file = Printf.sprintf "%s.html" title in
       (source_filename, extension,
-       (* href *) dest_file, (* text *) human_title,
+       Uri.make ~path:dest_file (), human_title,
        Internal (1, Template.serialize Cow.Html.nil)
       )
   in
@@ -159,19 +159,19 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         | Submenu _ | No_menu _ -> Cow.Html.nil
         | Nav_header ->
            Html.li ~cls:"disabled"
-             (Html.a ~href:(Uri.of_string "#")
+             (Html.a ~href:(Uri.make ~fragment:"" ())
                 (Html.strong (Html.string lnk_text)))
         | Divider ->
            Html.li ~cls:"disabled divider"
              (Html.a ~href:(Uri.of_string "#") (Html.string " "))
         | External | Internal _ ->
-           let classes = if active_src = src then "active" else "" in
-           Html.li ~cls:classes
-             (Html.a ~href:(Uri.of_string lnk)
+           let classes = if active_src = src then Some "active" else None in
+           Html.li ?cls:classes
+             (Html.a ~href:lnk
                 (Html.string (" " ^ lnk_text)))
       ) menu_pages
     in
-    Html.ul ~cls:"nav nav-pills nav-stacked" menu_items
+    Html.ul ~add_li:false ~cls:"nav nav-pills nav-stacked" menu_items
   in
 
   (* Pages creation *)
@@ -196,7 +196,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         in
         {
           menu_source = OpamFilename.to_string source_filename;
-          menu_link = subdir ^ "/" ^ lnk;
+          menu_link = Uri.with_path lnk (subdir ^ "/" ^ Uri.path lnk);
           menu_link_text = lnk_text;
           menu_item = Internal (level, Template.serialize html_page);
           menu_srcurl = srcurl;
@@ -222,7 +222,7 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
       in
       {
         menu_source = "index.html";
-        menu_link = subdir ^ "/";
+        menu_link = Uri.make ~path:(subdir ^ "/") ();
         menu_link_text = "Documentation index";
         menu_item = No_menu (List.length (OpamStd.String.split subdir '/'),
                              Template.serialize html_index);
@@ -278,7 +278,7 @@ let to_menu ~content_dir =
   menu_12 @
   [{
     menu_source = "1.1";
-    menu_link = "/doc/1.1/";
+    menu_link = Uri.make ~path:"/doc/1.1/" ();
     menu_link_text = "Archives (OPAM 1.1)";
     menu_item = External;
     menu_srcurl =
@@ -288,7 +288,7 @@ let to_menu ~content_dir =
   };
   {
     menu_source = "2.0";
-    menu_link = "/doc/2.0/";
+    menu_link = Uri.make ~path:"/doc/2.0/" ();
     menu_link_text = "Development version (OPAM 2.0)";
     menu_item = External;
     menu_srcurl =

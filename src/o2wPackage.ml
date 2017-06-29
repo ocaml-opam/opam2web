@@ -135,7 +135,7 @@ let to_html ~statistics ~prefix universe pkg_info =
   let html_of_vc attrs name vset ((relop,v) as vc) =
     let vstr = OpamPackage.Version.to_string v in
     let rhtml = Html.string (OpamFormula.string_of_relop relop)
-                @ Html.string "&nbsp;" in
+                @ Html.of_string "&nbsp;" in
     match OpamfuFormula.extremum_of_version_constraint vset vc with
     | Some v ->
        Html.tag "td" ~attrs
@@ -327,11 +327,11 @@ let to_html ~statistics ~prefix universe pkg_info =
         | c when c = Int64.one ->
            Html.string "Installed "
            @ Html.strong (Html.string "once")
-           @ Html.string " in last month."
+           @ Html.string " last month."
         | c ->
            Html.string "Installed "
            @ Html.strong (Html.string (Int64.to_string c))
-           @ Html.string " times in last month."
+           @ Html.string " times last month."
       in
       Html.tag "tr"
         (Html.tag "th" (Html.string "Statistics")
@@ -362,7 +362,7 @@ let to_html ~statistics ~prefix universe pkg_info =
     h2 (string pkg_info.name)
     @ div ~cls:"row"
         (div ~cls:"span9"
-           (div (ul ~cls:"nav nav-pills" version_links)
+           (div (ul ~add_li:false ~cls:"nav nav-pills" version_links)
             @ tag "table" ~cls:"table"
                 (tag "tbody" (mk_tr pkg_author
                               @ mk_tr pkg_license

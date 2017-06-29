@@ -137,7 +137,7 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
 
   let number_of_packages nb packages =
     Html.div ~cls:"page-header text-center"
-      (Html.h2 ~cls:"text-error" (Html.int nb @ Html.string " "
+      (Html.h1 ~cls:"text-error" (Html.int nb @ Html.string " "
                                   @ Html.small (Html.string packages))) in
   let number_of_packages =
     let packages = match nb_packages with
