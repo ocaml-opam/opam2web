@@ -92,7 +92,7 @@ let make_website user_options universe =
     in
     let date = {
       menu_source = content_dir;
-      menu_link = packages_prefix^"/index-date.html";
+      menu_link = Uri.make ~path:(packages_prefix^"/index-date.html") ();
       menu_link_text = "Packages";
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
       menu_srcurl = None;
@@ -103,7 +103,7 @@ let make_website user_options universe =
       let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
       let popularity = {
         menu_source = content_dir;
-        menu_link = packages_prefix ^ "/index-popularity.html";
+        menu_link = Uri.make ~path:(packages_prefix ^ "/index-popularity.html") ();
         menu_link_text = "Packages";
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg universe);
         menu_srcurl = None;
@@ -130,25 +130,25 @@ let make_website user_options universe =
     ~content_dir ~out_dir:user_options.out_dir
     ([
       { menu_source = content_dir;
-        menu_link = ".";
+        menu_link = Uri.make ~path:"." ();
         menu_link_text = "OPAM";
         menu_item = Internal (0, home_index);
         menu_srcurl = None; };
 
       { menu_source = content_dir;
-        menu_link = packages_prefix^"/";
+        menu_link = Uri.make ~path:(packages_prefix^"/") ();
         menu_link_text = "Repository";
         menu_item = Internal (1, package_index);
         menu_srcurl = None; };
 
       { menu_source = content_dir^"/doc";
-        menu_link = "doc/";
+        menu_link = Uri.make ~path:"doc/" ();
         menu_link_text = "Documentation";
         menu_item = Submenu doc_menu;
         menu_srcurl = None; };
 
       { menu_source = content_dir;
-        menu_link = "about.html";
+        menu_link = Uri.make ~path:"about.html" ();
         menu_link_text = "About OPAM";
         menu_item = Internal (0, Template.serialize about_page);
         menu_srcurl = None; };
@@ -241,8 +241,12 @@ let default_cmd =
           $ blog_source_uri),
   Term.info "opam2web" ~version ~doc ~man
 
-;;
-
-match Term.eval default_cmd with
-| `Error _ -> exit 1
-| _ -> exit 0
+let () =
+  OpamFormatConfig.init ();
+  OpamStd.Config.init ();
+  OpamRepositoryConfig.init ();
+  OpamSolverConfig.init ();
+  OpamStateConfig.init ();
+  match Term.eval default_cmd with
+  | `Error _ -> exit 1
+  | _ -> exit 0

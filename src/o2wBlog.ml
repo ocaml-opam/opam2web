@@ -147,7 +147,7 @@ let make_pages entries =
                (Html.string entry.blog_title)))
         entries
     in
-    Html.ul items ~cls:"nav nav-pills nav-stacked"
+    Html.ul ~add_li:false items ~cls:"nav nav-pills nav-stacked"
   in
   (* Pages creation *)
   let aux_page entry =
@@ -193,7 +193,8 @@ let make_pages entries =
 
 let make_menu ?srcurl entries =
   let pages = make_pages entries in
-  let blog_link entry = "blog/" ^ entry.blog_name ^ "/" in
+  let blog_link entry =
+    Uri.make ~path:("blog/" ^ entry.blog_name ^ "/") () in
   let srcurl entry = match srcurl with
     | None -> None
     | Some u -> Some (u ^"/"^ Filename.basename entry.blog_source)
@@ -226,6 +227,7 @@ let make_news entries =
     Html.p
       (Html.i ~cls:"icon-ok" (Html.string " ")
        @ Html.strong (html_date entry.blog_date)
+       @ Html.string " "
        @ Html.a ~href:link (Html.string entry.blog_title)
        @ Html.br Html.empty)
   in

@@ -19,7 +19,7 @@ open OpamTypes
 
 type page = {
   page_source  : string;
-  page_link    : string; (* the path of the link *)
+  page_link    : Uri.t;
   page_link_text: string;
   page_depth   : int;
   page_contents: Cow.Xml.signal list;
@@ -27,7 +27,7 @@ type page = {
 }
 
 type menu = {
-  menu_link: string;
+  menu_link: Uri.t;
   menu_link_text: string;
   menu_item: menu_item;
   menu_source: string;

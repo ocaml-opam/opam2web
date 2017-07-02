@@ -287,7 +287,7 @@ let write_cache (cache: cache) =
   OpamFilename.mkdir (OpamFilename.dirname cache_file);
   let oc = open_out_bin (OpamFilename.to_string cache_file) in
   Digest.output oc version_id;
-  Marshal.to_channel oc cache [Marshal.No_sharing];
+  Marshal.to_channel oc cache [];
   close_out oc
 let read_cache () : cache =
   try
@@ -316,6 +316,9 @@ let partial_digest ic len =
 let statistics_set files =
   let cache = read_cache () in
   let skip_before = two_months_ago in
+  let cache =
+    OpamFilename.Map.filter (fun f _ -> List.mem f files) cache
+  in
   match files with
   | [] -> None
   | files ->
