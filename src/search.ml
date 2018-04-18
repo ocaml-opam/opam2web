@@ -34,26 +34,26 @@ let by_descr = 2
 
 (* Hide the row [tr] of a table element *)
 let hide tr =
-  tr##style##display <- _s "none"
+  tr##.style##.display := _s "none"
 
 (* Make visible the row [tr] of a table element *)
 let show tr =
-  tr##style##display <- _s ""
+  tr##.style##.display := _s ""
 
 (* Filter the string [str] from the table [tbl] by looking in the column
    name (position 0) and the description (position 2) *)
 let filter str tbl =
-  for i = 1 to (tbl##rows##length) do
-    let tr = from_option (tbl##rows##item (i)) in
+  for i = 1 to (tbl##.rows##.length) do
+    let tr = from_option (tbl##.rows##item (i)) in
     (* Get the [td] corresponding to the name column *)
-    let name = from_option (tr##cells##item (by_name)) in
+    let name = from_option (tr##.cells##item (by_name)) in
     (* Get the [td] corresponding to the description column *)
-    let descr = from_option (tr##cells##item (by_descr)) in
+    let descr = from_option (tr##.cells##item (by_descr)) in
     (* Filter name or column column of the table *)
     if (Regexp.search (Regexp.regexp (String.lowercase (Js.to_string str)))
-          (String.lowercase (Js.to_string name##innerHTML)) 0) <> None ||
+          (String.lowercase (Js.to_string name##.innerHTML)) 0) <> None ||
       (Regexp.search (Regexp.regexp (String.lowercase (Js.to_string str)))
-         (String.lowercase (Js.to_string descr##innerHTML)) 0) <> None
+         (String.lowercase (Js.to_string descr##.innerHTML)) 0) <> None
     then
       show tr
     else
@@ -65,5 +65,5 @@ let _=
   let tbl = from_option (Dom_html.CoerceTo.table tbl) in
   let search = get_element_by_id "search" in
   let search = from_option (Dom_html.CoerceTo.input search) in
-  search##onkeyup <- Dom_html.handler
-    (fun _ -> filter search##value tbl; Js._false);
+  search##.onkeyup := Dom_html.handler
+    (fun _ -> filter search##.value tbl; Js._false);

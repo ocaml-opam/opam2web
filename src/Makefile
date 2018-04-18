@@ -17,7 +17,7 @@ INCLUDES=-I apalog
 TARGET=opam2web
 
 JS_OF_OCAML=js_of_ocaml
-JSFLAGS=-package js_of_ocaml.syntax,js_of_ocaml -syntax camlp4o
+JSFLAGS=-package js_of_ocaml.ppx,js_of_ocaml
 
 ARCHIVES=$(TARGET).cma $(TARGET).cmxa $(TARGET).a
 
