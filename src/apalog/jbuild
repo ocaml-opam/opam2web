@@ -1,0 +1,9 @@
+(library(
+  (name apalog)
+  (wrapped false)
+  (modules (lexcombinedlog readcombinedlog logentry compressed))
+))
+
+(ocamllex(
+  lexcombinedlog
+))

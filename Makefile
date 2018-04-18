@@ -1,18 +1,19 @@
-.PHONY: all build install clean
-
-all: build
+.PHONY: build install uninstall clean test
 
 build:
-	cd src && $(MAKE)
-	cp src/search.js ext/js/
+	jbuilder build @install @js_search
+	cp _build/default/src/js_search/search.bc.js ext/js/
+	cp _build/default/src/opam2web.exe opam2web
 
 install:
-	cd src && $(MAKE) install
+	jbuilder install
+
+uninstall:
+	jbuilder uninstall
 
 clean:
-	cd src && $(MAKE) clean
+	rm -rf _build
 
-.PHONY: test-prepare
 test-prepare:
 	rm -rf www
 	mkdir -p www/content/doc www/content/blog

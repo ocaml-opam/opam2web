@@ -43,14 +43,14 @@ and menu_item =
   | External
 
 type statistics = {
-  (** Individual package download count *)
   pkg_stats: int64 package_map;
-  (** Global download count (sum of all packages download count) *)
+  (** Individual package download count *)
   global_stats: int64;
-  (** Update count (number of 'urls.txt' downloads *)
+  (** Global download count (sum of all packages download count) *)
   update_stats: int64;
-  (** Number of unique IPs *)
+  (** Update count (number of 'urls.txt' downloads *)
   users_stats: int64;
+  (** Number of unique IPs *)
 }
 
 type statistics_set = {
@@ -79,11 +79,11 @@ type log_client = log_client_os * log_client_browser
 
 (** Different requests made to the repository server *)
 type log_request =
-  (** Request of type "GET /\\(.+\\)\\.html HTTP/[.0-9]+" *)
+  (* Request of type "GET /\\(.+\\)\\.html HTTP/[.0-9]+" *)
   | Html_req of string
-  (** Request of type "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" *)
+  (* Request of type "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" *)
   | Archive_req of package
-  (** Request of type "GET /urls\\.txt HTTP/[.0-9]+" *)
+  (* Request of type "GET /urls\\.txt HTTP/[.0-9]+" *)
   | Update_req
   | Unknown_req of string
 
