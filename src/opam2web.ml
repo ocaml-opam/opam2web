@@ -82,13 +82,13 @@ let make_website user_options universe =
   let popularity =
     match statistics with
     | None   -> OpamPackage.Name.Map.empty
-    | Some s -> OpamfUniverse.(O2wStatistics.aggregate_package_popularity
-                                 s.month_stats.pkg_stats universe.pkg_idx) in
+    | Some s -> O2wStatistics.aggregate_package_popularity
+                  s.month_stats.pkg_stats universe.pkg_idx in
   let to_html = O2wUniverse.to_html ~content_dir ~sortby_links ~popularity in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg =
-      O2wPackage.compare_date ~reverse:true universe.OpamfUniverse.pkgs_dates
+      O2wPackage.compare_date ~reverse:true universe.pkgs_dates
     in
     let date = {
       menu_source = content_dir;
@@ -203,12 +203,10 @@ let blog_source_uri = Arg.(
       ~docv:"URI"
       ~doc:"The base address to point to blog source files")
 
-let build logfiles out_dir content_dir repositories preds index root_uri blog_source_uri =
-  let () = List.iter (function
-    | `path path -> Printf.printf "=== Repository: %s ===\n%!" path;
-    | `local local -> Printf.printf "=== Repository: %s [opam] ===\n%!" local;
-    | `opam -> Printf.printf "=== Universe: current opam universe ===\n%!";
-  ) repositories in
+let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
+  let () =
+    List.iter (Printf.printf "=== Repository: %s ===\n%!") repositories in
+  let repositories = List.map (fun p -> `path p) repositories in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
   let root_uri = Uri.of_string root_uri in
@@ -223,7 +221,7 @@ let build logfiles out_dir content_dir repositories preds index root_uri blog_so
   } in
   Printf.printf "Loading universe... %!";
   let universe =
-    O2wUniverse.of_repositories ~preds index repositories
+    O2wUniverse.of_repositories OpamfUniverse.Index_pred repositories
   in
   Printf.printf "done.\n%!";
   make_website user_options universe
@@ -236,9 +234,13 @@ let default_cmd =
     `S "BUGS";
     `P "Report bugs on the web at <https://github.com/ocaml/opam2web>.";
   ] in
+  let repositories_arg =
+    Arg.(value & pos_all dir ["."] & info []
+           ~docv:"REPOSITORY"
+           ~doc:"Directories containing the repositories to consider")
+  in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ OpamfuCli.repositories $ OpamfuCli.pred $ OpamfuCli.index $ root_uri
-          $ blog_source_uri),
+          $ repositories_arg $ root_uri $ blog_source_uri),
   Term.info "opam2web" ~version ~doc ~man
 
 let () =
