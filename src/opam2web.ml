@@ -25,7 +25,7 @@ type options = {
   files_dir: string;
   content_dir: string;
   logfiles: filename list;
-  repositories: OpamfUniverse.repository list;
+  repositories: string list;
   root_uri: Uri.t;
   blog_source_uri: string;
 }
@@ -206,7 +206,6 @@ let blog_source_uri = Arg.(
 let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
   let () =
     List.iter (Printf.printf "=== Repository: %s ===\n%!") repositories in
-  let repositories = List.map (fun p -> `path p) repositories in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
   let root_uri = Uri.of_string root_uri in

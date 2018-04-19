@@ -42,5 +42,5 @@ val to_html:
 (** Generate a universe from a list of repositories *)
 val of_repositories:
   ?preds:OpamfUniverse.pred list list -> OpamfUniverse.index ->
-  [ `local of string | `opam | `path of string ]  list ->
+  string  list ->
   Cow.Html.t OpamfUniverse.t
