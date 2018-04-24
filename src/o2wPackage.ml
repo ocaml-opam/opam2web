@@ -14,12 +14,31 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open OpamTypes
 open OpamTypesBase
 open Cow
 open O2wTypes
+open OpamStateTypes
+open OpamStd.Option.Op
+
+let ( ++ ) = Html.( ++ )
 
 let compare_alphanum = OpamPackage.compare
+
+let pkg_href ?href_base nv =
+  let name = OpamPackage.Name.to_string nv.name in
+  let version = OpamPackage.Version.to_string nv.version in
+  let base = Printf.sprintf "%s/%s.%s/" name name version in
+  let base = Uri.of_string base in
+  match href_base with
+  | None   -> base
+  | Some p -> Uri.resolve "http" p base
+
+let name_href ?href_base name =
+ let base = Uri.of_string (OpamPackage.Name.to_string name) in
+  match href_base with
+  | None   -> base
+  | Some p -> Uri.resolve "http" p base
+
 
 (* Comparison function using number of downloads for each package *)
 let compare_popularity ?(reverse = false) pkg_stats p1 p2 =
@@ -53,48 +72,164 @@ let html_descr (short,long) =
   Html.h4 (Html.string short)
   @ to_html long
 
+(* copied from opamFormula.ml:92 , and ported from string to html *)
+let html_of_formula html_of_a f =
+  let rec aux ?(in_and=false) f =
+    let paren_if ?(cond=false) s =
+      if cond || OpamFormatConfig.(!r.all_parens)
+      then Html.string "(" ++ s ++ Html.string ")"
+      else s
+    in
+    match f with
+    | Empty    -> Html.empty
+    | Atom a   -> paren_if (html_of_a a)
+    | Block x  -> Html.string "(" ++ aux x ++ Html.string ")"
+    | And(x,y) ->
+      paren_if
+        (aux ~in_and:true x ++ Html.string " & " ++ aux ~in_and:true y)
+    | Or(x,y)  ->
+      paren_if ~cond:in_and
+        (aux x ++ Html.string " | " ++ aux y)
+  in
+  aux f
+
+let html_atom ~prefix st pkg (name, f) =
+  let env v = match OpamVariable.Full.to_string v with
+    | "name" -> Some (S (OpamPackage.name_to_string pkg))
+    | "version" -> Some (S (OpamPackage.version_to_string pkg))
+    | _ -> None
+  in
+  let f = OpamFilter.partial_filter_formula env (Atom (name, f)) in
+  let constr = match f with
+    | Atom (_, c) -> c
+    | Empty -> Empty
+    | _ -> assert false
+  in
+  let solutions =
+    OpamFormula.packages st.packages
+      (OpamFilter.filter_formula ~default:true (fun _ -> None) f)
+  in
+  let name_link =
+    let hname =
+      Html.span ~cls:"formula-package"
+        (Html.string (OpamPackage.Name.to_string name))
+    in
+    let has_constraints =
+      OpamFormula.fold_left (fun acc at ->
+          acc || match at with Constraint _ -> true | Filter _ -> false)
+        false constr
+    in
+    match has_constraints, OpamPackage.Set.max_elt_opt solutions with
+    | false, _ | _, None ->
+      if OpamPackage.has_name st.packages name
+      then Html.a ~href:(name_href ~href_base:prefix name) hname
+      else hname
+    | f, Some nv ->
+      Html.a ~href:(pkg_href ~href_base:prefix nv) hname
+  in
+  let hconstr =
+    if constr = Empty then None else
+      Some
+        (html_of_formula (function
+             | Constraint (op, FString s) ->
+               Html.string (OpamPrinter.relop op) ++
+               Html.span ~cls:"package-version" (Html.string s)
+             | Constraint (op, v) ->
+               Html.string (OpamPrinter.relop op) ++
+               Html.span ~cls:"label" (Html.string (OpamFilter.to_string v))
+             | Filter f ->
+               Html.span ~cls:"label" (Html.string (OpamFilter.to_string f)))
+            constr)
+  in
+  let hconstr =
+    if OpamPackage.Set.is_empty solutions then
+      let warn = Html.i ~cls:"icon-warning-sign" Html.empty in
+      match hconstr with
+      | None -> Some warn
+      | Some hc -> Some (hc ++ Html.string " " ++ warn)
+    else hconstr
+  in
+  name_link,
+  hconstr
+
+
 (* Returns a HTML description of the given package *)
-let to_html ~statistics ~prefix universe pkg_info =
-  let open OpamfUniverse in
-  let href = Pkg.href ~href_base:Uri.(of_string prefix) in
-  let name = OpamPackage.Name.of_string pkg_info.name in
-  let version = OpamPackage.Version.of_string pkg_info.version in
-  let pkg = OpamPackage.create name version in
-  let pkg_opam = OpamPackage.Map.find pkg universe.pkgs_opams in
+let to_html ~prefix univ pkg =
+  let href =
+    let ensure_slash s =
+      if s = "" || s.[String.length s - 1] = '/' then s else s ^ "/"
+    in
+    pkg_href ~href_base:Uri.(of_string (ensure_slash prefix))
+  in
+  let {name; version} = pkg in
+  let pkg = OpamPackage.create pkg.name pkg.version in
+  let pkg_opam = OpamSwitchState.opam univ.st pkg in
   let version_links =
+    let version_set =
+      OpamPackage.versions_of_name univ.st.packages pkg.name
+    in
+    let latest = OpamPackage.Version.Set.max_elt version_set in
     let versions =
-      try OpamPackage.Version.Set.elements
-            (OpamPackage.Name.Map.find name universe.versions)
-      with Not_found -> [version] in
-    List.map
-      (fun version ->
-         let href = href name version in
-         let version = OpamPackage.Version.to_string version in
-         if pkg_info.version = version then
-           Html.li ~cls:"active"
-             (Html.a ~href:(Uri.of_string "#")
-                (Html.string "version " @ Html.string version))
-         else
-           Html.li (Html.a ~href (Html.string version)))
-      versions in
-  let pkg_url = match pkg_info.url with
-    | None          -> Html.empty
+        (OpamPackage.versions_of_name univ.st.packages pkg.name)
+    in
+    let print_v v =
+      Html.span ~cls:"package-version"
+        (Html.string (OpamPackage.Version.to_string v)) ++
+      if v = latest then Html.string " (latest)"
+      else Html.empty
+    in
+    Html.div ~cls:"btn-group" @@
+    Html.tag "a" ~cls:"btn dropdown-toggle"
+      ~attrs:["data-toggle","dropdown"; "href","#"]
+      (print_v version ++ Html.string " "
+       ++ Html.span ~cls:"caret" Html.empty)
+    ++
+    (Html.ul ~cls:"dropdown-menu" @@
+     List.map
+       (fun version ->
+          let href = href (OpamPackage.create name version) in
+          if pkg.version = version then
+            Html.li ~cls:"active"
+              (Html.a ~href:(Uri.of_string "#") (print_v version))
+          else
+            Html.li (Html.a ~href (print_v version)))
+       (OpamPackage.Version.Set.elements versions))
+  in
+  let pkg_descr =
+    let to_html = function
+      | None -> Html.empty
+      | Some md ->
+        try Cow.Markdown.of_string md
+        with Invalid_argument _ ->
+          OpamConsole.error "BAD MARKDOWN in %s descr"
+            (OpamPackage.to_string pkg);
+          Html.string md
+    in
+    (OpamFile.OPAM.synopsis pkg_opam >>| Html.string >>| Html.h4) +! Html.empty
+    @ to_html (OpamFile.OPAM.descr_body pkg_opam)
+  in
+  let pkg_url = match OpamFile.OPAM.url pkg_opam with
+    | None -> Html.empty
     | Some url_file ->
+      let url = OpamFile.URL.url url_file in
       let kind =
-        let k = OpamFile.URL.kind url_file in
-        Html.string " ["
-        @ Html.string (string_of_repository_kind k) @ Html.string "] " in
-      let checksum = match OpamFile.URL.checksum url_file with
-        | Some c -> Html.small (Html.string c)
-        | None -> Html.empty in
-      let url = string_of_address (OpamFile.URL.url url_file) in
+        let k = OpamUrl.string_of_backend url.backend in
+        Html.string " [" @ Html.string k @ Html.string "] "
+      in
+      let cksums =
+        List.fold_right (fun c acc ->
+            Html.(br empty) ::
+            Html.small (Html.string (OpamHash.to_string c)) ::
+            acc)
+          (OpamFile.URL.checksum url_file) []
+      in
+      let url = OpamUrl.base_url url in
       Html.tag "tr"
         (Html.tag "th" (Html.string "Source " @ kind)
          @ Html.tag "td"
              (Html.a ~href:(Uri.of_string url) ~title:"Download source"
                 (Html.string url)
-              @ Html.br Html.empty
-              @ checksum)) in
+              @ Html.list cksums))  in
   let list name l : (string * Cow.Xml.t) option = match l with
     | []  -> None
     | [e] -> Some (name      , Html.string e)
@@ -112,189 +247,86 @@ let to_html ~statistics ~prefix universe pkg_info =
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_issues = links "Issue Tracker" (OpamFile.OPAM.bug_reports pkg_opam) in
-  let pkg_tags = list "Tag" (OpamFile.OPAM.tags pkg_opam) in
-  let pkg_published = match pkg_info.published with
+  let pkg_tags = match OpamFile.OPAM.tags pkg_opam with
+    | [] -> None
+    | tags ->
+      Some ("Tags",
+            Html.list @@ List.map
+              (fun t ->
+                 Html.string " " ++
+                 Html.a ~href:(Uri.with_fragment
+                                 (Uri.of_string prefix)
+                                 (Some t))
+                   (Html.span ~cls:"label label-info" (Html.string t)))
+              tags)
+  in
+  let pkg_published = match OpamPackage.Map.find_opt pkg univ.dates with
     | None -> None
     | Some timestamp ->
-      Some ("Published", Html.string (O2wMisc.string_of_timestamp timestamp))
+      Some ("Published", O2wMisc.html_of_timestamp timestamp)
   in
-  let html_conj = Html.string "&" in
-  let html_disj = Html.string "|" in
-  let vset_of_name name =
-    try
-      OpamPackage.Name.Map.find name universe.versions
-    with Not_found -> OpamPackage.Version.Set.empty
-  in
-  let html_of_name name vset =
-    let name_str = OpamPackage.Name.to_string name in
-    if OpamPackage.Version.Set.cardinal vset = 0
-    then Html.string name_str
-    else let v = OpamPackage.Version.Set.max_elt vset in
-         Html.a ~href:(href name v) (Html.string name_str)
-  in
-  let html_of_vc attrs name vset ((relop,v) as vc) =
-    let vstr = OpamPackage.Version.to_string v in
-    let rhtml = Html.string (OpamFormula.string_of_relop relop)
-                @ Html.of_string "&nbsp;" in
-    match OpamfuFormula.extremum_of_version_constraint vset vc with
-    | Some v ->
-       Html.tag "td" ~attrs
-         (rhtml @ Html.a ~href:(href name v) (Html.string vstr))
-    | None ->
-       Html.tag "td" ~attrs (rhtml @ Html.string vstr) in
-  let html_of_namevc name vc =
-    let vset = vset_of_name name in
-    let vvset = OpamfuFormula.(filter_versions (Some (Atom vc)) vset) in
-    let vchtml = html_of_vc ["colspan","3"] name vset vc in
-    Html.tag "td" (html_of_name name vvset) @ vchtml
-  in
-  let html_of_namevconj name lo hi =
-    let vset = vset_of_name name in
-    let vvset = OpamfuFormula.(
-      filter_versions (Some (And [Atom lo; Atom hi])) vset
-    ) in
-    let lo = html_of_vc [] name vset lo in
-    let hi = html_of_vc [] name vset hi in
-    Html.tag "td" (html_of_name name vvset) @ lo
-    @ Html.tag "td" html_conj @ hi
-  in
-  let html_of_namevdisj name lo hi =
-    let vset = vset_of_name name in
-    let vvset = OpamfuFormula.(
-      filter_versions (Some (Or [Atom lo; Atom hi])) vset
-    ) in
-    let lo = html_of_vc [] name vset lo in
-    let hi = html_of_vc [] name vset hi in
-    Html.tag "td" (html_of_name name vvset) @ lo
-    @ Html.tag "td" html_disj @ hi
-  in
-  let enrow ?(attrs=[]) tds = Html.tag "tr" ~attrs tds in
-  let html_of_operator k ophtml hd argl =
-    let rows = List.length argl + 1 in
-    Html.tag "td" ~attrs:["colspan", "4"]
-      (Html.tag "table" ~attrs:["class", "formula"]
-         (Html.tag "tr"
-            (Html.tag "th" ophtml ~cls:"operator"
-                                  ~attrs:["rowspan", string_of_int rows]
-             @ k hd)
-          @ List.concat(List.map (fun x -> enrow (k x)) argl))) in
-  let rec html_of_formula html_of_atom = OpamfuFormula.(function
-    | Atom x -> html_of_atom x
-    | And []  | Or []  -> Html.tag "td" Html.empty
-    | And [x] | Or [x] -> html_of_formula html_of_atom x
-    | And (hd::conjl)  ->
-      html_of_operator (html_of_formula html_of_atom) html_conj hd conjl
-    | Or  (hd::disjl)  ->
-      html_of_operator (html_of_formula html_of_atom) html_disj hd disjl
-  ) in
-  let html_of_namevf = OpamfuFormula.(function
-    | (name,(None | Some ((And []) | (Or [])))) ->
-       Html.tag "td" (html_of_name name (vset_of_name name))
-       @ Html.tag "td" ~attrs:["colspan", "3"] Html.empty
-    | (name,Some (Atom vc)) -> html_of_namevc name vc
-    | (name,Some (And [Atom x; Atom y])) -> html_of_namevconj name x y
-    | (name,((Some (And (c::cl))) as vf)) ->
-      let vset = vset_of_name name in
-      let vvset = OpamfuFormula.filter_versions vf vset in
-      let ophtml = html_of_operator
-        (html_of_formula (html_of_vc ["colspan","3"] name vset)) html_conj c cl
-      in
-      Html.tag "td" ~cls:"pkgname" (html_of_name name vvset)
-      @ ophtml
-    | (name,Some (Or [Atom x; Atom y])) -> html_of_namevdisj name x y
-    | (name,((Some (Or (d::dl))) as vf)) ->
-      let vset = vset_of_name name in
-      let vvset = OpamfuFormula.filter_versions vf vset in
-      let ophtml = html_of_operator
-        (html_of_formula (html_of_vc ["colspan","3"] name vset)) html_disj d dl
-      in
-      Html.tag "td" ~cls:"pkgname" (html_of_name name vvset)
-      @ ophtml
-  ) in
-  let mk_formula name f =
-    let f = OpamfuFormula.of_opam_formula (f pkg_opam) in
-    let f = OpamfuFormula.(sort_formula (simplify f)) in
-    match f with
-    | None -> None
-    | Some f ->
-      Some (name, Html.tag "table" ~cls:"formula-wrap"
-                    (Html.tag "tr" (html_of_formula html_of_namevf f)))
-  in
-  let pkg_depends = mk_formula "Dependencies"
-      (fun opam -> filter_deps ~build:true ~test:true ~doc:true ~dev:false (OpamFile.OPAM.depends opam)) in
-  let pkg_depopts = mk_formula "Optional dependencies"
-      (fun opam -> filter_deps ~build:true ~test:true ~doc:true ~dev:false (OpamFile.OPAM.depopts opam)) in
-  let html_of_revdeps title revdeps =
-    let deps = List.map (fun (dep_name, vdnf) ->
-      let vf = OpamfuFormula.(simplify_expr (expr_of_version_dnf vdnf)) in
-      let vset = vset_of_name dep_name in
-      let vvset = OpamfuFormula.filter_versions vf vset in
-      let name_html =
-        Html.tag "tr" (Html.tag "td" ~attrs:["colspan", "3"]
-                                (html_of_name dep_name vvset)) in
-      let rec html_of_vf span = OpamfuFormula.(function
-        | None | Some ((And []) | (Or [])) -> []
-        | Some (Atom vc) ->
-          [html_of_vc ["colspan",string_of_int span] dep_name vset vc]
-        | Some (And ((Atom vc)::cl)) ->
-          let rows = 1 + List.length cl in
-          (Html.tag "th" ~cls:"operator" ~attrs:["rowspan", string_of_int rows]
-             html_conj
-           @ html_of_vc ["colspan",string_of_int (span - 1)] dep_name vset vc)
-          :: (List.fold_right (fun c l ->
-                  l @ (html_of_vf (span - 1) (Some c))
-                ) cl [])
-        | Some (Or (d::dl)) ->
-          let rows = OpamfuFormula.expr_width (Or (d::dl)) in
-          begin match html_of_vf (span - 1) (Some d) with
-          | h::t ->
-             (Html.tag "th" html_disj ~cls:"operator"
-                                      ~attrs:["rowspan", string_of_int rows]
-              @ h)
-             :: (List.fold_right (fun d l ->
-                     l @ (html_of_vf (span - 1) (Some d))
-                   ) dl t)
-          | [] -> []
-          end
-        | _ -> assert false (* FIXME: pattern not exhaustive *)
-      ) in
-      let attrs = ["class","embedded-formula"] in
-      name_html @ List.concat (List.map (enrow ~attrs) (html_of_vf 3 vf))
-    ) revdeps
-    in
-    match deps with
+  let rec formula_list = function
     | [] -> []
-    | _ -> Html.tag "tr" ~cls:"well"
-             (Html.tag "th" ~attrs:["colspan", "3"] (Html.string title))
-           :: deps
+    | Empty :: r -> formula_list r
+    | Block f :: r -> formula_list (f::r)
+    | (And _) as a :: r ->
+      Html.string "all of" ++ and_formula a :: formula_list r
+    | (Or _ as o) :: r ->
+      Html.string "any of" ++ or_formula o :: formula_list r
+    | Atom (name, f) :: r ->
+      let name, constr =
+        html_atom univ.st ~prefix:(Uri.of_string prefix) pkg (name, f)
+      in
+      Html.span name ++
+      (match constr with
+       | None -> Html.empty
+       | Some c -> Html.span ~cls:"version-constraint" c) ::
+      formula_list r
+  and and_formula : filtered_formula -> Html.t = function
+    | Empty -> Html.empty
+    | f ->
+      Html.ul ~cls:"formula" @@
+      formula_list (OpamFormula.ands_to_list f)
+  and or_formula = function
+    | Empty -> Html.empty
+    | f ->
+      Html.ul ~add_li:true ~cls:"formula" @@
+      formula_list (OpamFormula.ors_to_list f)
   in
-
-  let requiredby =
-    try OpamPackage.Map.find pkg universe.rev_depends
-    with Not_found -> OpamPackage.Name.Map.empty in
-  let requiredby_deps = OpamPackage.Name.Map.bindings requiredby in
-  let requiredby_html =
-    html_of_revdeps "Necessary for" requiredby_deps in
-
-  let usedby =
-    try OpamPackage.Map.find pkg universe.rev_depopts
-    with Not_found -> OpamPackage.Name.Map.empty in
-  let usedby_deps = OpamPackage.Name.Map.bindings usedby in
-  let usedby_html =
-    html_of_revdeps "Optional for" usedby_deps in
-
-  let norevdeps = Html.tag "tr" (Html.tag "td"
-                                   (Html.string "No package is dependent")) in
-
-  let pkg_compiler = match OpamFile.OPAM.ocaml_version pkg_opam with
-    | None -> None
-    | Some cvf ->
-      let formula_str = OpamFormula.(string_of_formula (fun (relop,v) ->
-        (string_of_relop relop)^" "^(OpamCompiler.Version.to_string v)
-      ) cvf) in
-      Some ("OCaml", Html.string formula_str)
+  let pkg_depends =
+    match OpamFile.OPAM.depends pkg_opam with
+    | Empty -> None
+    | f -> Some ("Dependencies", and_formula f)
   in
-
+  let pkg_depopts =
+    match OpamFile.OPAM.depopts pkg_opam with
+    | Empty -> None
+    | f -> Some ("Optional dependencies", or_formula f)
+  in
+  let pkg_conflicts =
+    let conflicts =
+      OpamSwitchState.conflicts_with univ.st (OpamPackage.Set.singleton pkg)
+        univ.st.packages
+    in
+    let cf =
+      OpamPackage.Name.Map.fold
+        (fun name versions acc ->
+           let cstr =
+             OpamFormula.formula_of_version_set
+               (OpamPackage.versions_of_name univ.st.packages name)
+               versions |>
+             OpamFormula.map (fun (op,v) ->
+                 Atom (Constraint (op,
+                                   FString (OpamPackage.Version.to_string v))))
+           in
+           OpamFormula.ors [acc; Atom (name, cstr)])
+        (OpamPackage.to_map conflicts)
+        OpamFormula.Empty
+    in
+    match cf with
+    | Empty -> None
+    | f -> Some ("Conflicts", or_formula f)
+  in
   let pkg_available =
     match OpamFile.OPAM.available pkg_opam with
     | FBool true -> None
@@ -303,22 +335,11 @@ let to_html ~statistics ~prefix universe pkg_info =
       Some ("Available", Html.string filter_str)
   in
 
-  let pkg_os = OpamFormula.(
-    match OpamFile.OPAM.os pkg_opam with
-    | Empty -> None
-    | f ->
-      let formula_str = string_of_formula (fun (b,s) ->
-        if b then s else "!"^s
-      ) f in
-      Some ("OS", Html.string formula_str)
-  ) in
-
-  let pkg_stats = match statistics with
+  let pkg_stats = match univ.version_popularity with
     | None -> Html.empty
-    | Some sset ->
-      let s = sset.month_stats in
+    | Some stats ->
       let pkg_count =
-        try OpamPackage.Map.find pkg s.pkg_stats
+        try OpamPackage.Map.find pkg stats
         with Not_found -> Int64.zero
       in
       let pkg_count_html = match pkg_count with
@@ -337,54 +358,133 @@ let to_html ~statistics ~prefix universe pkg_info =
         (Html.tag "th" (Html.string "Statistics")
          @ Html.tag "td" pkg_count_html)
   in
+  let mk_revdeps depends_f rdepends =
+    OpamPackage.Name.Map.fold (fun name versions acc ->
+        let vf =
+          OpamFormula.formula_of_version_set
+            (OpamPackage.versions_of_name univ.st.packages name)
+            versions
+        in
+        let latest =
+          OpamPackage.create name (OpamPackage.Version.Set.max_elt versions)
+        in
+        let flags =
+          match OpamSwitchState.opam_opt univ.st latest with
+          | None -> OpamStd.String.Set.empty
+          | Some o ->
+            let flags_ll =
+              OpamFormula.fold_left (fun acc (n, f) ->
+                  if n <> pkg.name then acc else
+                  let flags =
+                    List.fold_left (fun acc -> function
+                        | Atom (Filter (FIdent ([], v, None))) ->
+                          OpamStd.String.Set.add
+                            (OpamVariable.to_string v) acc
+                        | _ -> acc)
+                      OpamStd.String.Set.empty
+                      (OpamFormula.ands_to_list f)
+                  in
+                  flags :: acc)
+                [] (depends_f o)
+            in
+            match flags_ll with
+            | [] -> OpamStd.String.Set.empty
+            | fs::r -> List.fold_left OpamStd.String.Set.inter fs r
+        in
+        let formula =
+          OpamFormula.ands @@
+          List.rev_append
+            (List.rev_map (fun flag ->
+                 Atom (Filter (FIdent ([], OpamVariable.of_string flag, None))))
+                (OpamStd.String.Set.elements flags))
+            [OpamFormula.map (fun (op,v) ->
+                 Atom (Constraint (op,
+                                   FString (OpamPackage.Version.to_string v))))
+                vf]
+        in
+        html_atom ~prefix:(Uri.of_string prefix)
+          univ.st latest (name, formula) :: acc)
+      (OpamPackage.to_map @@
+       OpamStd.Option.default OpamPackage.Set.empty @@
+       OpamPackage.Map.find_opt pkg rdepends)
+      []
+    |> List.rev
+  in
+  let rev_deps =
+    match mk_revdeps OpamFile.OPAM.depends univ.rev_depends with
+    | [] -> Html.empty
+    | rd ->
+      Html.div ~cls:"revdeps" @@
+      Html.span ~cls:"revdeps-title" (Html.string "Required by") ++
+      (Html.ul ~add_li:true ~cls:"formula" @@
+       List.map (fun (name, constr) ->
+           Html.span name ++
+           match constr with
+           | None -> Html.empty
+           | Some c -> Html.span ~cls:"version-constraint" c) rd)
+  in
+  let rev_depopts =
+    match mk_revdeps OpamFile.OPAM.depopts univ.rev_depopts with
+    | [] -> Html.empty
+    | rd ->
+      Html.div ~cls:"revdeps" @@
+      Html.span ~cls:"revdeps-title" (Html.string "Optionally used by") ++
+      (Html.ul ~add_li:true ~cls:"formula" @@
+       List.map (fun (name, constr) ->
+           Html.span name ++
+           match constr with
+           | None -> Html.empty
+           | Some c -> Html.span ~cls:"version-constraint" c) rd)
+  in
+
   let mk_tr = function
     | None                   -> Html.empty
     | Some (title, contents) ->
        Html.tag "tr" (Html.tag "th" (Html.string title)
                       @ Html.tag "td" contents) in
-  let repo = Pkg.to_repo universe pkg in
-  let links = Repo.links repo in
-  let _, prefix = OpamPackage.Map.find pkg universe.pkg_idx in
-  let pkg_edit = match OpamFile.Repo.upstream links with
-    | None -> Html.empty
-    | Some url_base ->
-      let base = Uri.of_string url_base in
-      let opam_loc = OpamFilename.remove_prefix
-        repo.OpamTypes.repo_root
-        (OpamRepositoryPath.opam repo prefix pkg) in
-      let url = Uri.(resolve "" base (of_string opam_loc)) in
-      let loc = Uri.to_string url in
-      mk_tr (Some ("Edit", Html.a ~title:"Edit this package description"
-                                  ~href:url
-                                  (Html.string loc)))
+  let repo_edit =
+    univ.st.switch_config.OpamFile.Switch_config.repos >>=
+    List.find_opt (fun r ->
+        OpamPackage.Map.mem pkg
+          (OpamRepositoryName.Map.find r univ.st.switch_repos.repo_opams)) >>|
+    OpamRepositoryState.get_repo univ.st.switch_repos >>= fun r ->
+    OpamFile.Repo.read_opt (OpamRepositoryPath.repo r.repo_root) >>=
+    OpamFile.Repo.upstream >>= fun upstream ->
+    OpamFile.OPAM.metadata_dir pkg_opam >>| fun pkgdir ->
+    let base = Uri.of_string upstream in
+    let rel =
+      OpamFilename.remove_prefix r.repo_root OpamFilename.Op.(pkgdir // "opam")
+    in
+    let url = Uri.(resolve "" base (of_string rel)) in
+    let loc = Uri.to_string url in
+    mk_tr (Some ("Edit", Html.a ~title:"Edit this package description"
+                   ~href:url
+                   (Html.string loc)))
   in
+  let repo_edit = repo_edit +! Html.empty in
   Html.(
-    h2 (string pkg_info.name)
+    h2 (string (OpamPackage.Name.to_string name) ++
+        small (span ~cls:"versions" (string "version " ++ version_links)))
     @ div ~cls:"row"
         (div ~cls:"span9"
-           (div (ul ~add_li:false ~cls:"nav nav-pills" version_links)
-            @ tag "table" ~cls:"table"
-                (tag "tbody" (mk_tr pkg_author
+           (div ~cls:"well" pkg_descr
+            @ tag "table" ~cls:"table package-info"
+                (tag "tbody" (mk_tr pkg_tags
+                              @ mk_tr pkg_author
                               @ mk_tr pkg_license
+                              @ mk_tr pkg_published
                               @ mk_tr pkg_homepage
                               @ mk_tr pkg_issues
-                              @ mk_tr pkg_tags
                               @ mk_tr pkg_maintainer
+                              @ mk_tr pkg_available
                               @ mk_tr pkg_depends
                               @ mk_tr pkg_depopts
-                              @ mk_tr pkg_compiler
-                              @ mk_tr pkg_available
-                              @ mk_tr pkg_os
-                              @ mk_tr pkg_published
+                              @ mk_tr pkg_conflicts
                               @ pkg_url
                               @ pkg_stats
-                              @ pkg_edit))
-            @ div ~cls:"well" pkg_info.descr)
-         @ div ~cls:"span3"
-             (tag "table" ~cls:"table table-bordered"
-                (tag "tbody" (List.concat requiredby_html
-                              @ List.concat usedby_html
-                              @ match requiredby_deps,usedby_deps with
-                                | [], [] -> norevdeps
-                                | _ , _  -> Html.empty)))
-        ))
+                              @ repo_edit)))
+         @ div ~cls:"span3 revdeps-column"
+             (if rev_deps = Html.empty && rev_depopts = Html.empty
+              then span ~cls:"revdeps-title" (string "No package is dependent")
+              else rev_deps ++ rev_depopts))
+  )

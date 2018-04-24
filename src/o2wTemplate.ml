@@ -18,6 +18,8 @@ open Printf
 open Cow
 open O2wTypes
 
+let ( ++ ) = Html.( ++ )
+
 let string_of_time () =
   let t = Unix.localtime (Unix.time ()) in
   sprintf "%d/%d/%d" t.Unix.tm_mday (t.Unix.tm_mon + 1)
@@ -33,7 +35,6 @@ let prepend_root (depth: int) (src: Uri.t): Uri.t =
   else Uri.with_path src (aux path depth)
 
 let create ~title ~header ~body ~footer ~depth =
-  let title = Html.string title in
   let js_files = [
       "ext/js/jquery.js";
       "ext/js/site.js";
@@ -103,15 +104,14 @@ let make_nav (active, depth) pages =
     match m.menu_item with
     | External   ->
        Html.li ~cls:class_attr
-         (Html.a ~href:m.menu_link
-            (Html.string m.menu_link_text))
+         (Html.a ~href:m.menu_link m.menu_link_text)
     | Internal _ ->
       let lnk = prepend_root depth m.menu_link in
       Html.li ~cls:class_attr
-        (Html.a ~href:lnk (Html.string m.menu_link_text))
+        (Html.a ~href:lnk m.menu_link_text)
     | No_menu _ -> Html.empty
     | Nav_header ->
-       Html.li ~cls:"nav-header" (Html.string m.menu_link_text)
+       Html.li ~cls:"nav-header" m.menu_link_text
     | Divider ->
        Html.li ~cls:"divider" Html.empty
     | Submenu sub_items ->
@@ -123,7 +123,7 @@ let make_nav (active, depth) pages =
            ~cls:"dropdown-toggle"
            ~attrs:["href", "#";
                    "data-toggle", "dropdown"]
-           (Html.string m.menu_link_text
+           (m.menu_link_text
             @ Html.b ~cls:"caret" Html.empty)
          @ Html.ul ~add_li:false ~cls:"dropdown-menu"
              (List.map (make_item ~subnav:true) sub_items)
@@ -195,7 +195,8 @@ let rec extract_links ~content_dir ~out_dir page =
   let links = get_links [] page.page_contents in
   List.iter (fun link ->
       let (/) = Filename.concat in
-      if Re_str.string_match (Re_str.regexp ".*://") link 0 then ()
+      let urlsep = Re.(compile @@ seq [rep any; str "://"]) in
+      if Re.execp urlsep link then ()
       else
         let addr,id =
           OpamStd.Option.default (link,"") (OpamStd.String.cut_at link '#')
@@ -220,7 +221,7 @@ let rec extract_links ~content_dir ~out_dir page =
             | Some src ->
                OpamConsole.msg "%s: Add resource %s to %s\n" file
                  src target;
-               OpamSystem.copy src target;
+               OpamSystem.copy_file src target;
             | None ->
                OpamConsole.error "In %s: Reference to resource %s not found"
                  file link
@@ -275,7 +276,7 @@ let generate ~content_dir ~out_dir menu pages =
     in
     let path = Uri.(to_string (resolve "http" uri_dir suffix)) in
     let template = Template.({ path="template.xhtml"; fields=[
-      "title", (default (Html.string "OPAM"), Optional);
+      "title", (default (Html.string "opam"), Optional);
       "head",  (default Html.empty,      Optional);
       "header",(default Html.empty,      Optional);
       "body",  (mandatory (),            Required);

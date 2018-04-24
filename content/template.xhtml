@@ -3,11 +3,11 @@
       xmlns:t="http://ocaml.org/xmlns/template#">
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    <title>OPAM - <t:insert name="title" /></title>
+    <title>opam - <t:insert name="title" /></title>
     <link href="/blog/feed.xml" type="application/atom+xml" rel="alternate" title="Platform blog ATOM Feed" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
-        content="The homepage of OPAM, a package manager for OCaml" />
+        content="The homepage of opam, a package manager for OCaml" />
     <meta name="author" content="OCamlPro" />
     <link rel="icon" type="image/png" href="/ext/img/favicon.png" />
     <link rel="stylesheet" href="/ext/css/bootstrap.css" />
@@ -32,7 +32,10 @@
             <span class="icon-bar"> </span>
             <span class="icon-bar"> </span>
           </a>
-          <a class="brand" href="https://github.com/ocaml/opam">OPAM on Github</a>
+          <a class="brand" href="https://github.com/ocaml/opam">
+            <img src="/ext/img/GitHub-Mark-32px.png"
+                 alt="opam on Github"></img>
+          </a>
           <div class="nav-collapse collapse">
             <t:insert name="header" />
 <!--
@@ -45,13 +48,14 @@
       </div>
     </div>
 
-    <div id="wrap">
-    <div id="main" class="container clear-top">
+    <!-- <div id="wrap"> -->
+    <div id="main" class="container">
 
       <t:insert name="body" />
 
-    </div> <!-- /container -->
-    </div> <!-- /wrap -->
+    </div>
+
+    <!-- </div> -->
 
     <div class="footer"><t:insert name="footer" /></div>
 

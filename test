@@ -1,0 +1,21 @@
+#!/bin/bash -uex
+
+rm -rf www
+mkdir -p www
+
+cd www
+git clone ~/ocamlpro/opam-repository .
+
+cp -r ../content .
+mkdir -p content/doc/{1.1,1.2,2.0}
+cp -r ../../opam.wiki/* content/doc/1.1
+cp -r ../../opam/doc/pages/* content/doc
+cp -r ../../opam/doc/html content/doc/2.0/api
+cp -r ../../opam/doc/man-html content/doc/2.0/man
+
+../_build/default/src/opam2web.exe --content content . -r 'http://127.0.0.1:8080'
+cp -r -L ../ext .
+cohttp-server-lwt -s 127.0.0.1 # &
+# xdg-open 'http://127.0.0.1:8080/index.html'
+# trap 'kill %%' EXIT
+# wait %%

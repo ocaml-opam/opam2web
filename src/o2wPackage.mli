@@ -34,5 +34,7 @@ val compare_popularity: ?reverse:bool -> int64 name_map ->
 val html_descr : string * string -> Cow.Html.t
 
 (** Returns a HTML description of the given package info *)
-val to_html: statistics:statistics_set option -> prefix:string ->
-  Cow.Html.t OpamfUniverse.t -> Cow.Html.t OpamfUniverse.pkg -> Cow.Html.t
+val to_html: prefix:string -> univ -> package -> Cow.Html.t
+
+(** Returns the local link to get to a package page def *)
+val pkg_href: ?href_base:Uri.t -> package -> Uri.t

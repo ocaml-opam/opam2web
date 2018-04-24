@@ -14,20 +14,118 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open OpamTypes
-open OpamfUniverse
 open Cow
 open O2wTypes
+open OpamStateTypes
 
-let to_page ~statistics universe pkg pkg_info acc =
+let ( ++ ) = Html.( ++ )
+
+let dates universe =
+  let any_opam_path = "*/opam" in
+  let parse_git_commit_times =
+    let rec read_time found = function
+      | [] -> found
+      | ln::rest -> read_file found (float_of_string ln) rest
+    and read_file found time = function
+      | [] -> found
+      | ""::rest -> read_time found rest
+      | path::rest ->
+        let suff = String.length any_opam_path - 1 in
+        let path = String.(sub path 0 (length path - suff)) in
+        let slash = try String.rindex path '/' + 1 with Not_found -> 0 in
+        let pkg = String.(sub path slash (length path - slash)) in
+        let found =
+          match OpamPackage.of_string_opt pkg with
+          | Some pkg -> OpamPackage.Map.add pkg time found
+          | None -> found
+        in
+        read_file found time rest
+    in
+    read_time
+  in
+  let repos_list =
+    match universe.switch_config.OpamFile.Switch_config.repos with
+    | None -> invalid_arg "dates"
+    | Some r -> r
+  in
+  let dates =
+    List.fold_right (fun repo dates ->
+        let repo_def =
+          OpamRepositoryName.Map.find repo universe.switch_repos.repositories
+        in
+        let command = [
+          "git"; "log"; "--name-only"; "--diff-filter=ACR"; "--reverse";
+          "--pretty=format:%ct"; "-m"; "--first-parent"; "--"; any_opam_path;
+        ] in
+        let repo_name = OpamRepositoryName.to_string repo in
+        try
+          let times = OpamFilename.in_dir
+              (OpamFilename.dirname_dir (OpamRepositoryPath.packages_dir repo_def.repo_root))
+              (fun () -> OpamSystem.read_command_output command)
+          in
+          parse_git_commit_times dates times
+        with (OpamSystem.Process_error _ | Failure _ as e) ->
+          OpamConsole.warning "Date retrieval for %s using" repo_name;
+          OpamConsole.warning "%s" (String.concat " " command);
+          OpamConsole.warning "failed with:\n%s" (Printexc.to_string e);
+          dates)
+      repos_list
+      OpamPackage.Map.empty
+  in
+  let missing = OpamPackage.Set.diff universe.packages (OpamPackage.keys dates) in
+  if not (OpamPackage.Set.is_empty missing)
+  then (* begin *)
+    OpamConsole.warning "Couldn't retrieve creation date for:\n%s"
+      (OpamStd.List.concat_map " " OpamPackage.to_string (OpamPackage.Set.elements missing));
+    (* OpamPackage.Set.fold (fun pkg map ->
+   *       let opam = OpamPackage.Map.find pkg universe.opams in
+   *       let dir = match OpamFile.OPAM.metadata_dir opam with
+   *         | Some d -> d
+   *         | None -> invalid_arg "dates"
+   *       in
+   *       let opam_stat =
+   *         Unix.stat (OpamFilename.to_string OpamFilename.Op.(dir // "opam"))
+   *       in
+   *       OpamPackage.Map.add pkg opam_stat.Unix.st_mtime map
+   *     ) missing dates
+   * end
+   * else *)
+    dates
+
+let depends st deps_fun =
+  OpamPackage.Map.fold (fun pkg opam ->
+      let env v = match OpamVariable.Full.to_string v with
+        | "name" -> Some (S (OpamPackage.name_to_string pkg))
+        | "version" -> Some (S (OpamPackage.version_to_string pkg))
+        | _ -> None
+      in
+      let deps =
+        OpamFormula.packages st.packages @@
+        OpamFilter.filter_formula ~default:true env (deps_fun opam)
+      in
+      OpamPackage.Map.add pkg deps)
+    st.opams OpamPackage.Map.empty
+
+let rev_depends deps =
+  OpamPackage.Map.fold (fun pkg ->
+      OpamPackage.Set.fold (fun pkg1 ->
+          OpamPackage.Map.update pkg1
+            (OpamPackage.Set.add pkg) OpamPackage.Set.empty))
+    deps OpamPackage.Map.empty
+
+let to_page ~prefix universe pkg acc =
   try
+    if Unix.isatty Unix.stdout then
+      Printf.printf "+++ Building page for %s%!\r\027[K"
+        (OpamPackage.to_string pkg);
     let page = {
-      page_source   = pkg_info.OpamfUniverse.name;
-      page_link     = pkg_info.OpamfUniverse.href;
-      page_link_text = pkg_info.OpamfUniverse.title;
+      page_source   = "packages/" ^ OpamPackage.Name.to_string pkg.name ^ "/" ^ OpamPackage.to_string pkg;
+      page_link     =
+        O2wPackage.pkg_href ~href_base:(Uri.of_string (prefix^"/")) pkg;
+      page_link_text = Html.string (OpamPackage.to_string pkg);
       page_depth    = 3;
       page_contents = Template.serialize
-        (O2wPackage.to_html ~statistics ~prefix:"../../" universe pkg_info);
+        (O2wPackage.to_html ~prefix:"../../" universe pkg);
       page_srcurl = None;
     } in
     page :: acc
@@ -38,32 +136,32 @@ let to_page ~statistics universe pkg pkg_info acc =
     acc
 
 (* Create a list of package pages to generate for a universe *)
-let to_pages ~statistics ~prefix universe =
-  let projects = OpamPackage.Name.Map.fold (fun name max_v acc ->
+let to_pages ~prefix universe =
+  let projects = OpamPackage.Name.Map.fold (fun name versions acc ->
+    let max_v = OpamPackage.Version.Set.max_elt versions in
     let pkg  = OpamPackage.create name max_v in
-    let info = OpamPackage.Map.find pkg universe.pkgs_infos in
     let name = OpamPackage.Name.to_string name in
-    let href = Uri.make ~path:Filename.(concat prefix (concat name "")) () in
+    let href = Uri.make ~path:(prefix ^ "/" ^ name ^ "/") () in
     let page = {
-      page_source   = name;
+      page_source   = "packages/" ^ name;
       page_link     = href;
-      page_link_text = name;
+      page_link_text = Html.string name;
       page_depth    = 2;
       page_contents = Template.serialize
-        (O2wPackage.to_html ~statistics ~prefix:"../" universe info);
+        (O2wPackage.to_html ~prefix:"../" universe pkg);
       page_srcurl = None;
     } in
     page :: acc
-  ) universe.max_versions [] in
-  OpamPackage.Map.fold
-    (to_page ~statistics universe) universe.pkgs_infos projects
+  ) (OpamPackage.to_map universe.st.packages) [] in
+  OpamPackage.Set.fold
+    (to_page ~prefix universe) universe.st.packages projects
 
 let sortby_links ~links ~default ~active =
   let mk_item title =
     let href =
       if title = default
       then Uri.of_string "./"
-      else Uri.of_string ("index-"^(String.lowercase title)^".html")
+      else Uri.of_string ("index-"^(String.lowercase_ascii title)^".html")
     in
     let ahref =
       Html.a ~href (Html.string "sort by " @ Html.string title)
@@ -72,68 +170,149 @@ let sortby_links ~links ~default ~active =
   in
   List.map mk_item links
 
+let latest_version_packages universe =
+  OpamPackage.Name.Map.fold (fun name vs acc ->
+      OpamPackage.Set.add
+        (OpamPackage.create name (OpamPackage.Version.Set.max_elt vs))
+        acc)
+    (OpamPackage.to_map universe.packages)
+    OpamPackage.Set.empty
+
+let load_opam_state repo_roots =
+  let gt = {
+    global_lock = OpamSystem.lock_none;
+    root = OpamStateConfig.(!r.root_dir);
+    config = OpamStd.Option.Op.(OpamStateConfig.(load !r.root_dir) +!
+                                OpamFile.Config.empty);
+    global_variables = OpamVariable.Map.empty;
+  } in
+  let repo_roots =
+    List.map (fun r ->
+        OpamRepositoryName.of_string (OpamFilename.Dir.to_string r),
+        r)
+      repo_roots
+  in
+  let repositories =
+    List.fold_left (fun acc (repo_name, repo_root) ->
+        let repo = OpamRepositoryBackend.local repo_root in
+        OpamRepositoryName.Map.add repo_name { repo with repo_name } acc)
+      OpamRepositoryName.Map.empty repo_roots
+  in
+  let repos_definitions =
+    OpamRepositoryName.Map.map (fun r ->
+        OpamFile.Repo.safe_read (OpamRepositoryPath.repo r.repo_root))
+      repositories
+  in
+  let repo_opams =
+    OpamRepositoryName.Map.map (fun r ->
+        OpamRepositoryState.load_repo_opams r)
+      repositories
+  in
+  let rt = {
+    repos_global = gt;
+    repos_lock = OpamSystem.lock_none;
+    repositories; repos_definitions; repo_opams;
+  } in
+  OpamSwitchState.load_virtual ~repos_list:(fst (List.split repo_roots))
+    gt rt
+
+let load statistics repo_roots =
+  Printf.printf "++ Loading opam state.\n%!";
+  let st = load_opam_state repo_roots in
+  Printf.printf "++ Gathering dependencies.\n%!";
+  let deps = depends st OpamFile.OPAM.depends in
+  let rdeps = rev_depends deps in
+  let depopts = depends st OpamFile.OPAM.depopts in
+  let rev_depopts = rev_depends depopts in
+  Printf.printf "++ Getting package modification dates from git.\n%!";
+  let dates = dates st in
+  let version_popularity, name_popularity =
+    match statistics with
+    | None -> None, None
+    | Some s ->
+      let vp = s.month_stats.pkg_stats in
+      let np =
+        OpamPackage.Map.fold (fun nv x ->
+            OpamPackage.Name.Map.update nv.name (Int64.add x) 0L)
+          vp OpamPackage.Name.Map.empty
+      in
+      Some vp, Some np
+  in
+  {
+    st;
+    dates;
+    version_popularity;
+    name_popularity;
+    depends = deps;
+    rev_depends = rdeps;
+    depopts;
+    rev_depopts;
+  }
+
 (* Returns a HTML list of the packages in the given universe *)
-let to_html ~content_dir ~sortby_links ~popularity ~active
-    ~compare_pkg universe =
+let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
   let sortby_links_html = sortby_links ~active in
   let sorted_packages =
-    let pkg_set = universe.max_packages in
-    let pkg_set = match universe.index with
-      | Index_all -> pkg_set
-      | Index_pred -> OpamPackage.Set.filter
-        (Pkg.are_preds_satisfied
-           universe.pkgs_opams
-           universe.pkg_idx
-           universe.preds)
-        pkg_set
-    in
+    let pkg_set = latest_version_packages univ.st in
     let packages = OpamPackage.Set.elements pkg_set in
     List.sort compare_pkg packages
   in
   let repos_html =
-    let repos = OpamRepository.sort universe.repos in
     let row r =
+      let r =
+        OpamRepositoryName.Map.find r
+          univ.st.switch_repos.repositories
+      in
       let s =
-        Printf.sprintf "%s(%d %s %s)"
+        Printf.sprintf "%s(%s)"
           (OpamRepositoryName.to_string r.repo_name)
-          r.repo_priority
-          (OpamTypesBase.string_of_repository_kind r.repo_kind)
-          (OpamTypesBase.string_of_address r.repo_address)
+          (OpamUrl.to_string r.repo_url)
       in
       [Html.string s]
     in
-    Html.Create.table repos ~row
+    match univ.st.switch_config.OpamFile.Switch_config.repos with
+    | None -> Html.empty
+    | Some repos -> Html.Create.table repos ~row
   in
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
-          try Some (OpamPackage.Map.find pkg universe.pkgs_infos)
+          try Some (OpamPackage.Map.find pkg univ.st.opams)
           with Not_found -> None in
         match info with
         | None          -> acc
         | Some pkg_info ->
           let pkg_name = OpamPackage.name pkg in
           let pkg_download =
-            try
-              let d = OpamPackage.Name.Map.find pkg_name popularity in
-              [Printf.sprintf "Downloads: %Ld" d]
-            with Not_found -> []
+            match
+              OpamStd.Option.Op.(univ.name_popularity >>= OpamPackage.Name.Map.find_opt pkg_name)
+            with
+            | Some d -> [Printf.sprintf "Downloads: %Ld" d]
+            | None -> []
           in
-          let pkg_published = match pkg_info.published with
+          let pkg_published = match OpamPackage.Map.find_opt pkg univ.dates with
             | Some timestamp -> [
               Printf.sprintf "Published: %s"
                 (O2wMisc.string_of_timestamp timestamp)
             ]
             | None -> []
           in
-          let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published) in
+          let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
+          let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
+          let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published @ pkg_tags) in
           let name = OpamPackage.Name.to_string pkg_name in
           let pkg_href = Uri.(resolve "http" (of_string "../packages/") (of_string name)) in
-          Html.tag "tr"
-            (Html.tag "td" ~attrs:["title", pkg_tooltip]
-               (Html.a ~href:pkg_href (Html.string pkg_info.name))
-             @ Html.tag "td" (Html.string pkg_info.version)
-             @ Html.tag "td" (Html.string pkg_info.synopsis))
+          let synopsis =
+            OpamStd.Option.Op.((OpamFile.OPAM.synopsis pkg_info >>| Html.string)
+                               +! Html.empty)
+            ++ Html.span ~cls:"invisible" (Html.string tags)
+          in
+          (Html.tag "tr" ~attrs:["title", pkg_tooltip]
+             (Html.tag "td"
+                (Html.a ~href:pkg_href
+                   (Html.string (OpamPackage.name_to_string pkg)))
+              @ Html.tag "td" (Html.string (OpamPackage.version_to_string pkg))
+              @ Html.tag "td" synopsis))
           :: acc)
       []
       (List.rev sorted_packages)
@@ -149,6 +328,7 @@ let to_html ~content_dir ~sortby_links ~popularity ~active
     "pkgs",  serialize(Html.tag "tbody" (List.concat packages_html));
   ])
 
-(** Generate a universe from a list of repositories *)
-let of_repositories ?preds index repos =
-  map O2wPackage.html_descr (of_repositories ?preds index repos)
+
+(* (\** Generate a universe from a list of repositories *\)
+ * let of_repositories ?preds index repos =
+ *   map O2wPackage.html_descr (of_repositories ?preds index repos) *)

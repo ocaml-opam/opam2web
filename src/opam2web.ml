@@ -18,6 +18,9 @@ open Cmdliner
 open Cow
 open O2wTypes
 open OpamTypes
+open OpamStateTypes
+
+let ( ++ ) = Html.( ++ )
 
 (* Options *)
 type options = {
@@ -46,14 +49,18 @@ let include_files (path: string) files_path : unit =
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
 (* Generate a whole static website using the given repository stack *)
-let make_website user_options universe =
+let make_website user_options =
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
   let statistics = O2wStatistics.statistics_set user_options.logfiles in
   let content_dir = user_options.content_dir in
+  let universe =
+    O2wUniverse.load statistics
+      (List.map OpamFilename.Dir.of_string user_options.repositories)
+  in
   Printf.printf "++ Building the package pages.\n%!";
-  let pages = O2wUniverse.to_pages
-    ~statistics ~prefix:packages_prefix universe
+  let pages =
+    O2wUniverse.to_pages ~prefix:packages_prefix universe
   in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc () = O2wDocumentation.to_menu ~content_dir in
@@ -79,33 +86,32 @@ let make_website user_options universe =
       O2wUniverse.sortby_links ~links:criteria_nostats ~default:"name"
     | Some _ ->
       O2wUniverse.sortby_links ~links:criteria ~default:"name" in
-  let popularity =
-    match statistics with
-    | None   -> OpamPackage.Name.Map.empty
-    | Some s -> O2wStatistics.aggregate_package_popularity
-                  s.month_stats.pkg_stats universe.pkg_idx in
-  let to_html = O2wUniverse.to_html ~content_dir ~sortby_links ~popularity in
+  let to_html =
+    O2wUniverse.to_html ~content_dir ~sortby_links universe
+  in
   Printf.printf "++ Building the package indexes.\n%!";
   let package_links =
     let compare_pkg =
-      O2wPackage.compare_date ~reverse:true universe.pkgs_dates
+      O2wPackage.compare_date ~reverse:true universe.dates
     in
     let date = {
       menu_source = content_dir;
       menu_link = Uri.make ~path:(packages_prefix^"/index-date.html") ();
-      menu_link_text = "Packages";
-      menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg universe);
+      menu_link_text = Html.string "Packages";
+      menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg);
       menu_srcurl = None;
     } in
-    match statistics with
+    match universe.name_popularity with
     | None -> [ date ]
     | Some s ->
-      let compare_pkg = O2wPackage.compare_popularity ~reverse:true popularity in
+      let compare_pkg =
+        O2wPackage.compare_popularity ~reverse:true s
+      in
       let popularity = {
         menu_source = content_dir;
         menu_link = Uri.make ~path:(packages_prefix ^ "/index-popularity.html") ();
-        menu_link_text = "Packages";
-        menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg universe);
+        menu_link_text = Html.string "Packages";
+        menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg);
         menu_srcurl = None;
       } in
       [ popularity; date ]
@@ -122,34 +128,37 @@ let make_website user_options universe =
       OpamConsole.warning "%s is not available." filename;
       Html.empty in
   let doc_menu = menu_of_doc () in
-  let home_index = O2wHome.to_html
-    ~content_dir ~statistics ~popularity ~news universe in
+  let home_index = O2wHome.to_html ~content_dir ~statistics ~news universe in
   let package_index =
-    to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum universe in
+    to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum in
+  let opam_title =
+    Html.img (Uri.make ~path:"/ext/img/favicon.png" ()) ++
+    Html.span ~cls:"opam-title" (Html.string " opam")
+  in
   O2wTemplate.generate
     ~content_dir ~out_dir:user_options.out_dir
     ([
       { menu_source = content_dir;
         menu_link = Uri.make ~path:"." ();
-        menu_link_text = "OPAM";
+        menu_link_text = opam_title;
         menu_item = Internal (0, home_index);
         menu_srcurl = None; };
 
       { menu_source = content_dir;
         menu_link = Uri.make ~path:(packages_prefix^"/") ();
-        menu_link_text = "Repository";
+        menu_link_text = Html.string "Packages";
         menu_item = Internal (1, package_index);
         menu_srcurl = None; };
 
       { menu_source = content_dir^"/doc";
         menu_link = Uri.make ~path:"doc/" ();
-        menu_link_text = "Documentation";
+        menu_link_text = Html.string "Documentation";
         menu_item = Submenu doc_menu;
         menu_srcurl = None; };
 
       { menu_source = content_dir;
         menu_link = Uri.make ~path:"about.html" ();
-        menu_link_text = "About OPAM";
+        menu_link_text = Html.string "About opam";
         menu_item = Internal (0, Template.serialize about_page);
         menu_srcurl = None; };
 
@@ -218,12 +227,7 @@ let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
     root_uri;
     blog_source_uri;
   } in
-  Printf.printf "Loading universe... %!";
-  let universe =
-    O2wUniverse.of_repositories OpamfUniverse.Index_pred repositories
-  in
-  Printf.printf "done.\n%!";
-  make_website user_options universe
+  make_website user_options
 
 let default_cmd =
   let doc = "generate a web site from an opam universe" in

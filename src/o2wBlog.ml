@@ -17,7 +17,7 @@
 open Cow
 open O2wTypes
 
-let header_separator = "^--BODY--$"
+let header_separator = "--BODY--"
 
 type post = {
   blog_source: string;
@@ -28,36 +28,54 @@ type post = {
   blog_name: string;
 }
 
+let empty_post = {
+  blog_source = "";
+  blog_title = "";
+  blog_authors = [];
+  blog_date = 0.;
+  blog_body = Cow.Html.empty;
+  blog_name = "";
+}
+
 (* format: 2014-08-09 17:44:00+02:00 *)
-let parse_date filename d =
+let parse_date =
+  let digits n = Re.(repn digit n (Some n)) in
   let re =
-    Re_str.regexp
-      "\\([0-9][0-9][0-9][0-9]\\)-\\([0-9][0-9]\\)-\\([0-9][0-9]\\)\
-       \\( \\([0-9][0-9]\\):\\([0-9][0-9]\\)\\(:\\([0-9][0-9]\\)\\)?\\)?\
-       \\(\\([-+][0-9][0-9]\\):\\([0-9][0-9]\\)\\)?"
+    Re.(compile @@ whole_string @@ seq [
+        group(digits 4); char '-'; group(digits 2); char '-'; group(digits 2);
+        opt @@ seq [
+          space; group(digits 2); char ':';
+          group(digits 2);
+          opt @@ seq [ char ':'; group(digits 2) ];
+        ];
+        opt @@ space;
+        opt @@ str "UTC";
+        opt @@ seq [group(seq [set "-+"; digits 2]); opt (char ':'); group(digits 2)];
+      ])
   in
-  if not (Re_str.string_match re d 0) then
-    OpamConsole.error_and_exit "Invalid date %S in %s"
-      d
-      (OpamFilename.to_string filename);
-  let t =
-    let ios i =
-      try int_of_string (Re_str.matched_group i d)
-      with Not_found | Invalid_argument _ -> 0 in
-    Unix.({
-        tm_year = ios 1 - 1900;
-        tm_mon  = ios 2 - 1;
-        tm_mday = ios 3;
-        tm_hour = ios 5 - ios 10;
-        tm_min  = (ios 6 - if ios 10 > 0 then ios 11 else 0 - ios 11);
-        tm_sec  = ios 8;
+  fun s ->
+    try
+      let g = Re.exec re s in
+      let get i =
+        try int_of_string (Re.Group.get g i)
+        with Not_found -> 0
+      in
+      let tm = {
+        Unix.
+        tm_year = get 1 - 1900;
+        tm_mon  = get 2 - 1;
+        tm_mday = get 3;
+        tm_hour = get 4 - get 7;
+        tm_min  = (get 5 - if get 7 > 0 then get 8 else 0 - get 8);
+        tm_sec  = get 6;
         (* Initial dummy values *)
         tm_wday  = 0;
         tm_yday  = 0;
         tm_isdst = false;
-      })
-  in
-  fst (Unix.mktime t)
+      } in
+      fst (Unix.mktime tm)
+    with Not_found ->
+      Printf.ksprintf failwith "Invalid date %S" s
 
 let short_date timestamp =
   let open Unix in
@@ -74,53 +92,59 @@ let html_date timestamp =
     ) in
   Html.time ~datetime:d (Html.string (short_date timestamp))
 
+let blog_header_parse =
+  let open OpamPp.Op in
+  let fields = [
+    "title", OpamPp.ppacc
+      (fun blog_title t -> {t with blog_title}) (fun t -> t.blog_title)
+      OpamFormat.V.string;
+    "authors", OpamPp.ppacc
+      (fun blog_authors t -> {t with blog_authors}) (fun t -> t.blog_authors)
+      (OpamFormat.V.map_list ~depth:1
+         (OpamFormat.V.map_option OpamFormat.V.string
+            (OpamPp.opt (OpamPp.singleton -| OpamFormat.V.string))));
+    "date", OpamPp.ppacc
+      (fun blog_date t -> {t with blog_date}) (fun t -> t.blog_date)
+      (OpamFormat.V.string -| OpamPp.of_pair "date" (parse_date, short_date));
+  ] in
+  let pp =
+    OpamFormat.I.map_file @@
+    OpamFormat.I.fields ~name:"blog" ~empty:empty_post fields -|
+    OpamFormat.I.show_errors ~name:"blog" ~strict:true ()
+  in
+  fun filename str ->
+    let pos = OpamTypesBase.pos_file (OpamFile.filename filename) in
+    OpamFile.Syntax.of_string filename str |>
+    OpamPp.parse pp ~pos |>
+    snd
+
 let to_entry ~content_dir filename =
   let name = Filename.chop_extension filename in
   let extension = OpamStd.String.remove_prefix ~prefix:name filename in
   if extension <> ".md" && extension <> ".html" then None else
   let filename = OpamFilename.Op.(content_dir//filename) in
   let content = OpamFilename.read filename in
-  match Re_str.bounded_split (Re_str.regexp header_separator) content 2 with
-  | [] | [_] | _::_::_::_ ->
-      OpamConsole.note "Skipping %s: no header found"
-        (OpamFilename.to_string filename);
-      None
-  | [header; body] ->
-      let title, authors, date =
-        let lexbuf = Lexing.from_string header in
-        let s_filename = OpamFilename.to_string filename in
-        lexbuf.Lexing.lex_curr_p <- { lexbuf.Lexing.lex_curr_p with
-                                      Lexing.pos_fname = s_filename };
-        let {OpamTypes.file_contents=s} = OpamParser.main OpamLexer.token lexbuf s_filename in
-        let invalid = OpamFormat.invalid_fields s ["title";"authors";"date"] in
-        if invalid <> [] then
-          OpamConsole.error_and_exit "Invalid fields %s in %s"
-            (String.concat "," invalid) s_filename;
-        let title = OpamFormat.assoc s "title" OpamFormat.parse_string in
-        let authors =
-          OpamFormat.(
-            assoc_list s "authors"
-              (parse_list (parse_option parse_string (fun x -> parse_string (List.hd x))))
-          ) in
-        let date = OpamFormat.assoc s "date" (fun f ->
-            parse_date filename (OpamFormat.parse_string f)) in
-        title, authors, date
-      in
-      let html_body = match extension with
-        | ".html" -> Cow.Html.of_string body
-        | ".md" ->
-            let md_content = Omd.of_string body in
-            Cow.Html.of_string (Omd.to_html md_content)
-        | _ -> assert false
-      in
-      Some {
-        blog_source = OpamFilename.to_string filename;
-        blog_title = title;
-        blog_authors = authors;
-        blog_date = date;
-        blog_body = html_body;
-        blog_name = name;
-      }
+  let header_sep_re = Re.(compile @@ seq [ bol; str header_separator; eol ]) in
+  match Re.split header_sep_re content with
+  | [] | [_] ->
+    OpamConsole.note "Skipping %s: no header found"
+      (OpamFilename.to_string filename);
+    None
+  | header :: body ->
+    let body = String.concat (header_separator^"\n") body in
+    let blog = blog_header_parse (OpamFile.make filename) header in
+    let html_body = match extension with
+      | ".html" -> Cow.Html.of_string body
+      | ".md" ->
+        let md_content = Omd.of_string body in
+        Cow.Html.of_string (Omd.to_html md_content)
+      | _ -> assert false
+    in
+    Some { blog with
+           blog_source = OpamFilename.to_string filename;
+           blog_body = html_body;
+           blog_name = name;
+         }
 
 (* Generate the HTML corresponding to a blog page in the <content>/blog
    directory *)
@@ -205,14 +229,14 @@ let make_menu ?srcurl entries =
       let first =
         [{ menu_source = first_entry.blog_source;
            menu_link = blog_link first_entry;
-           menu_link_text = "Platform Blog";
+           menu_link_text = Html.string "Platform Blog";
            menu_item = Internal (2, first_page);
            menu_srcurl = srcurl first_entry; }] in
       let others =
         List.map2 (fun entry page ->
             { menu_source = entry.blog_source;
               menu_link = blog_link entry;
-              menu_link_text = entry.blog_title;
+              menu_link_text = Html.string entry.blog_title;
               menu_item = No_menu (2, page);
               menu_srcurl = srcurl entry; })
           entries pages

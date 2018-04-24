@@ -23,5 +23,4 @@ val packages_prefix : string
 
 (** Generate the homepage *)
 val to_html: content_dir:string -> statistics:statistics_set option ->
-  popularity:int64 name_map -> news:Cow.Xml.t ->
-  Cow.Html.t OpamfUniverse.t -> Cow.Xml.signal list
+  news:Cow.Xml.t -> univ -> Cow.Xml.signal list

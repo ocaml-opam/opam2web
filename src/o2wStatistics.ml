@@ -41,20 +41,20 @@ module StringMap = struct
 end
 
 let timestamp_regexp =
-  Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
+  Re.Str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
                  \\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
 
 let timestamp_of_entry e =
   let open Unix in
   let open Logentry in
-  if Re_str.string_match timestamp_regexp e.date 0 then
+  if Re.Str.string_match timestamp_regexp e.date 0 then
     fst (Unix.mktime {
-        tm_mday = int_of_string (Re_str.matched_group 1 e.date);
-        tm_mon  = O2wMisc.month_of_string (Re_str.matched_group 2 e.date);
-        tm_year = int_of_string (Re_str.matched_group 3 e.date) - 1900;
-        tm_hour = int_of_string (Re_str.matched_group 4 e.date);
-        tm_min  = int_of_string (Re_str.matched_group 5 e.date);
-        tm_sec  = int_of_string (Re_str.matched_group 6 e.date);
+        tm_mday = int_of_string (Re.Str.matched_group 1 e.date);
+        tm_mon  = O2wMisc.month_of_string (Re.Str.matched_group 2 e.date);
+        tm_year = int_of_string (Re.Str.matched_group 3 e.date) - 1900;
+        tm_hour = int_of_string (Re.Str.matched_group 4 e.date);
+        tm_min  = int_of_string (Re.Str.matched_group 5 e.date);
+        tm_sec  = int_of_string (Re.Str.matched_group 6 e.date);
         (* Initial dummy values *)
         tm_wday  = 0;
         tm_yday  = 0;
@@ -64,11 +64,11 @@ let timestamp_of_entry e =
 
 let request_of_entry e =
   let html_regexp =
-    Re_str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
+    Re.Str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
   let archive_regexp =
-    Re_str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
+    Re.Str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
   let update_regexp =
-    Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
+    Re.Str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
   let open Logentry in
   let package_of_string str =
     try OpamPackage.of_string (Filename.basename str)
@@ -76,43 +76,43 @@ let request_of_entry e =
       failwith ("opam exit with code " ^ string_of_int e)
   in
   try
-    if Re_str.string_match html_regexp e.request 0 then
-      Html_req (Re_str.matched_group 1 e.request)
-    else if Re_str.string_match archive_regexp e.request 0 then
-      Archive_req (package_of_string (Re_str.matched_group 1 e.request))
-    else if Re_str.string_match update_regexp e.request 0 then
+    if Re.Str.string_match html_regexp e.request 0 then
+      Html_req (Re.Str.matched_group 1 e.request)
+    else if Re.Str.string_match archive_regexp e.request 0 then
+      Archive_req (package_of_string (Re.Str.matched_group 1 e.request))
+    else if Re.Str.string_match update_regexp e.request 0 then
       Update_req
     else
       Unknown_req e.request
   with Failure _ -> Unknown_req e.request
 
 let internal_regexp =
-  Re_str.regexp "https?://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
+  Re.Str.regexp "https?://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
 
 let referrer_of_entry e =
   let open Logentry in
   match e.referrer with
   | "-" -> No_ref
-  | s when Re_str.string_match internal_regexp e.referrer 0 ->
-    Internal_ref (Re_str.matched_group 2 e.referrer)
+  | s when Re.Str.string_match internal_regexp e.referrer 0 ->
+    Internal_ref (Re.Str.matched_group 2 e.referrer)
   | s -> External_ref s
 
 let browser_regexp =
-  Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
+  Re.Str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
 let os_regexp =
-  Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
+  Re.Str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
                  Android\\|Linux\\|FreeBSD\\)"
 
 let client_of_entry e =
   let open Logentry in
   (* TODO: refine client string parsing (versions, more browsers...)  *)
   let match_browser =
-    try Re_str.search_forward browser_regexp e.client 0
+    try Re.Str.search_forward browser_regexp e.client 0
     with Not_found -> (-1) in
   let browser =
     if match_browser >= 0 then
       let browser_str =
-        try Re_str.matched_group 1 e.client
+        try Re.Str.matched_group 1 e.client
         with Not_found -> "" in
       match browser_str with
       | "Chrome" -> Chrome ""
@@ -123,12 +123,12 @@ let client_of_entry e =
     else
       Unknown_browser "" in
   let match_os =
-    try Re_str.search_forward os_regexp e.client 0
+    try Re.Str.search_forward os_regexp e.client 0
     with Not_found -> (-1) in
   let os =
     if match_os >= 0 then
       let os_str =
-        try Re_str.matched_group 1 e.client
+        try Re.Str.matched_group 1 e.client
         with Not_found -> "" in
       match os_str with
       | "Windows" -> Windows ""
@@ -395,24 +395,6 @@ let statistics_set files =
     in
     write_cache cache;
     Some stats
-
-let aggregate_package_popularity pkg_stats pkg_idx =
-  OpamPackage.Map.fold (fun pkg pkg_count acc ->
-    if not (OpamPackage.Map.mem pkg pkg_idx) then
-      (* This can happen when some packages are deleted *)
-      acc
-    else (
-      let pkg_name = OpamPackage.name pkg in
-      if not (OpamPackage.Name.Map.mem pkg_name acc) then
-        OpamPackage.Name.Map.add pkg_name pkg_count acc
-      else (
-        let last_count = OpamPackage.Name.Map.find pkg_name acc in
-        OpamPackage.Name.Map.add pkg_name
-          (Int64.add pkg_count last_count)
-          (OpamPackage.Name.Map.remove pkg_name acc)
-      )
-    )
-  ) pkg_stats OpamPackage.Name.Map.empty
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower)
    value associated *)

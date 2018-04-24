@@ -2,7 +2,7 @@
 
 build:
 	jbuilder build @install @js_search
-	cp _build/default/src/js_search/search.bc.js ext/js/
+	cp _build/default/src/js_search/search.bc.js ext/js/search.js
 	cp _build/default/src/opam2web.exe opam2web
 
 install:

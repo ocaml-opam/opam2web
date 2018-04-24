@@ -20,8 +20,7 @@ let win = Dom_html.window
 let _s = Js.string
 
 let get_element_by_id id =
-  Js.Opt.get (doc##getElementById (Js.string id))
-    (fun () -> Firebug.console##log (_s id); assert false)
+  Js.Opt.to_option (doc##getElementById (Js.string id))
 
 let from_option opt =
   match Js.Opt.to_option opt with
@@ -43,27 +42,36 @@ let show tr =
 (* Filter the string [str] from the table [tbl] by looking in the column
    name (position 0) and the description (position 2) *)
 let filter str tbl =
-  for i = 1 to (tbl##.rows##.length) do
-    let tr = from_option (tbl##.rows##item (i)) in
+  for i = 1 to tbl##.rows##.length do
+    Js.Opt.iter (tbl##.rows##item (i)) @@ fun tr ->
     (* Get the [td] corresponding to the name column *)
-    let name = from_option (tr##.cells##item (by_name)) in
+    let name = tr##.cells##item (by_name) in
     (* Get the [td] corresponding to the description column *)
-    let descr = from_option (tr##.cells##item (by_descr)) in
+    let descr = tr##.cells##item (by_descr) in
+    let matches str elt =
+      Js.Opt.case elt (fun () -> false) @@ fun e ->
+      None <>
+      Regexp.search (Regexp.regexp_string_case_fold (Js.to_string str))
+        (Js.to_string e##.innerHTML) 0
+    in
     (* Filter name or column column of the table *)
-    if (Regexp.search (Regexp.regexp (String.lowercase (Js.to_string str)))
-          (String.lowercase (Js.to_string name##.innerHTML)) 0) <> None ||
-      (Regexp.search (Regexp.regexp (String.lowercase (Js.to_string str)))
-         (String.lowercase (Js.to_string descr##.innerHTML)) 0) <> None
-    then
-      show tr
-    else
-      hide tr
+    if matches str name || matches str descr
+    then show tr
+    else hide tr
   done
 
-let _=
-  let tbl = get_element_by_id "packages" in
-  let tbl = from_option (Dom_html.CoerceTo.table tbl) in
-  let search = get_element_by_id "search" in
-  let search = from_option (Dom_html.CoerceTo.input search) in
-  search##.onkeyup := Dom_html.handler
-    (fun _ -> filter search##.value tbl; Js._false);
+let ( >>= ) = Js.Opt.bind
+
+let _ =
+  doc##getElementById (Js.string "search") >>= Dom_html.CoerceTo.input
+  >>= fun search ->
+  doc##getElementById (Js.string "packages") >>= Dom_html.CoerceTo.table
+  >>= fun tbl ->
+  let handler =
+    Dom_html.handler (fun _ -> filter search##.value tbl; Js._false)
+  in
+  search##.onkeyup := handler;
+  let hash = win##.location##.hash##substring_toEnd 1 in
+  if hash##.length > 0 then search##.value := hash;
+  if search##.value##.length > 0 then filter search##.value tbl;
+  Js.some handler
