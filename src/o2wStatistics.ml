@@ -278,7 +278,7 @@ type cache_elt = {
   cache_only_since: float;
 }
 type cache = cache_elt OpamFilename.Map.t
-let cache_file = OpamFilename.of_string "~/.cache/opam2web/stats_cache"
+let cache_file = OpamFilename.of_string "~/.cache/opam2web2/stats_cache"
 let cache_format_version = 1
 let version_id =
   Digest.string (OpamVersion.(to_string (full ())) ^" "^
