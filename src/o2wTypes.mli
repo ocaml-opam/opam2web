@@ -30,7 +30,8 @@ type univ = {
 type page = {
   page_source  : string;
   page_link    : Uri.t;
-  page_link_text: Cow.Html.t;
+  page_link_text: string;
+  page_link_html: Cow.Html.t;
   page_depth   : int;
   page_contents: Cow.Xml.signal list;
   page_srcurl  : string option;
@@ -38,7 +39,8 @@ type page = {
 
 type menu = {
   menu_link: Uri.t;
-  menu_link_text: Cow.Html.t;
+  menu_link_text: string;
+  menu_link_html: Cow.Html.t;
   menu_item: menu_item;
   menu_source: string;
   menu_srcurl: string option;

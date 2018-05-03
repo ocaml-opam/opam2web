@@ -181,7 +181,8 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         {
           menu_source = OpamFilename.to_string source_filename;
           menu_link = lnk;
-          menu_link_text = Html.string lnk_text;
+          menu_link_text = lnk_text;
+          menu_link_html = Html.string lnk_text;
           menu_item = page;
           menu_srcurl = None;
         }
@@ -197,7 +198,8 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
         {
           menu_source = OpamFilename.to_string source_filename;
           menu_link = Uri.with_path lnk (subdir ^ "/" ^ Uri.path lnk);
-          menu_link_text = Html.string lnk_text;
+          menu_link_text = lnk_text;
+          menu_link_html = Html.string lnk_text;
           menu_item = Internal (level, Template.serialize html_page);
           menu_srcurl = srcurl;
         }
@@ -223,7 +225,8 @@ let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl 
       {
         menu_source = "index.html";
         menu_link = Uri.make ~path:(subdir ^ "/") ();
-        menu_link_text = Html.string "Documentation index";
+        menu_link_text = "Documentation index";
+        menu_link_html = Html.string "Documentation index";
         menu_item = No_menu (List.length (OpamStd.String.split subdir '/'),
                              Template.serialize html_index);
         menu_srcurl = srcurl;
@@ -279,7 +282,8 @@ let to_menu ~content_dir =
   [{
     menu_source = "1.1";
     menu_link = Uri.make ~path:"/doc/1.1/" ();
-    menu_link_text = Html.string "Archives (OPAM 1.1)";
+    menu_link_text = "Archives (OPAM 1.1)";
+    menu_link_html = Html.string "Archives (OPAM 1.1)";
     menu_item = External;
     menu_srcurl =
       match srcurl_11 with
@@ -289,7 +293,8 @@ let to_menu ~content_dir =
   {
     menu_source = "1.2";
     menu_link = Uri.make ~path:"/doc/1.2/" ();
-    menu_link_text = Html.string "Archives (OPAM 1.2)";
+    menu_link_text = "Archives (OPAM 1.2)";
+    menu_link_html = Html.string "Archives (OPAM 1.2)";
     menu_item = External;
     menu_srcurl =
       match srcurl_12 with

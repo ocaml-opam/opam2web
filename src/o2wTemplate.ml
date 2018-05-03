@@ -35,6 +35,7 @@ let prepend_root (depth: int) (src: Uri.t): Uri.t =
   else Uri.with_path src (aux path depth)
 
 let create ~title ~header ~body ~footer ~depth =
+  let title = Html.string title in
   let js_files = [
       "ext/js/jquery.js";
       "ext/js/site.js";
@@ -104,14 +105,14 @@ let make_nav (active, depth) pages =
     match m.menu_item with
     | External   ->
        Html.li ~cls:class_attr
-         (Html.a ~href:m.menu_link m.menu_link_text)
+         (Html.a ~href:m.menu_link m.menu_link_html)
     | Internal _ ->
       let lnk = prepend_root depth m.menu_link in
       Html.li ~cls:class_attr
-        (Html.a ~href:lnk m.menu_link_text)
+        (Html.a ~href:lnk m.menu_link_html)
     | No_menu _ -> Html.empty
     | Nav_header ->
-       Html.li ~cls:"nav-header" m.menu_link_text
+       Html.li ~cls:"nav-header" m.menu_link_html
     | Divider ->
        Html.li ~cls:"divider" Html.empty
     | Submenu sub_items ->
@@ -123,7 +124,7 @@ let make_nav (active, depth) pages =
            ~cls:"dropdown-toggle"
            ~attrs:["href", "#";
                    "data-toggle", "dropdown"]
-           (m.menu_link_text
+           (m.menu_link_html
             @ Html.b ~cls:"caret" Html.empty)
          @ Html.ul ~add_li:false ~cls:"dropdown-menu"
              (List.map (make_item ~subnav:true) sub_items)
@@ -240,6 +241,7 @@ let generate ~content_dir ~out_dir menu pages =
           { page_source = m.menu_source;
             page_link = m.menu_link;
             page_link_text = m.menu_link_text;
+            page_link_html = m.menu_link_html;
             page_depth;
             page_contents;
             page_srcurl = m.menu_srcurl; } in

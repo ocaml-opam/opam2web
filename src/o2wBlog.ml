@@ -229,14 +229,16 @@ let make_menu ?srcurl entries =
       let first =
         [{ menu_source = first_entry.blog_source;
            menu_link = blog_link first_entry;
-           menu_link_text = Html.string "Platform Blog";
+           menu_link_text = "Platform Blog";
+           menu_link_html = Html.string "Platform Blog";
            menu_item = Internal (2, first_page);
            menu_srcurl = srcurl first_entry; }] in
       let others =
         List.map2 (fun entry page ->
             { menu_source = entry.blog_source;
               menu_link = blog_link entry;
-              menu_link_text = Html.string entry.blog_title;
+              menu_link_text = entry.blog_title;
+              menu_link_html = Html.string entry.blog_title;
               menu_item = No_menu (2, page);
               menu_srcurl = srcurl entry; })
           entries pages

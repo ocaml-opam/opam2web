@@ -97,7 +97,8 @@ let make_website user_options =
     let date = {
       menu_source = content_dir;
       menu_link = Uri.make ~path:(packages_prefix^"/index-date.html") ();
-      menu_link_text = Html.string "Packages";
+      menu_link_text = "Packages";
+      menu_link_html = Html.string "Packages";
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg);
       menu_srcurl = None;
     } in
@@ -110,7 +111,8 @@ let make_website user_options =
       let popularity = {
         menu_source = content_dir;
         menu_link = Uri.make ~path:(packages_prefix ^ "/index-popularity.html") ();
-        menu_link_text = Html.string "Packages";
+        menu_link_text = "Packages";
+        menu_link_html = Html.string "Packages";
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg);
         menu_srcurl = None;
       } in
@@ -140,25 +142,29 @@ let make_website user_options =
     ([
       { menu_source = content_dir;
         menu_link = Uri.make ~path:"." ();
-        menu_link_text = opam_title;
+        menu_link_text = "opam";
+        menu_link_html = opam_title;
         menu_item = Internal (0, home_index);
         menu_srcurl = None; };
 
       { menu_source = content_dir;
         menu_link = Uri.make ~path:(packages_prefix^"/") ();
-        menu_link_text = Html.string "Packages";
+        menu_link_text = "Packages";
+        menu_link_html = Html.string "Packages";
         menu_item = Internal (1, package_index);
         menu_srcurl = None; };
 
       { menu_source = content_dir^"/doc";
         menu_link = Uri.make ~path:"doc/" ();
-        menu_link_text = Html.string "Documentation";
+        menu_link_text = "Documentation";
+        menu_link_html = Html.string "Documentation";
         menu_item = Submenu doc_menu;
         menu_srcurl = None; };
 
       { menu_source = content_dir;
         menu_link = Uri.make ~path:"about.html" ();
-        menu_link_text = Html.string "About opam";
+        menu_link_text = "About opam";
+        menu_link_html = Html.string "About opam";
         menu_item = Internal (0, Template.serialize about_page);
         menu_srcurl = None; };
 

@@ -122,7 +122,8 @@ let to_page ~prefix universe pkg acc =
       page_source   = "packages/" ^ OpamPackage.Name.to_string pkg.name ^ "/" ^ OpamPackage.to_string pkg;
       page_link     =
         O2wPackage.pkg_href ~href_base:(Uri.of_string (prefix^"/")) pkg;
-      page_link_text = Html.string (OpamPackage.to_string pkg);
+      page_link_text = OpamPackage.to_string pkg;
+      page_link_html = Html.string (OpamPackage.to_string pkg);
       page_depth    = 3;
       page_contents = Template.serialize
         (O2wPackage.to_html ~prefix:"../../" universe pkg);
@@ -145,7 +146,8 @@ let to_pages ~prefix universe =
     let page = {
       page_source   = "packages/" ^ name;
       page_link     = href;
-      page_link_text = Html.string name;
+      page_link_text = name;
+      page_link_html = Html.string name;
       page_depth    = 2;
       page_contents = Template.serialize
         (O2wPackage.to_html ~prefix:"../" universe pkg);
