@@ -147,15 +147,28 @@ let one_week_ago = now -. (one_day *. 7.)
 let one_month_ago = now -. (one_day *. 30.)
 let two_months_ago = now -. (one_day *. 60.)
 
+let a_quarter = 15. *. 60.
+let ten_min = 10. *. 60.
+let five_min = 5. *. 60.
+let two_min = 120.
+
 module StrM = OpamStd.String.Map
 module IntM = OpamStd.IntMap
 module OPM = OpamPackage.Map
+module FloM =
+  OpamStd.Map.Make (struct
+    type t = float
+    let compare a b = int_of_float (a -. b)
+    let to_string = string_of_float
+    let to_json _ = `Null
+  end)
 
 (* Memory cache: IntMap, containing a day_mcache for each day (0..29, backward) *)
 type day_mcache = {
-  pkgs : int64 StrM.t OPM.t;
+  pkgs : float list StrM.t OPM.t;
   updates : int64 StrM.t;
   users : int64 StrM.t;
+  timestamps : package list FloM.t StrM.t;
 }
 
 type mcache = day_mcache IntM.t
@@ -165,6 +178,7 @@ let empty_day_mcache =
     pkgs = OPM.empty;
     updates = StrM.empty;
     users = StrM.empty;
+    timestamps = StrM.empty;
   }
 
 let empty_mcache = IntM.empty
@@ -176,20 +190,20 @@ let incr_strmap key map =
     with Not_found -> Int64.zero in
   StrM.add key (Int64.succ n) map
 
-(* Increment the counter corresponding to a package and a host *)
-let incr_pkgmap pkg host map =
+(* Add download timestamp corresponding to a package and a host *)
+let add_ts_pkgmap pkg host ts map =
   let m =
     try OPM.find pkg map
     with Not_found -> StrM.empty
   in
   let n =
     try StrM.find host m
-    with Not_found -> Int64.zero
+    with Not_found -> []
   in
-  OPM.add pkg (StrM.add host (Int64.succ n) m) map
+  OPM.add pkg (StrM.add host (ts::n) m) map
 
 let which_day ?(log_filter = O2wGlobals.default_log_filter) ?(from) entry =
-  let from = OpamStd.Option.default O2wGlobals.default_log_filter.log_end_time from in
+  let from = OpamStd.Option.default log_filter.log_end_time from in
   if log_filter.log_custom entry then
     let ago = from -. entry.log_timestamp in
     if ago > one_month then None
@@ -210,16 +224,101 @@ let add_mcache_entry mcache entry =
         let updates = incr_strmap entry.log_host  dmcache.updates in
         { dmcache with updates }
       | Archive_req pkg ->
-        let pkgs =
-          incr_pkgmap pkg entry.log_host dmcache.pkgs
+        let timestamps =
+          StrM.update entry.log_host
+            (FloM.update entry.log_timestamp (fun l -> pkg::l) [])
+            FloM.empty dmcache.timestamps
         in
-        { dmcache with pkgs}
+        let pkgs =
+          add_ts_pkgmap pkg entry.log_host entry.log_timestamp dmcache.pkgs
+        in
+        { dmcache with pkgs; timestamps}
       | _ -> dmcache
     in
     IntM.add d dmcache mcache
   | None -> mcache
 
-let compute_stats ?(unique=false) mcache =
+let compute_stats ?(unique=false) mcache repos =
+  (* timestamps: Compute once a map of packages to keep, by user, detect leaf
+     package given download timestamps: adjacent downloads < 5 min  *)
+  let _, pkg_to_keep =
+    let st = O2wUniverse.load_opam_state repos in
+    let get_package_deps env p =
+      let n = OpamPackage.name p in
+      try env, OpamPackage.Name.Map.find n env
+      with Not_found ->
+        let deps =
+          match OpamSwitchState.opam_opt st p with
+          | Some op ->
+            OpamFormula.fold_left (fun acc (n,_) -> n::acc) []
+              (OpamFile.OPAM.depends op)
+          | None -> []
+        in (OpamPackage.Name.Map.add n deps env), deps
+    in
+    let get_dependencies_set adjacent env =
+      let module OPS = OpamPackage.Name.Set in
+      FloM.fold (fun _ p (env, deps) ->
+          let n_env, ldeps = List.fold_left
+              (fun (acc_env, acc_d) pi ->
+                 let e,d = get_package_deps acc_env pi in
+                 e,d::acc_d) (env,[]) p in
+          n_env, OPS.union deps (OPS.of_list (List.flatten ldeps)))
+        adjacent (env, OPS.empty)
+    in
+    (* split map into first adjacent set (first dead window of 2 min) and rest *)
+    let get_adjacent map =
+      let rec aux max lst =
+        match lst with
+        | [] -> max
+        | (next, _)::rest ->
+          if next -. max < five_min then
+            aux next rest
+          else max
+      in
+      let split_ts =
+        match FloM.bindings map with
+        | [] -> assert false (* already checked that map is not empty *)
+        | (ts,_)::tl -> aux ts tl
+      in
+      match FloM.split split_ts map with
+      | m1, Some pl, m2 -> (FloM.add split_ts pl m1), m2
+      | m1, None, m2 -> assert false (* we are sure that the element exists*)
+    in
+    (* Fold accross month logs *)
+    IntM.fold (fun d dmcache (env, hostm_acc) ->
+        let n_env, n_hm =
+          (* Create leaf packages map, by user *)
+          StrM.fold (fun h tsm (env, tsm_acc) ->
+              let rec aux tsm (env, n_tsm_acc) =
+                if FloM.is_empty tsm then (env, n_tsm_acc)
+                else
+                (* Get adjacent download map, and filter by package
+                   dependencies: keep leaf only *)
+                let adjacent, others = get_adjacent tsm in
+                let n_env, all_deps = get_dependencies_set adjacent env in
+                let n_tsm =
+                  FloM.union List.append n_tsm_acc @@
+                  FloM.fold (fun ts pl acc ->
+                      let flt =
+                        List.filter
+                          (fun p ->
+                             not (OpamPackage.Name.Set.mem
+                                    (OpamPackage.name p) all_deps)) pl
+                      in
+                      if flt <> [] then FloM.add ts flt acc else acc)
+                    adjacent FloM.empty
+                in
+                aux others (n_env,n_tsm)
+              in
+              let n_env, new_binding = aux tsm (env, FloM.empty) in
+              n_env, StrM.add h new_binding tsm_acc
+            ) dmcache.timestamps (env, StrM.empty)
+        in
+        let n_tsm = StrM.union (FloM.union List.append) hostm_acc n_hm in
+        n_env, n_tsm
+      ) mcache (OpamPackage.Name.Map.empty, StrM.empty);
+  in
+  (* Compute stats given in interval map *)
   let compute_in interval =
     let users_stats =
       let flat_users_map =
@@ -242,9 +341,26 @@ let compute_stats ?(unique=false) mcache =
     in
     let pkg_stats =
       let flat_pkgs_map =
-        IntM.fold
-          (fun _ dmc map -> OPM.union (StrM.union Int64.add) dmc.pkgs map)
-          interval OPM.empty
+        let flat =
+          IntM.fold
+            (fun _ dmc map -> OPM.union (StrM.union List.append) dmc.pkgs map)
+            interval OPM.empty
+        in
+        OPM.mapi (fun pkg strm ->
+            StrM.mapi (fun host tsl ->
+                let pkg_user =
+                  try StrM.find host pkg_to_keep
+                  with Not_found -> assert false (* these maps have same content *)
+                in
+                let lst =
+                  List.filter (fun ts ->
+                      try List.mem pkg (FloM.find ts pkg_user)
+                      with Not_found -> false
+                    ) tsl
+                in
+                Int64.of_int (List.length lst))
+              strm)
+          flat
       in
       let add _ n acc = if unique then Int64.succ acc else Int64.add n acc in
       OPM.map (fun str -> StrM.fold add str Int64.zero) flat_pkgs_map
@@ -254,6 +370,7 @@ let compute_stats ?(unique=false) mcache =
     in
     { pkg_stats; global_stats; update_stats; users_stats }
   in
+  (* safety check *)
   if IntM.is_empty mcache then empty_stats_set
   else
   let a_day = 0 in
@@ -272,16 +389,18 @@ let compute_stats ?(unique=false) mcache =
     if IntM.is_empty map then empty_stats
     else compute_in map
   in
+  (* do not compute altime stats *)
   let alltime_stats = empty_stats in
   { alltime_stats; day_stats; week_stats; month_stats }
 
 let add_mcache =
   IntM.union
     (fun dmc1 dmc2 ->
-       let pkgs = OPM.union (StrM.union Int64.add) dmc1.pkgs dmc2.pkgs in
+       let pkgs = OPM.union (StrM.union List.append) dmc1.pkgs dmc2.pkgs in
        let updates = StrM.union Int64.add dmc1.updates dmc2.updates in
        let users = StrM.union Int64.add dmc1.users dmc2.users in
-       { pkgs; updates; users})
+       let timestamps = StrM.union (FloM.union List.append) dmc1.timestamps dmc2.timestamps in
+       { pkgs; updates; users; timestamps })
 
 (* Cache management *)
 type cache_elt = {
@@ -326,7 +445,7 @@ let partial_digest ic len =
   try Digest.channel ic len with End_of_file ->
     Digest.channel ic (-1)
 
-let statistics_set files =
+let statistics_set files repos =
   let cache = read_cache () in
   let skip_before = two_months_ago in
   let cache =
@@ -407,7 +526,7 @@ let statistics_set files =
         mc_and_logs
     in
     write_cache cache;
-    let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache in
+    let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache repos in
     Some stats
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower)

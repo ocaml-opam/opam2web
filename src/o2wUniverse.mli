@@ -41,6 +41,8 @@ val to_html:
 
 val latest_version_packages: 'a OpamStateTypes.switch_state -> package_set
 
+val load_opam_state : dirname list -> OpamStateTypes.unlocked OpamStateTypes.switch_state
+
 val load: statistics_set option -> dirname list -> univ
 
 (*
