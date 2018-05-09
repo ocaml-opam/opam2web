@@ -168,7 +168,6 @@ type day_mcache = {
   pkgs : float list StrM.t OPM.t;
   updates : int64 StrM.t;
   users : int64 StrM.t;
-  timestamps : package list FloM.t StrM.t;
 }
 
 type mcache = day_mcache IntM.t
@@ -178,7 +177,6 @@ let empty_day_mcache =
     pkgs = OPM.empty;
     updates = StrM.empty;
     users = StrM.empty;
-    timestamps = StrM.empty;
   }
 
 let empty_mcache = IntM.empty
@@ -224,15 +222,10 @@ let add_mcache_entry mcache entry =
         let updates = incr_strmap entry.log_host  dmcache.updates in
         { dmcache with updates }
       | Archive_req pkg ->
-        let timestamps =
-          StrM.update entry.log_host
-            (FloM.update entry.log_timestamp (fun l -> pkg::l) [])
-            FloM.empty dmcache.timestamps
-        in
         let pkgs =
           add_ts_pkgmap pkg entry.log_host entry.log_timestamp dmcache.pkgs
         in
-        { dmcache with pkgs; timestamps}
+        { dmcache with pkgs}
       | _ -> dmcache
     in
     IntM.add d dmcache mcache
@@ -240,8 +233,25 @@ let add_mcache_entry mcache entry =
 
 let compute_stats ?(unique=false) mcache repos =
   (* timestamps: Compute once a map of packages to keep, by user, detect leaf
-     package given download timestamps: adjacent downloads < 5 min  *)
+      package given download timestamps: adjacent downloads < 5 min  *)
   let _, pkg_to_keep =
+    let full_flat_pkgs =
+      IntM.fold
+        (fun _ dmc map -> OPM.union (StrM.union List.append) dmc.pkgs map)
+        mcache OPM.empty
+    in
+    (* construct timsetamps maps from [dmcache.pkgs]s *)
+    let timestamps =
+      OPM.fold (fun pkg strm map1 ->
+          StrM.fold (fun str tsl map2 ->
+              let map = try StrM.find str map2 with Not_found -> FloM.empty in
+              let tsm = List.fold_left
+                  (fun map3 ts -> FloM.update ts (fun l -> pkg::l) []  map3)
+                  map tsl in
+              StrM.add str tsm map2
+            ) strm map1
+        ) full_flat_pkgs StrM.empty
+    in
     let st = O2wUniverse.load_opam_state repos in
     let get_package_deps env p =
       let n = OpamPackage.name p in
@@ -284,39 +294,32 @@ let compute_stats ?(unique=false) mcache repos =
       | m1, Some pl, m2 -> (FloM.add split_ts pl m1), m2
       | m1, None, m2 -> assert false (* we are sure that the element exists*)
     in
-    (* Fold accross month logs *)
-    IntM.fold (fun d dmcache (env, hostm_acc) ->
-        let n_env, n_hm =
-          (* Create leaf packages map, by user *)
-          StrM.fold (fun h tsm (env, tsm_acc) ->
-              let rec aux tsm (env, n_tsm_acc) =
-                if FloM.is_empty tsm then (env, n_tsm_acc)
-                else
-                (* Get adjacent download map, and filter by package
-                   dependencies: keep leaf only *)
-                let adjacent, others = get_adjacent tsm in
-                let n_env, all_deps = get_dependencies_set adjacent env in
-                let n_tsm =
-                  FloM.union List.append n_tsm_acc @@
-                  FloM.fold (fun ts pl acc ->
-                      let flt =
-                        List.filter
-                          (fun p ->
-                             not (OpamPackage.Name.Set.mem
-                                    (OpamPackage.name p) all_deps)) pl
-                      in
-                      if flt <> [] then FloM.add ts flt acc else acc)
-                    adjacent FloM.empty
+    (* Create leaf packages map, by user *)
+    StrM.fold (fun h tsm (env, tsm_acc) ->
+        let rec aux tsm (env, n_tsm_acc) =
+          if FloM.is_empty tsm then (env, n_tsm_acc)
+          else
+          (* Get adjacent download map, and filter by package
+             dependencies: keep leaf only *)
+          let adjacent, others = get_adjacent tsm in
+          let n_env, all_deps = get_dependencies_set adjacent env in
+          let n_tsm =
+            FloM.union List.append n_tsm_acc @@
+            FloM.fold (fun ts pl acc ->
+                let flt =
+                  List.filter
+                    (fun p ->
+                       not (OpamPackage.Name.Set.mem
+                              (OpamPackage.name p) all_deps)) pl
                 in
-                aux others (n_env,n_tsm)
-              in
-              let n_env, new_binding = aux tsm (env, FloM.empty) in
-              n_env, StrM.add h new_binding tsm_acc
-            ) dmcache.timestamps (env, StrM.empty)
+                if flt <> [] then FloM.add ts flt acc else acc)
+              adjacent FloM.empty
+          in
+          aux others (n_env,n_tsm)
         in
-        let n_tsm = StrM.union (FloM.union List.append) hostm_acc n_hm in
-        n_env, n_tsm
-      ) mcache (OpamPackage.Name.Map.empty, StrM.empty);
+        let n_env, new_binding = aux tsm (env, FloM.empty) in
+        n_env, StrM.add h new_binding tsm_acc
+      ) timestamps (OpamPackage.Name.Map.empty, StrM.empty)
   in
   (* Compute stats given in interval map *)
   let compute_in interval =
@@ -399,8 +402,7 @@ let add_mcache =
        let pkgs = OPM.union (StrM.union List.append) dmc1.pkgs dmc2.pkgs in
        let updates = StrM.union Int64.add dmc1.updates dmc2.updates in
        let users = StrM.union Int64.add dmc1.users dmc2.users in
-       let timestamps = StrM.union (FloM.union List.append) dmc1.timestamps dmc2.timestamps in
-       { pkgs; updates; users; timestamps })
+       { pkgs; updates; users })
 
 (* Cache management *)
 type cache_elt = {
