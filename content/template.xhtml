@@ -9,12 +9,6 @@
     <meta name="description"
         content="The homepage of opam, a package manager for OCaml" />
     <meta name="author" content="OCamlPro" />
-    <link rel="icon" type="image/png" href="/ext/img/favicon.png" />
-    <link rel="stylesheet" href="/ext/css/bootstrap.css" />
-    <link rel="stylesheet" href="/ext/css/docs.css" />
-    <link rel="stylesheet" href="/ext/js/google-code-prettify/prettify.css" />
-    <link rel="stylesheet" href="/ext/css/site.css" />
-    <link rel="stylesheet" href="/ext/css/bootstrap-responsive.css" />
     <t:insert name="head" />
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
@@ -33,8 +27,7 @@
             <span class="icon-bar"> </span>
           </a>
           <a class="brand" href="https://github.com/ocaml/opam">
-            <img src="/ext/img/GitHub-Mark-32px.png"
-                 alt="opam on Github"></img>
+            <t:insert name="img-github" />
           </a>
           <div class="nav-collapse collapse">
             <t:insert name="header" />
@@ -63,8 +56,6 @@
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
 
-    <script src="/ext/js/google-code-prettify/prettify.js"> </script>
     <t:insert name="js" />
-    <script src="/ext/js/bootstrap.min.js"> </script>
   </body>
 </html>

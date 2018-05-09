@@ -281,7 +281,7 @@ let to_menu ~content_dir =
   menu_20 @
   [{
     menu_source = "1.1";
-    menu_link = Uri.make ~path:"/doc/1.1/" ();
+    menu_link = Uri.make ~path:(content_dir ^ "/doc/1.1/") ();
     menu_link_text = "Archives (OPAM 1.1)";
     menu_link_html = Html.string "Archives (OPAM 1.1)";
     menu_item = External;
@@ -292,7 +292,7 @@ let to_menu ~content_dir =
   };
   {
     menu_source = "1.2";
-    menu_link = Uri.make ~path:"/doc/1.2/" ();
+    menu_link = Uri.make ~path:(content_dir ^ "/doc/1.2/") ();
     menu_link_text = "Archives (OPAM 1.2)";
     menu_link_html = Html.string "Archives (OPAM 1.2)";
     menu_item = External;

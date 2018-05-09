@@ -37,18 +37,28 @@ let prepend_root (depth: int) (src: Uri.t): Uri.t =
 let create ~title ~header ~body ~footer ~depth =
   let title = Html.string title in
   let js_files = [
+      "ext/js/google-code-prettify/prettify.js";
       "ext/js/jquery.js";
       "ext/js/site.js";
       "ext/js/search.js";
+      "ext/js/bootstrap.min.js"
     ] in
   let prepend_root = prepend_root depth in
-  let href_css = prepend_root (Uri.make ~path:"ext/css/opam2web.css" ()) in
+  let lnk ?attrs ~rel path =
+    Html.link ~rel ?attrs ~href:(prepend_root (Uri.make ~path ())) Html.empty
+  in
   let head_html =
-    Html.link ~href:href_css ~attrs:["type", "text/css";
-                                     "rel", "stylesheet"]
-      Html.empty
-    @ Html.meta ~name:"generator" ~content:("opam2web " ^ Version.string)
+    Html.list [
+      lnk ~rel:"icon" ~attrs:["type","image/png"] "ext/img/favicon.png";
+      lnk ~rel:"stylesheet" "ext/css/bootstrap.css";
+      lnk ~rel:"stylesheet" "ext/css/docs.css";
+      lnk ~rel:"stylesheet" "ext/js/google-code-prettify/prettify.css";
+      lnk ~rel:"stylesheet" "ext/css/site.css";
+      lnk ~rel:"stylesheet" "ext/css/bootstrap-responsive.css";
+      lnk ~rel:"stylesheet" "ext/css/opam2web.css";
+      Html.meta ~name:"generator" ~content:("opam2web " ^ Version.string)
         Html.empty
+    ]
   in
   let js_html =
     Html.script ~typ:"text/javascript"
@@ -71,10 +81,15 @@ let create ~title ~header ~body ~footer ~depth =
              Html.empty)
           js_files)
   in
+  let img_github =
+    Html.img (prepend_root (Uri.make ~path:"ext/img/GitHub-Mark-32px.png" ()))
+      ~alt:"opam on Github"
+  in
   let js_html = List.rev js_html in [
       "title", Template.serialize title;
       "head",  Template.serialize head_html;
       "header",header;
+      "img-github", Template.serialize img_github;
       "body",  body;
       "footer",footer;
       "js",    Template.serialize js_html;
