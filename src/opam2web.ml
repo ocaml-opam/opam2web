@@ -52,7 +52,9 @@ let include_files (path: string) files_path : unit =
 let make_website user_options =
   Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
-  let statistics = O2wStatistics.statistics_set user_options.logfiles in
+  let statistics = O2wStatistics.statistics_set user_options.logfiles
+      (List.map OpamFilename.Dir.of_string user_options.repositories)
+  in
   let content_dir = user_options.content_dir in
   let universe =
     O2wUniverse.load statistics

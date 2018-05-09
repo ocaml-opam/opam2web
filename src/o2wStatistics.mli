@@ -20,7 +20,7 @@ open OpamTypes
 open O2wTypes
 
 (** Generate statistics on log entries *)
-val statistics_set: filename list -> statistics_set option
+val statistics_set: filename list -> dirname list -> statistics_set option
 
 (** Return the top packages *)
 val top_packages: ?ntop:int -> ?reverse:bool -> (package -> 'a) ->
