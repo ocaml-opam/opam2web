@@ -119,8 +119,13 @@ let make_nav (active, depth) pages =
     in
     match m.menu_item with
     | External   ->
-       Html.li ~cls:class_attr
-         (Html.a ~href:m.menu_link m.menu_link_html)
+      let lnk =
+        if Uri.host m.menu_link = None then
+          prepend_root depth m.menu_link
+        else m.menu_link
+      in
+      Html.li ~cls:class_attr
+        (Html.a ~href:lnk m.menu_link_html)
     | Internal _ ->
       let lnk = prepend_root depth m.menu_link in
       Html.li ~cls:class_attr
