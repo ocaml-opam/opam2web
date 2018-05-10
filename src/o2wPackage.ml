@@ -338,6 +338,12 @@ let to_html ~prefix univ pkg =
   let pkg_stats = match univ.version_popularity with
     | None -> Html.empty
     | Some stats ->
+      let has_checksum =
+        match OpamFile.OPAM.url pkg_opam >>| OpamFile.URL.checksum with
+        | Some [] | None -> false
+        | _ -> true
+      in
+      if not has_checksum then Html.empty else
       let pkg_count =
         try OpamPackage.Map.find pkg stats
         with Not_found -> Int64.zero
