@@ -89,7 +89,7 @@ let create ~title ~header ~body ~footer ~depth =
       "title", Template.serialize title;
       "head",  Template.serialize head_html;
       "header",header;
-      "img-github", Template.serialize img_github;
+      "githubimg", Template.serialize img_github;
       "body",  body;
       "footer",footer;
       "js",    Template.serialize js_html;
@@ -296,6 +296,7 @@ let generate ~content_dir ~out_dir menu pages =
       "title", (default (Html.string "opam"), Optional);
       "head",  (default Html.empty,      Optional);
       "header",(default Html.empty,      Optional);
+      "githubimg", (default Html.empty, Required);
       "body",  (mandatory (),            Required);
       "footer",(default Html.empty,      Optional);
       "js",    (default Html.empty,      Optional);

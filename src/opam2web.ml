@@ -136,7 +136,7 @@ let make_website user_options =
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum in
   let opam_title =
-    Html.img (Uri.make ~path:(content_dir ^ "/ext/img/favicon.png") ()) ++
+    Html.img (Uri.make ~path:("/ext/img/favicon.png") ()) ++
     Html.span ~cls:"opam-title" (Html.string " opam")
   in
   O2wTemplate.generate
