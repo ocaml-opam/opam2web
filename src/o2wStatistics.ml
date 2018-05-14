@@ -365,7 +365,11 @@ let compute_stats ?(unique=false) mcache repos =
               strm)
           flat
       in
-      let add _ n acc = if unique then Int64.succ acc else Int64.add n acc in
+      let add _ n acc =
+        if unique then
+          if n <> 0L then Int64.succ acc else acc
+        else Int64.add n acc
+      in
       OPM.map (fun str -> StrM.fold add str Int64.zero) flat_pkgs_map
     in
     let global_stats =
