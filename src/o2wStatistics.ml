@@ -268,10 +268,12 @@ let compute_stats ?(unique=false) mcache repos =
     let get_dependencies_set adjacent env =
       let module OPS = OpamPackage.Name.Set in
       FloM.fold (fun _ p (env, deps) ->
-          let n_env, ldeps = List.fold_left
+          let n_env, ldeps =
+            List.fold_left
               (fun (acc_env, acc_d) pi ->
                  let e,d = get_package_deps acc_env pi in
-                 e,d::acc_d) (env,[]) p in
+                 e,d::acc_d) (env,[]) p
+          in
           n_env, OPS.union deps (OPS.of_list (List.flatten ldeps)))
         adjacent (env, OPS.empty)
     in
