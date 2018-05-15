@@ -119,12 +119,16 @@ let html_atom ~prefix st pkg (name, f) =
           acc || match at with Constraint _ -> true | Filter _ -> false)
         false constr
     in
-    match has_constraints, OpamPackage.Set.max_elt_opt solutions with
-    | false, _ | _, None ->
+    match has_constraints, OpamPackage.Set.max_elt solutions with
+    | exception Not_found ->
       if OpamPackage.has_name st.packages name
       then Html.a ~href:(name_href ~href_base:prefix name) hname
       else hname
-    | f, Some nv ->
+    | false, _ ->
+      if OpamPackage.has_name st.packages name
+      then Html.a ~href:(name_href ~href_base:prefix name) hname
+      else hname
+    | f, nv ->
       Html.a ~href:(pkg_href ~href_base:prefix nv) hname
   in
   let hconstr =
@@ -450,9 +454,9 @@ let to_html ~prefix univ pkg =
                       @ Html.tag "td" contents) in
   let repo_edit =
     univ.st.switch_config.OpamFile.Switch_config.repos >>=
-    List.find_opt (fun r ->
+    OpamStd.Option.of_Not_found (List.find (fun r ->
         OpamPackage.Map.mem pkg
-          (OpamRepositoryName.Map.find r univ.st.switch_repos.repo_opams)) >>|
+          (OpamRepositoryName.Map.find r univ.st.switch_repos.repo_opams))) >>|
     OpamRepositoryState.get_repo univ.st.switch_repos >>= fun r ->
     OpamFile.Repo.read_opt (OpamRepositoryPath.repo r.repo_root) >>=
     OpamFile.Repo.upstream >>= fun upstream ->
