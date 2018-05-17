@@ -445,7 +445,7 @@ type cache_elt = {
 }
 type cache = cache_elt OpamFilename.Map.t
 let cache_file = OpamFilename.of_string "~/.cache/opam2web2/stats_cache"
-let cache_format_version = 2
+let cache_format_version = 3
 let version_id =
   Digest.string (OpamVersion.(to_string (full ())) ^" "^
                  string_of_int cache_format_version)
