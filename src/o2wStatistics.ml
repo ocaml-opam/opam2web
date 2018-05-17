@@ -31,6 +31,21 @@ let empty_stats_set = {
   month_leaf_pkg_stats = OpamPackage.Map.empty;
 }
 
+let string_of_stats s =
+  OpamStd.List.to_string Int64.to_string
+    [ Int64.of_int (OpamPackage.Map.cardinal s.pkg_stats) ;
+      s.global_stats ;
+      s.update_stats;
+      s.users_stats ]
+
+let string_of_stats_set stats =
+  Printf.sprintf
+    "all_time: %s\nday: %s\nweek: %s\nmonth: %s\n"
+    (string_of_stats stats.alltime_stats)
+    (string_of_stats stats.day_stats)
+    (string_of_stats stats.week_stats)
+    (string_of_stats stats.month_stats)
+
 let timestamp_regexp =
   Re.Str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
                  \\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
