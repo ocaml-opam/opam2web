@@ -153,6 +153,7 @@ let five_min = 5. *. 60.
 let two_min = 120.
 
 module StrM = OpamStd.String.Map
+module StrS = OpamStd.String.Set
 module IntM = OpamStd.IntMap
 module OPM = OpamPackage.Map
 module FloM =
@@ -167,7 +168,7 @@ module FloM =
 type day_mcache = {
   pkgs : float list StrM.t OPM.t;
   updates : int64 StrM.t;
-  users : int64 StrM.t;
+  users : StrS.t;
 }
 
 type mcache = day_mcache IntM.t
@@ -176,7 +177,7 @@ let empty_day_mcache =
   {
     pkgs = OPM.empty;
     updates = StrM.empty;
-    users = StrM.empty;
+    users = StrS.empty;
   }
 
 let empty_mcache = IntM.empty
@@ -214,12 +215,12 @@ let add_mcache_entry mcache entry =
   | Some ago ->
     let d = int_of_float (ago /. one_day) in
     let dmcache = try IntM.find d mcache with Not_found -> empty_day_mcache in
-    let users = incr_strmap entry.log_host dmcache.users in
+    let users = StrS.add entry.log_host dmcache.users in
     let dmcache = { dmcache with users } in
     let dmcache =
       match entry.log_request with
       | Update_req ->
-        let updates = incr_strmap entry.log_host  dmcache.updates in
+        let updates = incr_strmap entry.log_host dmcache.updates in
         { dmcache with updates }
       | Archive_req pkg ->
         let pkgs =
@@ -323,15 +324,15 @@ let compute_stats ?(unique=false) mcache repos =
         n_env, StrM.add h new_binding tsm_acc
       ) timestamps (OpamPackage.Name.Map.empty, StrM.empty)
   in
-  (* Compute stats given in interval map *)
+  (* Compute stats given in interval set *)
   let compute_in interval =
     let users_stats =
-      let flat_users_map =
+      let flat_users_set =
         IntM.fold
-          (fun _ dmc map -> StrM.union Int64.add dmc.users map)
-          interval StrM.empty
+          (fun _ dmc set -> StrS.union dmc.users set)
+          interval StrS.empty
       in
-      Int64.of_int (StrM.cardinal flat_users_map)
+      Int64.of_int (StrS.cardinal flat_users_set)
     in
     let update_stats =
       let flat_updates_map =
@@ -407,7 +408,7 @@ let add_mcache =
     (fun dmc1 dmc2 ->
        let pkgs = OPM.union (StrM.union List.append) dmc1.pkgs dmc2.pkgs in
        let updates = StrM.union Int64.add dmc1.updates dmc2.updates in
-       let users = StrM.union Int64.add dmc1.users dmc2.users in
+       let users = StrS.union dmc1.users dmc2.users in
        { pkgs; updates; users })
 
 (* Cache management *)
