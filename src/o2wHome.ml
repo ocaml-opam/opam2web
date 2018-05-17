@@ -75,7 +75,7 @@ let to_html ~content_dir ~statistics ~news univ =
         try OpamPackage.Name.Map.find pkg.name sset
         with Not_found -> 0L in
       let packages = univ.st.packages in
-      let nb_packages = OpamPackage.Set.cardinal packages in
+      let nb_packages = OpamPackage.Set.cardinal latest_packages in
       let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn latest_packages in
       let top10_items = List.map mk_top_li top10_pkgs in
       nb_packages,
