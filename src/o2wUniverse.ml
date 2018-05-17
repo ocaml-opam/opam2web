@@ -232,7 +232,7 @@ let load statistics repo_roots =
     match statistics with
     | None -> None, None
     | Some s ->
-      let vp = s.month_stats.pkg_stats in
+      let vp = s.month_leaf_pkg_stats in
       let np =
         OpamPackage.Map.fold (fun nv x ->
             OpamPackage.Name.Map.update nv.name (Int64.add x) 0L)

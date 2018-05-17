@@ -66,10 +66,11 @@ type statistics = {
 }
 
 type statistics_set = {
-  alltime_stats: statistics;
-  day_stats    : statistics;
-  week_stats   : statistics;
-  month_stats  : statistics;
+  alltime_stats        : statistics;
+  day_stats            : statistics;
+  week_stats           : statistics;
+  month_stats          : statistics;
+  month_leaf_pkg_stats : int64 package_map;
 }
 
 (** Log entry intermediate types *)
