@@ -312,7 +312,7 @@ let compute_stats ?(unique=false) mcache st =
         match lst with
         | [] -> max
         | (next, _)::rest ->
-          if next -. max < five_min then
+          if next -. max < two_min then
             aux next rest
           else max
       in
