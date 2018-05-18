@@ -20,7 +20,7 @@ type univ = {
   st: OpamStateTypes.unlocked OpamStateTypes.switch_state;
   dates: float package_map;
   name_popularity: int64 name_map option;
-  version_popularity: int64 package_map option;
+  version_popularity: (int64 package_map * (package * package_set) OpamStd.String.Map.t) option;
   depends: package_set package_map;
   rev_depends: package_set package_map;
   depopts: package_set package_map;
@@ -71,6 +71,7 @@ type statistics_set = {
   week_stats           : statistics;
   month_stats          : statistics;
   month_leaf_pkg_stats : int64 package_map;
+  hash_pkgs_map        : (package * package_set) OpamStd.String.Map.t;
 }
 
 (** Log entry intermediate types *)

@@ -16,8 +16,23 @@
 
 open O2wTypes
 
+exception Ghost_package
+
+module StrM = OpamStd.String.Map
+module StrS = OpamStd.String.Set
+module IntM = OpamStd.IntMap
+module OPM  = OpamPackage.Map
+module HashM = OpamHash.Map
+module FloM =
+  OpamStd.Map.Make (struct
+    type t = float
+    let compare a b = int_of_float (a -. b)
+    let to_string = string_of_float
+    let to_json _ = `Null
+  end)
+
 let empty_stats = {
-  pkg_stats    = OpamPackage.Map.empty;
+  pkg_stats    = OPM.empty;
   global_stats = Int64.zero;
   update_stats = Int64.zero;
   users_stats  = Int64.zero;
@@ -28,26 +43,13 @@ let empty_stats_set = {
   day_stats            = empty_stats;
   week_stats           = empty_stats;
   month_stats          = empty_stats;
-  month_leaf_pkg_stats = OpamPackage.Map.empty;
+  month_leaf_pkg_stats = OPM.empty;
+  hash_pkgs_map        = StrM.empty;
 }
-
-exception Ghost_package
-
-module StrM = OpamStd.String.Map
-module StrS = OpamStd.String.Set
-module IntM = OpamStd.IntMap
-module OPM  = OpamPackage.Map
-module FloM =
-  OpamStd.Map.Make (struct
-    type t = float
-    let compare a b = int_of_float (a -. b)
-    let to_string = string_of_float
-    let to_json _ = `Null
-  end)
 
 let string_of_stats s =
   OpamStd.List.to_string Int64.to_string
-    [ Int64.of_int (OpamPackage.Map.cardinal s.pkg_stats) ;
+    [ Int64.of_int (OPM.cardinal s.pkg_stats) ;
       s.global_stats ;
       s.update_stats;
       s.users_stats ]
@@ -98,7 +100,7 @@ let request_of_entry hash_map e =
       failwith ("opam exit with code " ^ string_of_int e)
   in
   let package_of_hash hash =
-    try StrM.find hash hash_map
+    try fst (StrM.find hash hash_map)
     with Not_found -> raise Ghost_package
   in
   try
@@ -435,7 +437,7 @@ let compute_stats ?(unique=false) mcache st =
   let month_stats = compute_in mcache in
   (* do not compute altime stats *)
   let alltime_stats = empty_stats in
-  { alltime_stats; day_stats; week_stats; month_stats; month_leaf_pkg_stats }
+  { alltime_stats; day_stats; week_stats; month_stats; month_leaf_pkg_stats; hash_pkgs_map=StrM.empty }
 
 let add_mcache =
   IntM.union
@@ -500,7 +502,13 @@ let statistics_set files repos =
         match OpamFile.OPAM.url opam with
         | Some url ->
           List.fold_left (fun map hash ->
-              StrM.add (String.concat "/" (OpamHash.to_path hash)) pkg map)
+              let hash_s = String.concat "/" (OpamHash.to_path hash) in
+              let v =
+                match StrM.find_opt hash_s map with
+                | Some (p,s) -> p, OpamPackage.Set.add pkg s
+                | None -> pkg, OpamPackage.Set.empty
+              in
+              StrM.add hash_s v map)
             map (OpamFile.URL.checksum url)
         | None -> map
       ) st.opams StrM.empty
@@ -583,7 +591,10 @@ let statistics_set files repos =
     in
     write_cache cache;
     let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache st in
-    Some stats
+    let hash_pkgs_map =
+      StrM.filter (fun _ (p,s) -> not (OpamPackage.Set.is_empty s)) hash_map
+    in
+    Some { stats with hash_pkgs_map }
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower)
    value associated *)
