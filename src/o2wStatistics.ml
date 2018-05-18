@@ -31,6 +31,20 @@ let empty_stats_set = {
   month_leaf_pkg_stats = OpamPackage.Map.empty;
 }
 
+exception Ghost_package
+
+module StrM = OpamStd.String.Map
+module StrS = OpamStd.String.Set
+module IntM = OpamStd.IntMap
+module OPM  = OpamPackage.Map
+module FloM =
+  OpamStd.Map.Make (struct
+    type t = float
+    let compare a b = int_of_float (a -. b)
+    let to_string = string_of_float
+    let to_json _ = `Null
+  end)
+
 let string_of_stats s =
   OpamStd.List.to_string Int64.to_string
     [ Int64.of_int (OpamPackage.Map.cardinal s.pkg_stats) ;
@@ -68,11 +82,13 @@ let timestamp_of_entry e =
       })
   else 0.
 
-let request_of_entry e =
+let request_of_entry hash_map e =
   let html_regexp =
     Re.Str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
   let archive_regexp =
     Re.Str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
+  let cache_opam2_regexp =
+    Re.Str.regexp "GET /2.0/cache/\\(.+/../.+\\) HTTP/[.0-9]+" in
   let update_regexp =
     Re.Str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
   let open Logentry in
@@ -81,11 +97,17 @@ let request_of_entry e =
     with OpamStd.Sys.Exit e ->
       failwith ("opam exit with code " ^ string_of_int e)
   in
+  let package_of_hash hash =
+    try StrM.find hash hash_map
+    with Not_found -> raise Ghost_package
+  in
   try
     if Re.Str.string_match html_regexp e.request 0 then
       Html_req (Re.Str.matched_group 1 e.request)
     else if Re.Str.string_match archive_regexp e.request 0 then
       Archive_req (package_of_string (Re.Str.matched_group 1 e.request))
+    else if Re.Str.string_match cache_opam2_regexp e.request 0 then
+      Archive_req (package_of_hash (Re.Str.matched_group 1 e.request))
     else if Re.Str.string_match update_regexp e.request 0 then
       Update_req
     else
@@ -145,8 +167,8 @@ let client_of_entry e =
       Unknown_os "" in
   os, browser
 
-let mk_entry e = {
-  log_request   = request_of_entry e;
+let mk_entry hash_map e = {
+  log_request   = request_of_entry hash_map e;
   log_timestamp = timestamp_of_entry e;
   log_referrer  = referrer_of_entry e;
   log_client    = client_of_entry e;
@@ -167,18 +189,6 @@ let a_quarter = 15. *. 60.
 let ten_min = 10. *. 60.
 let five_min = 5. *. 60.
 let two_min = 120.
-
-module StrM = OpamStd.String.Map
-module StrS = OpamStd.String.Set
-module IntM = OpamStd.IntMap
-module OPM = OpamPackage.Map
-module FloM =
-  OpamStd.Map.Make (struct
-    type t = float
-    let compare a b = int_of_float (a -. b)
-    let to_string = string_of_float
-    let to_json _ = `Null
-  end)
 
 (* Memory cache: IntMap, containing a day_mcache for each day (0..29, backward) *)
 type day_mcache = {
@@ -248,7 +258,7 @@ let add_mcache_entry mcache entry =
     IntM.add d dmcache mcache
   | None -> mcache
 
-let compute_stats ?(unique=false) mcache repos =
+let compute_stats ?(unique=false) mcache st =
   (* timestamps: Compute once a map of packages to keep, by user, detect leaf
       package given download timestamps: adjacent downloads < 5 min  *)
   let month_leaf_pkg_stats =
@@ -269,7 +279,6 @@ let compute_stats ?(unique=false) mcache repos =
             ) strm map1
         ) flat StrM.empty
     in
-    let st = O2wUniverse.load_opam_state repos in
     let get_package_deps env p =
       let n = OpamPackage.name p in
       try env, OpamPackage.Name.Map.find n env
@@ -485,6 +494,17 @@ let statistics_set files repos =
   let cache =
     OpamFilename.Map.filter (fun f _ -> List.mem f files) cache
   in
+  let st = O2wUniverse.load_opam_state repos in
+  let hash_map =
+    OPM.fold (fun pkg opam map ->
+        match OpamFile.OPAM.url opam with
+        | Some url ->
+          List.fold_left (fun map hash ->
+              StrM.add (String.concat "/" (OpamHash.to_path hash)) pkg map)
+            map (OpamFile.URL.checksum url)
+        | None -> map
+      ) st.opams StrM.empty
+  in
   match files with
   | [] -> None
   | files ->
@@ -532,7 +552,9 @@ let statistics_set files repos =
       Printf.printf "\rReading new entries from %s: %3d%%%!" l.name percent;
       let mcache =
         List.fold_left
-          (fun mcache line -> add_mcache_entry mcache (mk_entry line))
+          (fun mcache line ->
+             try add_mcache_entry mcache (mk_entry hash_map line)
+             with Ghost_package -> mcache)
           mcache (Readcombinedlog.read l chunk_size)
       in
       if Readcombinedlog.is_empty l then
@@ -560,7 +582,7 @@ let statistics_set files repos =
         mc_and_logs
     in
     write_cache cache;
-    let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache repos in
+    let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache st in
     Some stats
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower)
