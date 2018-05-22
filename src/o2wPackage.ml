@@ -341,16 +341,29 @@ let to_html ~prefix univ pkg =
 
   let pkg_stats = match univ.version_popularity with
     | None -> Html.empty
-    | Some stats ->
-      let has_checksum =
-        match OpamFile.OPAM.url pkg_opam >>| OpamFile.URL.checksum with
-        | Some [] | None -> false
-        | _ -> true
+    | Some (stats, hashs) ->
+      let checksum =
+        OpamStd.Option.default []
+          (OpamFile.OPAM.url pkg_opam >>| OpamFile.URL.checksum)
       in
-      if not has_checksum then Html.empty else
+      if checksum = [] then Html.empty else
       let pkg_count =
+        let rec pkg_same_hash = function
+          | h::r ->
+            (let hs = (String.concat "/" (OpamHash.to_path h)) in
+             match OpamStd.String.Map.find_opt hs hashs with
+             | Some (p,s) ->
+               if OpamPackage.Set.mem pkg s then Some p else pkg_same_hash r
+             | None -> pkg_same_hash r)
+          | [] -> None
+        in
         try OpamPackage.Map.find pkg stats
-        with Not_found -> Int64.zero
+        with Not_found ->
+          (match pkg_same_hash checksum with
+           | Some p ->
+             (try OpamPackage.Map.find p stats
+              with Not_found -> Int64.zero)
+           | None -> Int64.zero)
       in
       let pkg_count_html = match pkg_count with
         | c when c = Int64.zero ->
