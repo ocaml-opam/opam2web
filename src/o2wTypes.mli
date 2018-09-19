@@ -14,13 +14,24 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open OpamTypes
+include module type of struct include OpamTypes end
 
+type univ = {
+  st: OpamStateTypes.unlocked OpamStateTypes.switch_state;
+  dates: float package_map;
+  name_popularity: int64 name_map option;
+  version_popularity: (int64 package_map * (package * package_set) OpamStd.String.Map.t) option;
+  depends: package_set package_map;
+  rev_depends: package_set package_map;
+  depopts: package_set package_map;
+  rev_depopts: package_set package_map;
+}
 
 type page = {
   page_source  : string;
   page_link    : Uri.t;
   page_link_text: string;
+  page_link_html: Cow.Html.t;
   page_depth   : int;
   page_contents: Cow.Xml.signal list;
   page_srcurl  : string option;
@@ -29,6 +40,7 @@ type page = {
 type menu = {
   menu_link: Uri.t;
   menu_link_text: string;
+  menu_link_html: Cow.Html.t;
   menu_item: menu_item;
   menu_source: string;
   menu_srcurl: string option;
@@ -43,21 +55,23 @@ and menu_item =
   | External
 
 type statistics = {
-  (** Individual package download count *)
   pkg_stats: int64 package_map;
-  (** Global download count (sum of all packages download count) *)
+  (** Individual package download count *)
   global_stats: int64;
-  (** Update count (number of 'urls.txt' downloads *)
+  (** Global download count (sum of all packages download count) *)
   update_stats: int64;
-  (** Number of unique IPs *)
+  (** Update count (number of 'urls.txt' downloads *)
   users_stats: int64;
+  (** Number of unique IPs *)
 }
 
 type statistics_set = {
-  alltime_stats: statistics;
-  day_stats    : statistics;
-  week_stats   : statistics;
-  month_stats  : statistics;
+  alltime_stats        : statistics;
+  day_stats            : statistics;
+  week_stats           : statistics;
+  month_stats          : statistics;
+  month_leaf_pkg_stats : int64 package_map;
+  hash_pkgs_map        : (package * package_set) OpamStd.String.Map.t;
 }
 
 (** Log entry intermediate types *)
@@ -79,11 +93,11 @@ type log_client = log_client_os * log_client_browser
 
 (** Different requests made to the repository server *)
 type log_request =
-  (** Request of type "GET /\\(.+\\)\\.html HTTP/[.0-9]+" *)
+  (* Request of type "GET /\\(.+\\)\\.html HTTP/[.0-9]+" *)
   | Html_req of string
-  (** Request of type "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" *)
+  (* Request of type "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" *)
   | Archive_req of package
-  (** Request of type "GET /urls\\.txt HTTP/[.0-9]+" *)
+  (* Request of type "GET /urls\\.txt HTTP/[.0-9]+" *)
   | Update_req
   | Unknown_req of string
 

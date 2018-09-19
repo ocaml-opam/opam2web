@@ -16,45 +16,67 @@
 
 open O2wTypes
 
+exception Ghost_package
+
+module StrM = OpamStd.String.Map
+module StrS = OpamStd.String.Set
+module IntM = OpamStd.IntMap
+module OPM  = OpamPackage.Map
+module HashM = OpamHash.Map
+module FloM =
+  OpamStd.Map.Make (struct
+    type t = float
+    let compare a b = int_of_float (a -. b)
+    let to_string = string_of_float
+    let to_json _ = `Null
+  end)
+
 let empty_stats = {
-  pkg_stats    = OpamPackage.Map.empty;
+  pkg_stats    = OPM.empty;
   global_stats = Int64.zero;
   update_stats = Int64.zero;
   users_stats  = Int64.zero;
 }
 
 let empty_stats_set = {
-  alltime_stats = empty_stats;
-  day_stats     = empty_stats;
-  week_stats    = empty_stats;
-  month_stats   = empty_stats;
+  alltime_stats        = empty_stats;
+  day_stats            = empty_stats;
+  week_stats           = empty_stats;
+  month_stats          = empty_stats;
+  month_leaf_pkg_stats = OPM.empty;
+  hash_pkgs_map        = StrM.empty;
 }
 
-module StringMap = struct
-  include Map.Make (String)
-  let fold f t acc =
-    let acc = ref acc in
-    iter (fun k v ->
-      acc := f k v !acc
-    ) t;
-    !acc
-end
+let string_of_stats s =
+  OpamStd.List.to_string Int64.to_string
+    [ Int64.of_int (OPM.cardinal s.pkg_stats) ;
+      s.global_stats ;
+      s.update_stats;
+      s.users_stats ]
+
+let string_of_stats_set stats =
+  Printf.sprintf
+    "all_time: %s\nday: %s\nweek: %s\nmonth: %s\n"
+    (string_of_stats stats.alltime_stats)
+    (string_of_stats stats.day_stats)
+    (string_of_stats stats.week_stats)
+    (string_of_stats stats.month_stats)
 
 let timestamp_regexp =
-  Re_str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
+  Re.Str.regexp "\\([0-9]+\\)/\\([A-Z][a-z]+\\)/\\([0-9]+\\):\\([0-9]+\\):\
                  \\([0-9]+\\):\\([0-9]+\\) [-+][0-9]+"
 
 let timestamp_of_entry e =
   let open Unix in
   let open Logentry in
-  if Re_str.string_match timestamp_regexp e.date 0 then
+  if Re.Str.string_match timestamp_regexp e.date 0 then
     fst (Unix.mktime {
-        tm_mday = int_of_string (Re_str.matched_group 1 e.date);
-        tm_mon  = O2wMisc.month_of_string (Re_str.matched_group 2 e.date);
-        tm_year = int_of_string (Re_str.matched_group 3 e.date) - 1900;
-        tm_hour = int_of_string (Re_str.matched_group 4 e.date);
-        tm_min  = int_of_string (Re_str.matched_group 5 e.date);
-        tm_sec  = int_of_string (Re_str.matched_group 6 e.date);
+        tm_mday = int_of_string (Re.Str.matched_group 1 e.date);
+        tm_mon  = O2wMisc.month_of_string (Re.Str.matched_group 2 e.date);
+        tm_year = int_of_string (Re.Str.matched_group 3 e.date) - 1900;
+        tm_hour = int_of_string (Re.Str.matched_group 4 e.date);
+        tm_min  = int_of_string (Re.Str.matched_group 5 e.date);
+        tm_sec  = int_of_string (Re.Str.matched_group 6 e.date);
         (* Initial dummy values *)
         tm_wday  = 0;
         tm_yday  = 0;
@@ -62,57 +84,65 @@ let timestamp_of_entry e =
       })
   else 0.
 
-let request_of_entry e =
+let request_of_entry hash_map e =
   let html_regexp =
-    Re_str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
+    Re.Str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
   let archive_regexp =
-    Re_str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
+    Re.Str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
+  let cache_opam2_regexp =
+    Re.Str.regexp "GET /2.0/cache/\\(.+/../.+\\) HTTP/[.0-9]+" in
   let update_regexp =
-    Re_str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
+    Re.Str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
   let open Logentry in
   let package_of_string str =
     try OpamPackage.of_string (Filename.basename str)
     with OpamStd.Sys.Exit e ->
       failwith ("opam exit with code " ^ string_of_int e)
   in
+  let package_of_hash hash =
+    try fst (StrM.find hash hash_map)
+    with Not_found -> raise Ghost_package
+  in
   try
-    if Re_str.string_match html_regexp e.request 0 then
-      Html_req (Re_str.matched_group 1 e.request)
-    else if Re_str.string_match archive_regexp e.request 0 then
-      Archive_req (package_of_string (Re_str.matched_group 1 e.request))
-    else if Re_str.string_match update_regexp e.request 0 then
+    if Re.Str.string_match html_regexp e.request 0 then
+      Html_req (Re.Str.matched_group 1 e.request)
+    else if Re.Str.string_match archive_regexp e.request 0 then
+      Archive_req (package_of_string (Re.Str.matched_group 1 e.request))
+    else if Re.Str.string_match cache_opam2_regexp e.request 0 then
+      Archive_req (package_of_hash (Re.Str.matched_group 1 e.request))
+    else if Re.Str.string_match update_regexp e.request 0 then
       Update_req
     else
       Unknown_req e.request
   with Failure _ -> Unknown_req e.request
 
 let internal_regexp =
-  Re_str.regexp "https?://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
+  Re.Str.regexp "https?://opam\\.ocaml\\(\\.org\\|pro\\.com\\)/\\(.*\\)/?"
 
 let referrer_of_entry e =
   let open Logentry in
   match e.referrer with
   | "-" -> No_ref
-  | s when Re_str.string_match internal_regexp e.referrer 0 ->
-    Internal_ref (Re_str.matched_group 2 e.referrer)
+  | s when Re.Str.string_match internal_regexp e.referrer 0 ->
+    Internal_ref (Re.Str.matched_group 2 e.referrer)
   | s -> External_ref s
 
 let browser_regexp =
-  Re_str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
+  Re.Str.regexp "\\(MSIE\\|Chrome\\|Firefox\\|Safari\\)"
 let os_regexp =
-  Re_str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
+  Re.Str.regexp "\\(Windows\\|Macintosh\\|iPad\\|iPhone\\|\
                  Android\\|Linux\\|FreeBSD\\)"
 
 let client_of_entry e =
   let open Logentry in
   (* TODO: refine client string parsing (versions, more browsers...)  *)
   let match_browser =
-    try Re_str.search_forward browser_regexp e.client 0
+    try Re.Str.search_forward browser_regexp e.client 0
     with Not_found -> (-1) in
   let browser =
     if match_browser >= 0 then
       let browser_str =
-        try Re_str.matched_group 1 e.client
+        try Re.Str.matched_group 1 e.client
         with Not_found -> "" in
       match browser_str with
       | "Chrome" -> Chrome ""
@@ -123,12 +153,12 @@ let client_of_entry e =
     else
       Unknown_browser "" in
   let match_os =
-    try Re_str.search_forward os_regexp e.client 0
+    try Re.Str.search_forward os_regexp e.client 0
     with Not_found -> (-1) in
   let os =
     if match_os >= 0 then
       let os_str =
-        try Re_str.matched_group 1 e.client
+        try Re.Str.matched_group 1 e.client
         with Not_found -> "" in
       match os_str with
       | "Windows" -> Windows ""
@@ -139,8 +169,8 @@ let client_of_entry e =
       Unknown_os "" in
   os, browser
 
-let mk_entry e = {
-  log_request   = request_of_entry e;
+let mk_entry hash_map e = {
+  log_request   = request_of_entry hash_map e;
   log_timestamp = timestamp_of_entry e;
   log_referrer  = referrer_of_entry e;
   log_client    = client_of_entry e;
@@ -149,137 +179,284 @@ let mk_entry e = {
 
 open Readcombinedlog
 
-(* Sum the values of a (int64 StringMap), possibly reducing the value to one
-   unique count per string key if the 'unique' optional argument is true *)
-let sum_strmap ?(unique = false) map =
-  if unique then
-    Int64.of_int (StringMap.cardinal map)
-  else
-    StringMap.fold (fun _ n acc -> Int64.add n acc) map Int64.zero
-
-(* Increment the counter corresponding to a key in a (int64 StringMap) *)
-let incr_strmap key map =
-  let n =
-    try StringMap.find key map
-    with Not_found -> Int64.zero in
-  StringMap.add key (Int64.succ n) map
-
-let incr_hostmap pkg host map =
-  let m =
-    try OpamPackage.Map.find pkg map
-    with Not_found -> StringMap.empty in
-  OpamPackage.Map.add pkg (incr_strmap host m) map
-
-let apply_log_filter log_filter e =
-  e.log_timestamp >= log_filter.log_start_time
-  && e.log_timestamp <= log_filter.log_end_time
-  && log_filter.log_custom e
-
-let apply_log_filters log_filter es =
-  List.filter (apply_log_filter log_filter) es
-
-(* Count the number of update requests in a list of entries *)
-let count_updates ?(log_filter = O2wGlobals.default_log_filter) entries =
-  let count_map =
-    List.fold_left (fun acc e -> match e.log_request with
-        | Update_req -> incr_strmap e.log_host acc
-        | _ -> acc)
-      StringMap.empty entries
-  in
-  sum_strmap ~unique:log_filter.log_per_ip count_map
-
-(* Count the number of downloads for each OPAM archive *)
-let count_archive_downloads log_filter entries =
-  OpamPackage.Map.map
-    (sum_strmap ~unique:log_filter.log_per_ip)
-    (List.fold_left (fun stats entry ->
-         match entry.log_request with
-         | Archive_req pkg -> incr_hostmap pkg entry.log_host stats
-         | _ -> stats)
-        OpamPackage.Map.empty entries)
-
-(* Count hosts with at least 10 requests within the last week *)
-let count_users entries =
-  let users =
-    List.fold_left
-      (fun map elt -> incr_strmap elt.log_host map)
-      StringMap.empty entries
-  in
-  Int64.of_int (StringMap.cardinal users)
-
-(* Generate basic statistics on log entries *)
-let stats_of_entries log_filter entries =
-  let entries = apply_log_filters log_filter entries in
-  let pkg_stats = count_archive_downloads log_filter entries in
-  let global_stats =
-    OpamPackage.Map.fold (fun _ n acc -> Int64.add n acc) pkg_stats Int64.zero in
-  let update_stats = count_updates ~log_filter entries in
-  let users_stats = count_users entries in
-  {
-    pkg_stats;
-    global_stats;
-    update_stats;
-    users_stats;
-  }
-
-module FloatMap = Map.Make(struct type t = float let compare = compare end)
-
-type entry_map = log_entry list FloatMap.t (** indexed by timestamp *)
-let add_entry e m =
-  let existing = try FloatMap.find e.log_timestamp m with Not_found -> [] in
-  FloatMap.add e.log_timestamp (e::existing) m
-let entries_after ts m = match FloatMap.split ts m with
-  | _, Some e, m -> FloatMap.add ts e m
-  | _, None, m -> m
-let entries_list m =
-  FloatMap.fold (fun _ -> List.rev_append) m []
-
 let now = O2wGlobals.default_log_filter.log_end_time
 let one_day = 3600. *. 24.
+let one_month = one_day *. 30.
 let one_day_ago = now -. one_day
 let one_week_ago = now -. (one_day *. 7.)
 let one_month_ago = now -. (one_day *. 30.)
 let two_months_ago = now -. (one_day *. 60.)
 
-let stats_set_of_entries entries =
-  let month_entries = entries_after one_month_ago entries in
-  let week_entries =  entries_after one_week_ago month_entries in
-  let day_entries = entries_after one_day_ago week_entries in
-  let filter filter_name log_start_time entries =
-    stats_of_entries
-      { O2wGlobals.default_log_filter with log_start_time; filter_name }
-      (entries_list entries)
-  in
+let a_quarter = 15. *. 60.
+let ten_min = 10. *. 60.
+let five_min = 5. *. 60.
+let two_min = 120.
+
+(* Memory cache: IntMap, containing a day_mcache for each day (0..29, backward) *)
+type day_mcache = {
+  pkgs : float list StrM.t OPM.t;
+  updates : int64 StrM.t;
+  users : StrS.t;
+}
+
+type mcache = day_mcache IntM.t
+
+let empty_day_mcache =
   {
-    day_stats     = filter "day" one_day_ago day_entries;
-    week_stats    = filter "week" one_week_ago week_entries;
-    month_stats   = filter "month" one_month_ago month_entries;
-    alltime_stats = empty_stats;
+    pkgs = OPM.empty;
+    updates = StrM.empty;
+    users = StrS.empty;
   }
 
-let add_stats s1 s2 = {
-  pkg_stats    = OpamPackage.Map.union Int64.add s1.pkg_stats s2.pkg_stats;
-  global_stats = Int64.add s1.global_stats s2.global_stats;
-  update_stats = Int64.add s1.update_stats s2.update_stats;
-  users_stats  = Int64.add s1.users_stats s2.users_stats;
-}
+let empty_mcache = IntM.empty
 
-let add_stats_set s1 s2 = {
-  alltime_stats = empty_stats (* add_stats s1.alltime_stats s2.alltime_stats *);
-  day_stats     = add_stats s1.day_stats s2.day_stats;
-  week_stats    = add_stats s1.week_stats s2.week_stats;
-  month_stats   = add_stats s1.month_stats s2.month_stats;
-}
+(* Increment the counter corresponding to a key in a (int64 StringMap) *)
+let incr_strmap key map =
+  let n =
+    try StrM.find key map
+    with Not_found -> Int64.zero in
+  StrM.add key (Int64.succ n) map
 
+(* Add download timestamp corresponding to a package and a host *)
+let add_ts_pkgmap pkg host ts map =
+  let m =
+    try OPM.find pkg map
+    with Not_found -> StrM.empty
+  in
+  let n =
+    try StrM.find host m
+    with Not_found -> []
+  in
+  OPM.add pkg (StrM.add host (ts::n) m) map
+
+let which_day ?(log_filter = O2wGlobals.default_log_filter) ?(from) entry =
+  let from = OpamStd.Option.default log_filter.log_end_time from in
+  if log_filter.log_custom entry then
+    let ago = from -. entry.log_timestamp in
+    if ago > one_month then None
+    else Some ago
+  else None
+
+let add_mcache_entry mcache entry =
+  let now = O2wGlobals.default_log_filter.log_end_time in
+  match which_day ~from:now entry with
+  | Some ago ->
+    let d = int_of_float (ago /. one_day) in
+    let dmcache = try IntM.find d mcache with Not_found -> empty_day_mcache in
+    let users = StrS.add entry.log_host dmcache.users in
+    let dmcache = { dmcache with users } in
+    let dmcache =
+      match entry.log_request with
+      | Update_req ->
+        let updates = incr_strmap entry.log_host dmcache.updates in
+        { dmcache with updates }
+      | Archive_req pkg ->
+        let pkgs =
+          add_ts_pkgmap pkg entry.log_host entry.log_timestamp dmcache.pkgs
+        in
+        { dmcache with pkgs}
+      | _ -> dmcache
+    in
+    IntM.add d dmcache mcache
+  | None -> mcache
+
+let compute_stats ?(unique=false) mcache st =
+  (* timestamps: Compute once a map of packages to keep, by user, detect leaf
+      package given download timestamps: adjacent downloads < 5 min  *)
+  let month_leaf_pkg_stats =
+    let flat =
+      IntM.fold
+        (fun _ dmc map -> OPM.union (StrM.union List.append) dmc.pkgs map)
+        mcache OPM.empty
+    in
+    (* construct timsetamps maps from [dmcache.pkgs]s *)
+    let timestamps =
+      OPM.fold (fun pkg strm map1 ->
+          StrM.fold (fun str tsl map2 ->
+              let map = try StrM.find str map2 with Not_found -> FloM.empty in
+              let tsm = List.fold_left
+                  (fun map3 ts -> FloM.update ts (fun l -> pkg::l) []  map3)
+                  map tsl in
+              StrM.add str tsm map2
+            ) strm map1
+        ) flat StrM.empty
+    in
+    let get_package_deps env p =
+      let n = OpamPackage.name p in
+      try env, OpamPackage.Name.Map.find n env
+      with Not_found ->
+        let deps =
+          match OpamSwitchState.opam_opt st p with
+          | Some op ->
+            OpamFormula.fold_left (fun acc (n,_) -> n::acc) []
+              (OpamFile.OPAM.depends op)
+          | None -> []
+        in (OpamPackage.Name.Map.add n deps env), deps
+    in
+    let get_dependencies_set adjacent env =
+      let module OPS = OpamPackage.Name.Set in
+      FloM.fold (fun _ p (env, deps) ->
+          let n_env, ldeps =
+            List.fold_left
+              (fun (acc_env, acc_d) pi ->
+                 let e,d = get_package_deps acc_env pi in
+                 e,d::acc_d) (env,[]) p
+          in
+          n_env, OPS.union deps (OPS.of_list (List.flatten ldeps)))
+        adjacent (env, OPS.empty)
+    in
+    (* split map into first adjacent set (first dead window of 2 min)
+       and rest *)
+    let get_adjacent map =
+      let rec aux max lst =
+        match lst with
+        | [] -> max
+        | (next, _)::rest ->
+          if next -. max < two_min then
+            aux next rest
+          else max
+      in
+      let split_ts =
+        match FloM.bindings map with
+        | [] -> assert false (* already checked that map is not empty *)
+        | (ts,_)::tl -> aux ts tl
+      in
+      match FloM.split split_ts map with
+      | m1, Some pl, m2 -> (FloM.add split_ts pl m1), m2
+      | m1, None, m2 -> assert false (* we are sure that the element exists*)
+    in
+    let _, pkg_to_keep =
+      (* Create leaf packages map, by user *)
+      StrM.fold (fun h tsm (env, tsm_acc) ->
+          let rec aux tsm (env, n_tsm_acc) =
+            if FloM.is_empty tsm then (env, n_tsm_acc)
+            else
+            (* Get adjacent download map, and filter by package
+               dependencies: keep leaf only *)
+            let adjacent, others = get_adjacent tsm in
+            let n_env, all_deps = get_dependencies_set adjacent env in
+            let n_tsm =
+              FloM.union List.append n_tsm_acc @@
+              FloM.fold (fun ts pl acc ->
+                  let flt =
+                    List.filter
+                      (fun p ->
+                         not (OpamPackage.Name.Set.mem
+                                (OpamPackage.name p) all_deps)) pl
+                  in
+                  if flt <> [] then FloM.add ts flt acc else acc)
+                adjacent FloM.empty
+            in
+            aux others (n_env,n_tsm)
+          in
+          let n_env, new_binding = aux tsm (env, FloM.empty) in
+          n_env, StrM.add h new_binding tsm_acc
+        ) timestamps (OpamPackage.Name.Map.empty, StrM.empty)
+    in
+    let flat_pkgs_map =
+      OPM.mapi (fun pkg strm ->
+          StrM.mapi (fun host tsl ->
+              let pkg_user =
+                try StrM.find host pkg_to_keep
+                with Not_found -> assert false (* these maps have same content *)
+              in
+              let lst =
+                List.filter (fun ts ->
+                    try List.mem pkg (FloM.find ts pkg_user)
+                    with Not_found -> false
+                  ) tsl
+              in
+              Int64.of_int (List.length lst))
+            strm)
+        flat
+    in
+    let add _ n acc =
+      if unique then
+        if n <> 0L then Int64.succ acc else acc
+      else Int64.add n acc
+    in
+    OPM.map (fun str -> StrM.fold add str Int64.zero) flat_pkgs_map
+  in
+  (* Compute stats given in interval set *)
+  let compute_in interval =
+    let users_stats =
+      let flat_users_set =
+        IntM.fold
+          (fun _ dmc set -> StrS.union dmc.users set)
+          interval StrS.empty
+      in
+      Int64.of_int (StrS.cardinal flat_users_set)
+    in
+    let update_stats =
+      let flat_updates_map =
+        IntM.fold
+          (fun _ dmc map -> StrM.union Int64.add dmc.updates map)
+          interval StrM.empty
+      in
+      if unique then
+        Int64.of_int (StrM.cardinal flat_updates_map)
+      else
+        StrM.fold (fun _ n acc -> Int64.add n acc) flat_updates_map Int64.zero
+    in
+    let pkg_stats =
+      let flat_pkgs_map =
+        IntM.fold
+          (fun _ dmc map -> OPM.union (StrM.union List.append) dmc.pkgs map)
+          interval OPM.empty
+      in
+      let add _ n acc =
+        if unique then
+          if n <> [] then Int64.succ acc else acc
+        else Int64.add (Int64.of_int (List.length n)) acc
+      in
+      OPM.map (fun str -> StrM.fold add str Int64.zero) flat_pkgs_map
+    in
+    let global_stats =
+      OPM.fold (fun _ n acc -> Int64.add n acc) pkg_stats Int64.zero
+    in
+    { pkg_stats; global_stats; update_stats; users_stats }
+  in
+  (* safety check *)
+  if IntM.is_empty mcache then empty_stats_set
+  else
+  let a_day = 0 in
+  let a_week = 6 in
+  let day_stats =
+    try compute_in (IntM.singleton a_day (IntM.find a_day mcache))
+    with Not_found -> empty_stats
+  in
+  let week_stats =
+    let map =
+      match IntM.split a_week mcache with
+      | m , Some e, _ ->  IntM.add a_week e m
+      | m, None, _ -> m
+    in
+    if IntM.is_empty map then empty_stats
+    else compute_in map
+  in
+  let month_stats = compute_in mcache in
+  (* do not compute altime stats *)
+  let alltime_stats = empty_stats in
+  { alltime_stats; day_stats; week_stats; month_stats; month_leaf_pkg_stats; hash_pkgs_map=StrM.empty }
+
+let add_mcache =
+  IntM.union
+    (fun dmc1 dmc2 ->
+       let pkgs = OPM.union (StrM.union List.append) dmc1.pkgs dmc2.pkgs in
+       let updates = StrM.union Int64.add dmc1.updates dmc2.updates in
+       let users = StrS.union dmc1.users dmc2.users in
+       { pkgs; updates; users })
+
+(* Cache management *)
 type cache_elt = {
   cache_size: int;
   cache_hash: Digest.t; (* first 10k only *)
-  cache_entries: entry_map;
+  cache_month_map: mcache;
   cache_only_since: float;
 }
 type cache = cache_elt OpamFilename.Map.t
-let cache_file = OpamFilename.of_string "~/.cache/opam2web/stats_cache"
-let cache_format_version = 1
+let cache_file = OpamFilename.of_string "~/.cache/opam2web2/stats_cache"
+let cache_format_version = 3
 let version_id =
   Digest.string (OpamVersion.(to_string (full ())) ^" "^
                  string_of_int cache_format_version)
@@ -313,19 +490,36 @@ let partial_digest ic len =
   try Digest.channel ic len with End_of_file ->
     Digest.channel ic (-1)
 
-let statistics_set files =
+let statistics_set files repos =
   let cache = read_cache () in
   let skip_before = two_months_ago in
   let cache =
     OpamFilename.Map.filter (fun f _ -> List.mem f files) cache
   in
+  let st = O2wUniverse.load_opam_state repos in
+  let hash_map =
+    OPM.fold (fun pkg opam map ->
+        match OpamFile.OPAM.url opam with
+        | Some url ->
+          List.fold_left (fun map hash ->
+              let hash_s = String.concat "/" (OpamHash.to_path hash) in
+              let v =
+                match StrM.find_opt hash_s map with
+                | Some (p,s) -> p, OpamPackage.Set.add pkg s
+                | None -> pkg, OpamPackage.Set.empty
+              in
+              StrM.add hash_s v map)
+            map (OpamFile.URL.checksum url)
+        | None -> map
+      ) st.opams StrM.empty
+  in
   match files with
   | [] -> None
   | files ->
-    let cache_and_logs =
+    let mc_and_logs =
       List.rev_map (fun f ->
           let ic = OpamFilename.open_in f in
-          let cached, offset =
+          let mcache, offset =
             try
               let partial = OpamFilename.Map.find f cache in
               let len = in_channel_length ic in
@@ -337,15 +531,15 @@ let statistics_set files =
                 (Printf.printf "%s: cache found (%d out of %d KB new)\n%!"
                    (OpamFilename.to_string f)
                    ((len - partial.cache_size)/1024) (len/1024);
-                partial.cache_entries, partial.cache_size)
+                 partial.cache_month_map, partial.cache_size)
               else
                 (Printf.printf "%s: dropping invalid cache\n%!"
                    (OpamFilename.to_string f);
-                 FloatMap.empty, 0)
+                 empty_mcache, 0)
             with Not_found ->
               Printf.printf "%s: no cache found\n"
                 (OpamFilename.to_string f);
-              FloatMap.empty, 0
+              empty_mcache, 0
           in
           close_in ic;
           let reader =
@@ -358,25 +552,28 @@ let statistics_set files =
             { reader with
               Readcombinedlog.size = reader.Readcombinedlog.size - offset }
           in
-          f, (cached, reader)
+          f, (mcache, reader)
       ) files in
     let chunk_size = 10_000 in
-    let rec read entries l =
+    let rec read_and_mcache mcache l =
       let percent = if l.size = 0 then 100 else 100 * l.reads / l.size in
       Printf.printf "\rReading new entries from %s: %3d%%%!" l.name percent;
-      let entries =
-        List.fold_left (fun entries line -> add_entry (mk_entry line) entries)
-          entries (Readcombinedlog.read l chunk_size)
+      let mcache =
+        List.fold_left
+          (fun mcache line ->
+             try add_mcache_entry mcache (mk_entry hash_map line)
+             with Ghost_package -> mcache)
+          mcache (Readcombinedlog.read l chunk_size)
       in
       if Readcombinedlog.is_empty l then
         (Printf.printf "\rReading new entries from %s: %3d%%\n%!" l.name 100;
-         entries)
+         mcache)
       else
-        read entries l
+        read_and_mcache mcache l
     in
-    let cache, stats =
-      List.fold_left (fun (cache, stats) (file,(cached_entries,log)) ->
-          let entries = read cached_entries log in
+    let cache,mcache =
+      List.fold_left (fun (cache, sbglob) (file,(mcache, log)) ->
+          let mcache = read_and_mcache mcache log in
           let ic = open_in (OpamFilename.to_string file) in
           let cache_size = in_channel_length ic in
           let cache_hash = partial_digest ic cache_size in
@@ -385,34 +582,19 @@ let statistics_set files =
             OpamFilename.Map.add file
               { cache_size; cache_hash;
                 cache_only_since = skip_before;
-                cache_entries = entries_after skip_before entries }
+                cache_month_map = mcache }
               cache
           in
-          let stats = add_stats_set stats (stats_set_of_entries entries) in
-          cache, stats)
-        (cache, empty_stats_set)
-        cache_and_logs
+          cache, add_mcache mcache sbglob)
+        (cache, empty_mcache)
+        mc_and_logs
     in
     write_cache cache;
-    Some stats
-
-let aggregate_package_popularity pkg_stats pkg_idx =
-  OpamPackage.Map.fold (fun pkg pkg_count acc ->
-    if not (OpamPackage.Map.mem pkg pkg_idx) then
-      (* This can happen when some packages are deleted *)
-      acc
-    else (
-      let pkg_name = OpamPackage.name pkg in
-      if not (OpamPackage.Name.Map.mem pkg_name acc) then
-        OpamPackage.Name.Map.add pkg_name pkg_count acc
-      else (
-        let last_count = OpamPackage.Name.Map.find pkg_name acc in
-        OpamPackage.Name.Map.add pkg_name
-          (Int64.add pkg_count last_count)
-          (OpamPackage.Name.Map.remove pkg_name acc)
-      )
-    )
-  ) pkg_stats OpamPackage.Name.Map.empty
+    let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache st in
+    let hash_pkgs_map =
+      StrM.filter (fun _ (p,s) -> not (OpamPackage.Set.is_empty s)) hash_map
+    in
+    Some { stats with hash_pkgs_map }
 
 (* Retrieve the 'ntop' number of packages with the higher (or lower)
    value associated *)

@@ -27,3 +27,5 @@ val string_of_month: int -> string
 
 (** Return the string representation of a timestamp *)
 val string_of_timestamp: ?short:bool -> float -> string
+
+val html_of_timestamp: ?short:bool -> float -> Cow.Html.t

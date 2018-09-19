@@ -3,18 +3,12 @@
       xmlns:t="http://ocaml.org/xmlns/template#">
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-    <title>OPAM - <t:insert name="title" /></title>
+    <title>opam - <t:insert name="title" /></title>
     <link href="/blog/feed.xml" type="application/atom+xml" rel="alternate" title="Platform blog ATOM Feed" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
-        content="The homepage of OPAM, a package manager for OCaml" />
+        content="The homepage of opam, a package manager for OCaml" />
     <meta name="author" content="OCamlPro" />
-    <link rel="icon" type="image/png" href="/ext/img/favicon.png" />
-    <link rel="stylesheet" href="/ext/css/bootstrap.css" />
-    <link rel="stylesheet" href="/ext/css/docs.css" />
-    <link rel="stylesheet" href="/ext/js/google-code-prettify/prettify.css" />
-    <link rel="stylesheet" href="/ext/css/site.css" />
-    <link rel="stylesheet" href="/ext/css/bootstrap-responsive.css" />
     <t:insert name="head" />
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
@@ -32,7 +26,9 @@
             <span class="icon-bar"> </span>
             <span class="icon-bar"> </span>
           </a>
-          <a class="brand" href="https://github.com/ocaml/opam">OPAM on Github</a>
+          <a class="brand" href="https://github.com/ocaml/opam">
+            <t:insert name="githubimg" />
+          </a>
           <div class="nav-collapse collapse">
             <t:insert name="header" />
 <!--
@@ -45,13 +41,14 @@
       </div>
     </div>
 
-    <div id="wrap">
-    <div id="main" class="container clear-top">
+    <!-- <div id="wrap"> -->
+    <div id="main" class="container">
 
       <t:insert name="body" />
 
-    </div> <!-- /container -->
-    </div> <!-- /wrap -->
+    </div>
+
+    <!-- </div> -->
 
     <div class="footer"><t:insert name="footer" /></div>
 
@@ -59,8 +56,6 @@
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
 
-    <script src="/ext/js/google-code-prettify/prettify.js"> </script>
     <t:insert name="js" />
-    <script src="/ext/js/bootstrap.min.js"> </script>
   </body>
 </html>

@@ -20,8 +20,7 @@ open OpamTypes
 open O2wTypes
 
 (** Create a list of package pages to generate for a repository *)
-val to_pages: statistics:statistics_set option -> prefix:string ->
-  Cow.Html.t OpamfUniverse.t -> page list
+val to_pages: prefix:string -> univ -> page list
 
 (** Generate the list of HTML links for a list of page names *)
 val sortby_links:
@@ -34,12 +33,22 @@ val sortby_links:
 val to_html:
   content_dir:string ->
   sortby_links:(active:string -> Cow.Html.t list) ->
-  popularity:int64 name_map ->
   active:string ->
   compare_pkg:(package -> package -> int) ->
-  Cow.Html.t OpamfUniverse.t -> Cow.Xml.signal list
+  univ -> Cow.Xml.signal list
 
+(* val dates: 'a OpamStateTypes.switch_state -> float OpamPackage.Map.t *)
+
+val latest_version_packages: 'a OpamStateTypes.switch_state -> package_set
+
+val load_opam_state : dirname list -> OpamStateTypes.unlocked OpamStateTypes.switch_state
+
+val load: statistics_set option -> dirname list -> univ
+
+(*
 (** Generate a universe from a list of repositories *)
-val of_repositories:
-  ?preds:OpamfUniverse.pred list list -> OpamfUniverse.index ->
-  OpamfUniverse.repository list -> Cow.Html.t OpamfUniverse.t
+val pages_of_repositories:
+  string list ->   ?preds:OpamfUniverse.pred list list -> OpamfUniverse.index ->
+
+  Cow.Html.t OpamfUniverse.t
+*)

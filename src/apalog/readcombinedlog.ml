@@ -66,7 +66,7 @@ let read t chunk_size =
       let referrer = Lexcombinedlog.token lexbuf in
       let client   = Lexcombinedlog.token lexbuf in
       let entry =
-        Logentry.create host lname user date request status size referrer client in
+        Logentry.create ~host ~lname ~user ~date ~request ~status ~size ~referrer ~client in
       t.reads <- t.reads + String.length line;
       if t.filter entry then
         results := entry :: !results

@@ -1,6 +1,5 @@
 body {
-  padding-top: 60px;
-  padding-bottom: 40px;
+  padding: 0;
 }
 
 a {
@@ -9,6 +8,10 @@ a {
 
 a:hover {
   color: #000;
+}
+
+a code {
+  color: #b40404;
 }
 
 .nav-pills > .active > a,

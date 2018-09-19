@@ -15,39 +15,33 @@
 (**************************************************************************)
 
 open Cow
-open OpamfUniverse
 open O2wTypes
+open OpamStateTypes
 
 let packages_prefix = "packages"
 
 (* OPAM website homepage *)
-let to_html ~content_dir ~statistics ~popularity ~news universe =
-  let universe = { universe with
-    max_packages = OpamPackage.Set.filter
-      (Pkg.are_preds_satisfied
-         universe.pkgs_opams universe.pkg_idx universe.preds)
-      universe.max_packages
-  } in
+let to_html ~content_dir ~statistics ~news univ =
+  let latest_packages = O2wUniverse.latest_version_packages univ.st in
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
       let pkg_version = OpamPackage.Version.to_string (OpamPackage.version pkg) in
-      let pkg_href = Pkg.href ~href_base:Uri.(of_string (packages_prefix^"/"))
-        (OpamPackage.name pkg) (OpamPackage.version pkg) in
-      let pkg_date = O2wMisc.string_of_timestamp ~short:true update_tm in
+      let pkg_href = O2wPackage.pkg_href ~href_base:Uri.(of_string (packages_prefix^"/")) pkg in
+      let pkg_date = O2wMisc.html_of_timestamp ~short:true update_tm in
       Html.tag "tr"
         (Html.tag "td"
            (Html.a ~href:pkg_href (Html.string pkg_name
                                    @ Html.string " "
                                    @ Html.string pkg_version))
-         @ Html.tag "td" (Html.string pkg_date))
+         @ Html.tag "td" pkg_date)
     in
     let dates_fn pkg =
-      try OpamPackage.Map.find pkg universe.pkgs_dates
+      try OpamPackage.Map.find pkg univ.dates
       with Not_found -> 0. in
     let last_updates =
       O2wStatistics.top_packages ~reverse:true ~ntop:10
-        dates_fn universe.max_packages in
+        dates_fn latest_packages in
     let updated_items = List.map mk_update_li last_updates in
     Html.div ~cls:"span4"
       (Html.tag "table" ~cls:"table table-striped"
@@ -63,26 +57,25 @@ let to_html ~content_dir ~statistics ~popularity ~news universe =
                           (Html.string "all packages"))))))
   in
 
-  let nb_packages, packages_top10 = match statistics with
-    | None      -> OpamPackage.Set.cardinal universe.max_packages, Html.empty
+  let nb_packages, packages_top10 = match univ.name_popularity with
+    | None      -> OpamPackage.Set.cardinal latest_packages,
+                   Html.empty
     | Some sset ->
       let mk_top_li (pkg, pkg_count) =
         let name = OpamPackage.name pkg in
-        let version = OpamPackage.version pkg in
         let pkg_name = OpamPackage.Name.to_string name in
-        let pkg_href = Pkg.href ~href_base:Uri.(of_string (packages_prefix^"/"))
-                         name version in
+        let pkg_href =
+          O2wPackage.pkg_href ~href_base:Uri.(of_string (packages_prefix^"/")) pkg in
         Html.tag "tr"
           (Html.tag "td"
              (Html.a ~href:pkg_href (Html.string pkg_name))
            @ Html.tag "td" (Html.string(Int64.to_string pkg_count)))
       in
       let popularity_fn pkg =
-        try OpamPackage.Name.Map.find (OpamPackage.name pkg) popularity
+        try OpamPackage.Name.Map.find pkg.name sset
         with Not_found -> 0L in
-      let packages = universe.max_packages in
-      let nb_packages = OpamPackage.Set.cardinal packages in
-      let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn packages in
+      let nb_packages = OpamPackage.Set.cardinal latest_packages in
+      let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn latest_packages in
       let top10_items = List.map mk_top_li top10_pkgs in
       nb_packages,
       Html.div ~cls:"span4"

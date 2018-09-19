@@ -64,3 +64,19 @@ let string_of_timestamp ?(short = false) time =
     Printf.sprintf "%s %d" month_str tm.tm_mday
   else
     Printf.sprintf "%s %d, %d" month_str tm.tm_mday year
+
+let html_of_timestamp ?(short = false) time =
+  let tm = Unix.gmtime time in
+  let open Unix in
+  let month_str = string_of_month tm.tm_mon in
+  let year = 1900 + tm.tm_year in
+  let datetime =
+    Printf.sprintf "%04d-%02d-%02d" year (tm.tm_mon + 1) tm.tm_mday
+  in
+  let str =
+    if short then
+      Printf.sprintf "%s %d" month_str tm.tm_mday
+    else
+      Printf.sprintf "%s %d, %d" month_str tm.tm_mday year
+  in
+  Cow.Html.time ~datetime (Cow.Html.string str)
