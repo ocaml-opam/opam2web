@@ -255,7 +255,7 @@ let make_news entries =
        @ Html.strong (html_date entry.blog_date)
        @ Html.string " "
        @ Html.a ~href:link (Html.string entry.blog_title)
-       @ Html.br Html.empty)
+       @ Html.br)
   in
   List.fold_left (fun h e -> h @Html.string " " @ mk e) Html.empty news
 
@@ -273,8 +273,7 @@ let make_redirect ~root entries =
       Html.html
         (Html.head
            (Html.title (Html.string "Latest blog entry (redirect)")
-            @ Html.meta ~attrs:["http-equiv", "refresh"; "content", redirect]
-                Html.empty)
+            @ Html.meta ["http-equiv", "refresh"; "content", redirect])
         @ Html.body Html.empty)
 
 (*

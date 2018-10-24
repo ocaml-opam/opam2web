@@ -222,7 +222,7 @@ let to_html ~prefix univ pkg =
       in
       let cksums =
         List.fold_right (fun c acc ->
-            Html.(br empty) ::
+            Html.br ::
             Html.small (Html.string (OpamHash.to_string c)) ::
             acc)
           (OpamFile.URL.checksum url_file) []

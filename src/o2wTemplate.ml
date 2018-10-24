@@ -45,7 +45,7 @@ let create ~title ~header ~body ~footer ~depth =
     ] in
   let prepend_root = prepend_root depth in
   let lnk ?attrs ~rel path =
-    Html.link ~rel ?attrs ~href:(prepend_root (Uri.make ~path ())) Html.empty
+    Html.link ~rel ?attrs (prepend_root (Uri.make ~path ()))
   in
   let head_html =
     Html.list [
@@ -56,12 +56,11 @@ let create ~title ~header ~body ~footer ~depth =
       lnk ~rel:"stylesheet" "ext/css/site.css";
       lnk ~rel:"stylesheet" "ext/css/bootstrap-responsive.css";
       lnk ~rel:"stylesheet" "ext/css/opam2web.css";
-      Html.meta ~name:"generator" ~content:("opam2web " ^ Version.string)
-        Html.empty
+      Html.meta ~name:"generator" ~content:("opam2web " ^ Version.string) []
     ]
   in
   let js_html =
-    Html.script ~typ:"text/javascript"
+    Html.script ~ty:"text/javascript"
       (Html.string
          "var _gaq = _gaq || []; \
           _gaq.push(['_setAccount', 'UA-22552764-5']); \
@@ -77,7 +76,7 @@ let create ~title ~header ~body ~footer ~depth =
     @ List.flatten
       (List.rev_map (fun f ->
            Html.script
-             ~src:(Uri.to_string (prepend_root (Uri.make ~path:f ())))
+             ~src:(prepend_root (Uri.make ~path:f ()))
              Html.empty)
           js_files)
   in
