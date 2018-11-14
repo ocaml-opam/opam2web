@@ -87,12 +87,14 @@ let timestamp_of_entry e =
 let request_of_entry hash_map e =
   let html_regexp =
     Re.Str.regexp "GET /\\(.+\\)\\.html HTTP/[.0-9]+" in
+  (* next three regexp, the first optional group is for version *)
   let archive_regexp =
-    Re.Str.regexp "GET /archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
+    Re.Str.regexp "GET \\(/[.0-9]+\\)?/archives/\\(.+\\)\\+opam\\.tar\\.gz HTTP/[.0-9]+" in
   let cache_opam2_regexp =
-    Re.Str.regexp "GET /2.0/cache/\\(.+/../.+\\) HTTP/[.0-9]+" in
+    Re.Str.regexp "GET \\(/[.0-9]+\\)?/cache/\\(.+/../.+\\) HTTP/[.0-9]+" in
+  (* additional '/' at the beginning because of some trailing ones exists *)
   let update_regexp =
-    Re.Str.regexp "GET /urls\\.txt HTTP/[.0-9]+" in
+    Re.Str.regexp "GET \\(/\\)?\\(/[.0-9]+\\)?/urls\\.txt HTTP/[.0-9]+" in
   let open Logentry in
   let package_of_string str =
     try OpamPackage.of_string (Filename.basename str)
@@ -107,9 +109,9 @@ let request_of_entry hash_map e =
     if Re.Str.string_match html_regexp e.request 0 then
       Html_req (Re.Str.matched_group 1 e.request)
     else if Re.Str.string_match archive_regexp e.request 0 then
-      Archive_req (package_of_string (Re.Str.matched_group 1 e.request))
+      Archive_req (package_of_string (Re.Str.matched_group 2 e.request))
     else if Re.Str.string_match cache_opam2_regexp e.request 0 then
-      Archive_req (package_of_hash (Re.Str.matched_group 1 e.request))
+      Archive_req (package_of_hash (Re.Str.matched_group 2 e.request))
     else if Re.Str.string_match update_regexp e.request 0 then
       Update_req
     else
