@@ -23,6 +23,7 @@ module StrS = OpamStd.String.Set
 module IntM = OpamStd.IntMap
 module OPM  = OpamPackage.Map
 module HashM = OpamHash.Map
+module Cache = O2wCache
 module FloM =
   OpamStd.Map.Make (struct
     type t = float
@@ -456,36 +457,10 @@ type cache_elt = {
   cache_month_map: mcache;
   cache_only_since: float;
 }
-type cache = cache_elt OpamFilename.Map.t
-let cache_file = OpamFilename.of_string "~/.cache/opam2web2/stats_cache"
-let cache_format_version = 3
-let version_id =
-  Digest.string (OpamVersion.(to_string (full ())) ^" "^
-                 string_of_int cache_format_version)
-let write_cache (cache: cache) =
-  OpamFilename.mkdir (OpamFilename.dirname cache_file);
-  let oc = open_out_bin (OpamFilename.to_string cache_file) in
-  Digest.output oc version_id;
-  Marshal.to_channel oc cache [];
-  close_out oc
-let read_cache () : cache =
-  try
-    let ic = open_in_bin (OpamFilename.to_string cache_file) in
-    let cache =
-      if Digest.input ic = version_id then
-        (Printf.printf "Reading logs cache from %s... %!"
-           (OpamFilename.to_string cache_file);
-         let c = Marshal.from_channel ic in
-         Printf.printf "done.\n%!";
-         c)
-      else
-        (Printf.printf "Skipping mismatching logs cache %s\n%!"
-           (OpamFilename.to_string cache_file);
-         OpamFilename.Map.empty)
-    in
-    close_in ic;
-    cache
-  with _ -> OpamFilename.Map.empty
+type log_cache = cache_elt OpamFilename.Map.t
+let log_cache : log_cache Cache.t =
+  Cache.cache ~version:3 "~/.cache/opam2web2/stats_cache" OpamFilename.Map.empty
+
 let partial_digest ic len =
   seek_in ic 0;
   let len = max 10_000 len in
@@ -493,7 +468,7 @@ let partial_digest ic len =
     Digest.channel ic (-1)
 
 let statistics_set files repos =
-  let cache = read_cache () in
+  let cache = Cache.read_cache log_cache in
   let skip_before = two_months_ago in
   let cache =
     OpamFilename.Map.filter (fun f _ -> List.mem f files) cache
@@ -573,7 +548,7 @@ let statistics_set files repos =
       else
         read_and_mcache mcache l
     in
-    let cache,mcache =
+    let new_cache, mcache =
       List.fold_left (fun (cache, sbglob) (file,(mcache, log)) ->
           let mcache = read_and_mcache mcache log in
           let ic = open_in (OpamFilename.to_string file) in
@@ -591,7 +566,7 @@ let statistics_set files repos =
         (cache, empty_mcache)
         mc_and_logs
     in
-    write_cache cache;
+    Cache.write_cache new_cache log_cache;
     let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache st in
     let hash_pkgs_map =
       StrM.filter (fun _ (p,s) -> not (OpamPackage.Set.is_empty s)) hash_map
