@@ -263,6 +263,93 @@ let add_mcache_entry mcache entry =
     IntM.add d dmcache mcache
   | None -> mcache
 
+(* Package Dependencies cache: package ->  (dependencies set * opam file). Opam
+   file is stored to be able to detect updates *)
+type dependencies_cache = ( OpamFile.OPAM.t * OpamPackage.Name.Set.t) OpamPackage.Map.t
+let dependencies_cache : dependencies_cache Cache.t =
+  Cache.cache ~version:1 "~/.cache/opam2web2/dependencies_cache" OPM.empty
+
+let dependencies st =
+  Printf.printf "Universe...%!";
+  let timer = OpamConsole.timer () in
+  let universe =
+    OpamSwitchState.universe st
+      ~requested:(OpamPackage.names_of_packages st.packages) Query
+  in
+  let depopts = true in
+  let build = true in
+  let post = true in
+  let vm = OpamSolver.cudf_versions_map universe st.packages in
+  let cudf_universe =
+    OpamSolver.load_cudf_universe ~depopts ~build ~post ~version_map:vm
+      universe st.packages ()
+  in
+  let graph =
+    Cudf.get_packages cudf_universe
+    |> Cudf.load_universe
+    |> OpamCudf.Graph.of_universe
+  in
+  Printf.printf "loaded in %.3fs\n%!" (timer());
+  let opam2cudf nv =
+    let p =
+      { Cudf.default_package with
+        Cudf.package = Common.CudfAdd.encode (OpamPackage.name_to_string nv);
+        pkg_extra = [
+          OpamCudf.s_source, `String(OpamPackage.name_to_string nv);
+          OpamCudf.s_source_number, `String(OpamPackage.version_to_string nv);
+        ];
+      } in
+    match OpamPackage.Map.find_opt nv vm with
+    | Some version -> { p with Cudf.version }
+    | None -> p
+  in
+  fun package ->
+    (** translate opam package to cupdf packages here *)
+    let package = opam2cudf package in
+    let subgraph =
+      OpamCudf.(Graph.close_and_linearize graph (Set.singleton package))
+    in
+    List.rev_map OpamCudf.cudf2opam subgraph
+
+(* Get dependencies functions *)
+let get_deps deps st pkg env =
+  try
+    let opam0, pl = OpamPackage.Map.find pkg env in
+    match OpamSwitchState.opam_opt st pkg with
+    | Some opam when OpamFile.OPAM.effectively_equal opam0 opam ->
+      env, pl
+    | _ -> deps pkg env st
+  with Not_found -> deps pkg env st
+
+let full_deps dependencies =
+  get_deps @@ (fun pkg env st ->
+      let deps =
+        pkg
+        |> dependencies
+        |> OpamPackage.Set.of_list
+        |> OpamPackage.names_of_packages
+        |> OpamPackage.Name.Set.remove (OpamPackage.name pkg)
+      in
+      let opam =
+        OpamStd.Option.default OpamFile.OPAM.empty
+          (OpamSwitchState.opam_opt st pkg)
+      in
+      OpamPackage.Map.add pkg (opam, deps) env, deps)
+
+let generate_dependencies_cache repos =
+  let st = O2wUniverse.load_opam_state repos in
+  let dpc = Cache.read_cache dependencies_cache  in
+  let dependencies = dependencies st in
+  let timer = OpamConsole.timer () in
+  let ndpc =
+    OpamPackage.Set.fold (fun p e -> fst (full_deps dependencies st p e)) st.packages dpc
+  in
+  Printf.printf "I have %d elements, %d are new (%.3fs)\n"
+    (OPM.cardinal ndpc)
+    (OPM.cardinal ndpc - OPM.cardinal dpc)
+    (timer ());
+  Cache.write_cache ndpc dependencies_cache
+
 let compute_stats ?(unique=false) mcache st =
   (* timestamps: Compute once a map of packages to keep, by user, detect leaf
       package given download timestamps: adjacent downloads < 5 min  *)

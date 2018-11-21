@@ -31,6 +31,7 @@ type options = {
   repositories: string list;
   root_uri: Uri.t;
   blog_source_uri: string;
+  gen_dcache: bool;
 }
 
 let version = Version.string
@@ -50,9 +51,16 @@ let include_files (path: string) files_path : unit =
 
 (* Generate a whole static website using the given repository stack *)
 let make_website user_options =
-  Printf.printf "++ Building the new stats from %s.\n%!"
+  if user_options.gen_dcache then
+    (Printf.printf "Generating dependencies cache\n";
+     O2wStatistics.generate_dependencies_cache
+       (List.map OpamFilename.Dir.of_string user_options.repositories);
+     Printf.printf"...done\n")
+  else
+  (Printf.printf "++ Building the new stats from %s.\n%!"
     (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
-  let statistics = O2wStatistics.statistics_set user_options.logfiles
+  let statistics =
+    O2wStatistics.statistics_set user_options.logfiles
       (List.map OpamFilename.Dir.of_string user_options.repositories)
   in
   let content_dir = user_options.content_dir in
@@ -186,7 +194,7 @@ let make_website user_options =
   | Some s ->
     let popularity = s.month_stats.pkg_stats in
     O2wStatistics.to_csv popularity "stats.csv";
-    O2wStatistics.to_json popularity "stats.json"
+    O2wStatistics.to_json popularity "stats.json")
 
 let normalize d =
   let len = String.length d in
@@ -194,6 +202,10 @@ let normalize d =
     d ^ "/"
   else
     d
+
+let generate_dcache = Arg.(
+  value & flag & info ["generate-dcache"]
+  ~doc:"Generate packages dependencies cache and quit")
 
 let log_files = Arg.(
   value & opt_all string [] & info ["s"; "statistics"]
@@ -220,9 +232,9 @@ let blog_source_uri = Arg.(
       ~docv:"URI"
       ~doc:"The base address to point to blog source files")
 
-let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
-  let () =
-    List.iter (Printf.printf "=== Repository: %s ===\n%!") repositories in
+let build logfiles out_dir content_dir repositories root_uri blog_source_uri
+    gen_dcache =
+  List.iter (Printf.printf "=== Repository: %s ===\n%!") repositories;
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
   let root_uri = Uri.of_string root_uri in
@@ -234,6 +246,7 @@ let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
     repositories;
     root_uri;
     blog_source_uri;
+    gen_dcache;
   } in
   make_website user_options
 
@@ -251,7 +264,7 @@ let default_cmd =
            ~doc:"Directories containing the repositories to consider")
   in
   Term.(pure build $ log_files $ out_dir $ content_dir
-          $ repositories_arg $ root_uri $ blog_source_uri),
+          $ repositories_arg $ root_uri $ blog_source_uri $ generate_dcache),
   Term.info "opam2web" ~version ~doc ~man
 
 let () =

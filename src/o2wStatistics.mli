@@ -26,6 +26,9 @@ val statistics_set: filename list -> dirname list -> statistics_set option
 val top_packages: ?ntop:int -> ?reverse:bool -> (package -> 'a) ->
   package_set -> (package * 'a) list
 
+(** Generate package dependencies cache of given repos *)
+val generate_dependencies_cache: dirname list -> unit
+
 (** Export the popularity list into CSV format *)
 val to_csv: int64 package_map -> string -> unit
 
