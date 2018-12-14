@@ -46,30 +46,34 @@ let size t =
 let is_empty t =
   t.empty
 
-let read t chunk_size =
+let read ?(strict=true) t chunk_size =
   let results = ref [] in
   try
     for _i = 1 to chunk_size do
       let line = input_line t.ic in
       let lexbuf = Lexing.from_string line in
-      let host     = Lexcombinedlog.host lexbuf in
-      let lname    = Lexcombinedlog.token lexbuf in
-      let user     = Lexcombinedlog.token lexbuf in
-      let date     = Lexcombinedlog.date lexbuf in
-      let request  = Lexcombinedlog.token lexbuf in
-      let status   = Lexcombinedlog.token lexbuf in
-      let size     =
-        try Lexcombinedlog.size lexbuf
-        with _ ->
-          Printf.eprintf "error while parsing:\n%s\n%!" line;
-          "0" in
-      let referrer = Lexcombinedlog.token lexbuf in
-      let client   = Lexcombinedlog.token lexbuf in
-      let entry =
-        Logentry.create ~host ~lname ~user ~date ~request ~status ~size ~referrer ~client in
-      t.reads <- t.reads + String.length line;
-      if t.filter entry then
-        results := entry :: !results
+      try
+        let host     = Lexcombinedlog.host lexbuf in
+        let lname    = Lexcombinedlog.token lexbuf in
+        let user     = Lexcombinedlog.token lexbuf in
+        let date     = Lexcombinedlog.date lexbuf in
+        let request  = Lexcombinedlog.token lexbuf in
+        let status   = Lexcombinedlog.token lexbuf in
+        let size     =
+          try Lexcombinedlog.size lexbuf
+          with _ ->
+            Printf.eprintf "error while parsing:\n%s\n%!" line;
+            "0" in
+        let referrer = Lexcombinedlog.token lexbuf in
+        let client   = Lexcombinedlog.token lexbuf in
+        let entry =
+          Logentry.create ~host ~lname ~user ~date ~request ~status ~size ~referrer ~client in
+        t.reads <- t.reads + String.length line;
+        if t.filter entry then
+          results := entry :: !results
+      with Lexcombinedlog.Scanner_error as e ->
+        (Printf.eprintf "Scanner error on line:\n%s\n" line;
+         if strict then raise e)
     done;
     List.rev !results
   with End_of_file ->
