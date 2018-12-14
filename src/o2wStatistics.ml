@@ -566,7 +566,7 @@ let statistics_set files repos =
             (fun mcache line ->
                try add_mcache_entry mcache (mk_entry hash_map line)
                with Ghost_package -> mcache)
-            mcache (Readcombinedlog.read l chunk_size)
+            mcache (Readcombinedlog.read ~strict:false l chunk_size)
         with Lexcombinedlog.Scanner_error ->
         (Printf.eprintf "Scanner error, dropping a chunk from %s\n" l.name;
          mcache)
