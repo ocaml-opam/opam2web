@@ -561,11 +561,15 @@ let statistics_set files repos =
       let percent = if l.size = 0 then 100 else 100 * l.reads / l.size in
       Printf.printf "\rReading new entries from %s: %3d%%%!" l.name percent;
       let mcache =
-        List.fold_left
-          (fun mcache line ->
-             try add_mcache_entry mcache (mk_entry hash_map line)
-             with Ghost_package -> mcache)
-          mcache (Readcombinedlog.read l chunk_size)
+        try
+          List.fold_left
+            (fun mcache line ->
+               try add_mcache_entry mcache (mk_entry hash_map line)
+               with Ghost_package -> mcache)
+            mcache (Readcombinedlog.read l chunk_size)
+        with Lexcombinedlog.Scanner_error ->
+        (Printf.eprintf "Scanner error, dropping a chunk from %s\n" l.name;
+         mcache)
       in
       if Readcombinedlog.is_empty l then
         (Printf.printf "\rReading new entries from %s: %3d%%\n%!" l.name 100;
