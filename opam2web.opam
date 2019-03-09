@@ -26,6 +26,10 @@ depends: [
   "cow" {= "2.3.0"}
   "js_of_ocaml" {>= "2.4.1"}
   "js_of_ocaml-ppx"
-  "cmdliner"
+  "opam-core" {>= "2.0.0"}
+  "opam-format" {>= "2.0.0"}
+  "opam-state" {>= "2.0.0"}
+  "opam-client" {>= "2.0.0"}
+  "cohttp-lwt-unix"
 ]
 available: [ocaml-version >= "4.01.0"]
