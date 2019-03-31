@@ -1,1 +1,1 @@
-let string = "%%VERSION%%"
+let string = "%%VERSION_NUM%%"
