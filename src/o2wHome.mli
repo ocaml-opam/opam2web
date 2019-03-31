@@ -16,7 +16,6 @@
 
 (** Home page *)
 
-open OpamTypes
 open O2wTypes
 
 val packages_prefix : string

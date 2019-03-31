@@ -17,24 +17,6 @@
 open Cow
 open O2wTypes
 
-type doc_kind =
-  | Html
-  | Markdown
-  | Unknown of string
-  | No_extension
-
-let extension_of_kind: doc_kind -> string = function
-  | Html -> "html"
-  | Markdown -> "md"
-  | Unknown ext -> ext
-  | No_extension -> ""
-
-let kind_of_extension: string -> doc_kind = function
-  | "html" -> Html
-  | "md" -> Markdown
-  | "" -> No_extension
-  | ext -> Unknown ext
-
 (* Returns a pair (basename, extension) of the given filename *)
 let split_filename (file: string): (string * string) =
   try
@@ -127,7 +109,7 @@ let doc_toc md_content =
 
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_menu_aux ~content_dir ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl =
+let to_menu_aux ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl =
 
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
@@ -246,11 +228,11 @@ let to_menu ~content_dir =
       read_menu ~dir:(content_dir / subdir)
         (content_dir / subdir / "index.menu")
     in
-    let menu = to_menu_aux ~content_dir ~subdir ~menu_pages ~srcurl ?header in
+    let menu = to_menu_aux ~subdir ~menu_pages ~srcurl ?header in
     menu, srcurl
   in
   (* Main (current) 1.2 help menu *)
-  let menu_20, srcurl_20 =
+  let menu_20, _srcurl_20 =
     mk_menu "doc" ?header:None
   in
   (* Old (legacy) 1.1 help menu *)
@@ -260,7 +242,7 @@ let to_menu ~content_dir =
   in
   let menu_11 =
     OpamStd.List.filter_map (function
-        | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
+      | {menu_item = Internal (_, html) | No_menu (_, html); _} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
       menu_11
@@ -271,7 +253,7 @@ let to_menu ~content_dir =
   in
   let menu_12 =
     OpamStd.List.filter_map (function
-        | {menu_item = Internal (_, html) | No_menu (_, html)} as m ->
+        | {menu_item = Internal (_, html) | No_menu (_, html); _} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
       menu_12

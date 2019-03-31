@@ -54,7 +54,7 @@ let string_of_stats s =
       s.update_stats;
       s.users_stats ]
 
-let string_of_stats_set stats =
+let _string_of_stats_set stats =
   Printf.sprintf
     "all_time: %s\nday: %s\nweek: %s\nmonth: %s\n"
     (string_of_stats stats.alltime_stats)
@@ -125,7 +125,7 @@ let referrer_of_entry e =
   let open Logentry in
   match e.referrer with
   | "-" -> No_ref
-  | s when Re.Str.string_match internal_regexp e.referrer 0 ->
+  | _ when Re.Str.string_match internal_regexp e.referrer 0 ->
     Internal_ref (Re.Str.matched_group 2 e.referrer)
   | s -> External_ref s
 
@@ -184,14 +184,14 @@ open Readcombinedlog
 let now = O2wGlobals.default_log_filter.log_end_time
 let one_day = 3600. *. 24.
 let one_month = one_day *. 30.
-let one_day_ago = now -. one_day
-let one_week_ago = now -. (one_day *. 7.)
-let one_month_ago = now -. (one_day *. 30.)
+let _one_day_ago = now -. one_day
+let _one_week_ago = now -. (one_day *. 7.)
+let _one_month_ago = now -. (one_day *. 30.)
 let two_months_ago = now -. (one_day *. 60.)
 
-let a_quarter = 15. *. 60.
-let ten_min = 10. *. 60.
-let five_min = 5. *. 60.
+let _a_quarter = 15. *. 60.
+let _ten_min = 10. *. 60.
+let _five_min = 5. *. 60.
 let two_min = 120.
 
 (* Memory cache: IntMap, containing a day_mcache for each day (0..29, backward) *)
@@ -325,7 +325,7 @@ let compute_stats ?(unique=false) mcache st =
       in
       match FloM.split split_ts map with
       | m1, Some pl, m2 -> (FloM.add split_ts pl m1), m2
-      | m1, None, m2 -> assert false (* we are sure that the element exists*)
+      | _, None, _ -> assert false (* we are sure that the element exists*)
     in
     let _, pkg_to_keep =
       (* Create leaf packages map, by user *)
@@ -598,7 +598,7 @@ let statistics_set files repos =
     write_cache cache;
     let stats = compute_stats ~unique:O2wGlobals.default_log_filter.log_per_ip mcache st in
     let hash_pkgs_map =
-      StrM.filter (fun _ (p,s) -> not (OpamPackage.Set.is_empty s)) hash_map
+      StrM.filter (fun _ (_p,s) -> not (OpamPackage.Set.is_empty s)) hash_map
     in
     Some { stats with hash_pkgs_map }
 

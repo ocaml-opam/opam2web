@@ -16,7 +16,6 @@
 
 open Cow
 open O2wTypes
-open OpamStateTypes
 
 let packages_prefix = "packages"
 

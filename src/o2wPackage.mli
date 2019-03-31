@@ -16,7 +16,6 @@
 
 (** Packages *)
 
-open OpamTypes
 open O2wTypes
 
 (** Comparison function using string representation of an OpamPackage *)

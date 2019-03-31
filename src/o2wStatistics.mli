@@ -16,7 +16,6 @@
 
 (** Statistics *)
 
-open OpamTypes
 open O2wTypes
 
 (** Generate statistics on log entries *)

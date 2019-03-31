@@ -16,7 +16,6 @@
 
 (** Universe *)
 
-open OpamTypes
 open O2wTypes
 
 (** Create a list of package pages to generate for a repository *)
