@@ -7,3 +7,7 @@
 (alias
  (name js_search)
  (deps search.bc.js))
+
+(install
+ (section share)
+ (files (search.bc.js as js/search.js)))
