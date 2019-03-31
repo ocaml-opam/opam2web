@@ -1,18 +1,18 @@
 .PHONY: build install uninstall clean test
 
 build:
-	jbuilder build @install @js_search
+	dune build @install @js_search
 	cp _build/default/src/js_search/search.bc.js ext/js/search.js
 	cp _build/default/src/opam2web.exe opam2web
 
 install:
-	jbuilder install
+	dune install
 
 uninstall:
-	jbuilder uninstall
+	dune uninstall
 
 clean:
-	rm -rf _build
+	dune clean
 
 test-prepare:
 	rm -rf www
