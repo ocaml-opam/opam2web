@@ -20,7 +20,8 @@ depends: [
   "cohttp-lwt-unix"
 ]
 build: [
-  ["dune" "subst"] {pinned}
+#  ["dune" "subst"] {pinned}
+# until https://github.com/ocaml/dune/issues/1997
   ["dune" "build" "-p" name "-j" jobs]
 ]
 dev-repo: "git+https://github.com/ocaml/opam2web.git"
