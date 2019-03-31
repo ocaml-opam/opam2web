@@ -1,0 +1,3 @@
+(executable
+ (name opam2web)
+ (libraries opam2web))

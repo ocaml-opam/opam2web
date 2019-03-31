@@ -1,0 +1,7 @@
+(library
+ (name apalog)
+ (wrapped false)
+ (public_name opam2web.apalog)
+ (modules lexcombinedlog readcombinedlog logentry compressed))
+
+(ocamllex lexcombinedlog)
