@@ -18,7 +18,6 @@ open Cmdliner
 open Cow
 open O2wTypes
 open OpamTypes
-open OpamStateTypes
 
 let ( ++ ) = Html.( ++ )
 
@@ -37,7 +36,7 @@ let version = Version.string
 
 let packages_prefix = O2wHome.packages_prefix
 
-let include_files (path: string) files_path : unit =
+let include_files (path: string) _files_path : unit =
   let subpathes = ["doc"; "blog"; packages_prefix] in
   let pathes =
     if String.length path > 0 then

@@ -18,13 +18,6 @@ open Printf
 open Cow
 open O2wTypes
 
-let ( ++ ) = Html.( ++ )
-
-let string_of_time () =
-  let t = Unix.localtime (Unix.time ()) in
-  sprintf "%d/%d/%d" t.Unix.tm_mday (t.Unix.tm_mon + 1)
-    (t.Unix.tm_year + 1900)
-
 let prepend_root (depth: int) (src: Uri.t): Uri.t =
   let rec aux acc = function
     | 0 -> acc
@@ -185,7 +178,7 @@ let make_footer srcurl depth =
                  (Html.string "Commercial support")
              @ Html.string ".")))
 
-let rec extract_links ~content_dir ~out_dir page =
+let extract_links ~out_dir page =
   let pagedir =
     try Filename.chop_extension page.page_source
     with Invalid_argument _ -> page.page_source in
@@ -320,4 +313,4 @@ let generate ~content_dir ~out_dir menu pages =
   List.iter aux menu_pages;
   List.iter aux pages;
   printf "\r[%-5d/%d]\n%!" n n;
-  List.iter (extract_links ~content_dir ~out_dir) menu_pages
+  List.iter (extract_links ~out_dir) menu_pages

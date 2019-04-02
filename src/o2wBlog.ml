@@ -153,7 +153,7 @@ let get_entries ~content_dir ~pages =
   let entries = List.map (to_entry ~content_dir:OpamFilename.Op.(OpamFilename.Dir.of_string content_dir / "blog")) pages in
   let entries = OpamStd.List.filter_map (fun x -> x) entries in
   let entries =
-    List.sort (fun {blog_date=a} {blog_date=b} -> compare b a) entries in
+    List.sort (fun a b -> compare b.blog_date a.blog_date) entries in
 
   OpamConsole.msg "Correctly parsed %d blog entries:\n  - %s\n"
     (List.length entries)

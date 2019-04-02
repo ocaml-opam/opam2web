@@ -1,18 +1,16 @@
 .PHONY: build install uninstall clean test
 
 build:
-	jbuilder build @install @js_search
-	cp _build/default/src/js_search/search.bc.js ext/js/search.js
-	cp _build/default/src/opam2web.exe opam2web
+	dune build 
 
 install:
-	jbuilder install
+	dune install
 
 uninstall:
-	jbuilder uninstall
+	dune uninstall
 
 clean:
-	rm -rf _build
+	dune clean
 
 test-prepare:
 	rm -rf www
@@ -24,13 +22,13 @@ test-prepare:
 
 test: build test-prepare
 	cd www && \
-	../src/_build/opam2web.native --content content path:. && \
+	dune exec -- opam2web --content content path:. && \
 	cp -r -L ../ext . && \
 	xdg-open index.html
 
 fulltest: build test-prepare
 	cd www && \
-	git clone git@github.com:ocaml/opam-repository -b master && \
-	../src/_build/opam2web.native --content content path:opam-repository && \
+	git clone git://github.com/ocaml/opam-repository -b master && \
+	dune exec -- opam2web --content content path:opam-repository && \
 	cp -r -L ../ext . && \
 	xdg-open index.html

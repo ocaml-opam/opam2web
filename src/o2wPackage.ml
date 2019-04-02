@@ -128,7 +128,7 @@ let html_atom ~prefix st pkg (name, f) =
       if OpamPackage.has_name st.packages name
       then Html.a ~href:(name_href ~href_base:prefix name) hname
       else hname
-    | f, nv ->
+    | _, nv ->
       Html.a ~href:(pkg_href ~href_base:prefix nv) hname
   in
   let hconstr =

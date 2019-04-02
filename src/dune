@@ -1,0 +1,6 @@
+(library
+ (name opam2web)
+ (wrapped false)
+ (public_name opam2web)
+ (modules_without_implementation o2wTypes)
+ (libraries str omd cow opam-core opam-format opam-state opam-client cmdliner apalog))
