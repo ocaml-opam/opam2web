@@ -204,7 +204,7 @@ let to_html ~prefix univ pkg =
       | None -> Html.empty
       | Some md ->
         try Cow.Markdown.of_string md
-        with Invalid_argument _ ->
+        with Invalid_argument _ | Parsing.Parse_error->
           OpamConsole.error "BAD MARKDOWN in %s descr"
             (OpamPackage.to_string pkg);
           Html.string md
