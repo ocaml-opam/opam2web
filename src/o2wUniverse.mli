@@ -44,6 +44,22 @@ val load_opam_state : dirname list -> OpamStateTypes.unlocked OpamStateTypes.swi
 
 val load: statistics_set option -> dirname list -> univ
 
+(** Generate json file `stats.json` containing: all packages with timestamps,
+    last month all downloads and non-adjacent downloads. The format is:
+    [
+      {"name": string <pkg name>,
+       "versions":[
+          {"version": string <pkg version>,
+           "date": string <human readable date: month day, year>,
+           "downloads": int <nb dl>,
+           "month_downloads": int <nb dl>},
+           {"version": ...
+           }],
+       "name": ...
+    ]
+*)
+val generate_json : ?statistics:statistics_set -> univ -> unit
+
 (*
 (** Generate a universe from a list of repositories *)
 val pages_of_repositories:

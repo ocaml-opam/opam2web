@@ -21,5 +21,29 @@ open O2wTypes
 val packages_prefix : string
 
 (** Generate the homepage *)
-val to_html: content_dir:string -> statistics:statistics_set option ->
-  news:Cow.Xml.t -> univ -> Cow.Xml.signal list
+val to_html:
+  content_dir:string
+  -> news:Cow.Xml.t
+  -> ?statistics:statistics_set
+  -> home_datasets
+  -> Cow.Xml.signal list
+
+(** Build top10's datasets : popularity & last  updates *)
+val make_datasets: univ -> home_datasets
+
+
+(** Generate two json files:
+  - `last10_updates.json`: last 10 updated packages
+    [
+      {"package": string <pkg>,
+       "downloads": int <nb dl>},
+      {"package": ...
+    ]
+  - `top10.json`: 10 most popular packages
+    [
+      {"package": string <pkg>,
+       "date": string <human readable date: month day, year>},
+      {"package": ...
+    ]
+*)
+val generate_json: home_datasets -> unit

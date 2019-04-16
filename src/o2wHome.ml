@@ -19,9 +19,32 @@ open O2wTypes
 
 let packages_prefix = "packages"
 
+let make_datasets universe =
+  let latest_packages = O2wUniverse.latest_version_packages universe.st in
+  let last10_updates =
+    let dates_fn pkg =
+      try OpamPackage.Map.find pkg universe.dates
+      with Not_found -> 0. in
+    O2wStatistics.top_packages ~reverse:true ~ntop:10
+      dates_fn latest_packages
+  in
+  let top10_pkgs =
+    match universe.name_popularity with
+    | None -> None
+    | Some sset ->
+      let popularity_fn pkg =
+        try OpamPackage.Name.Map.find pkg.name sset
+        with Not_found -> 0L in
+      let top =
+        O2wStatistics.top_packages ~ntop: 10 popularity_fn latest_packages
+      in
+      Some top
+  in
+  let nb_packages = OpamPackage.Set.cardinal latest_packages in
+  { nb_packages; last10_updates; top10_pkgs }
+
 (* OPAM website homepage *)
-let to_html ~content_dir ~statistics ~news univ =
-  let latest_packages = O2wUniverse.latest_version_packages univ.st in
+let to_html ~content_dir ~news ?statistics ds =
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =
       let pkg_name = OpamPackage.Name.to_string (OpamPackage.name pkg) in
@@ -35,13 +58,7 @@ let to_html ~content_dir ~statistics ~news univ =
                                    @ Html.string pkg_version))
          @ Html.tag "td" pkg_date)
     in
-    let dates_fn pkg =
-      try OpamPackage.Map.find pkg univ.dates
-      with Not_found -> 0. in
-    let last_updates =
-      O2wStatistics.top_packages ~reverse:true ~ntop:10
-        dates_fn latest_packages in
-    let updated_items = List.map mk_update_li last_updates in
+    let updated_items = List.map mk_update_li ds.last10_updates in
     Html.div ~cls:"span4"
       (Html.tag "table" ~cls:"table table-striped"
          (Html.tag "thead"
@@ -56,10 +73,10 @@ let to_html ~content_dir ~statistics ~news univ =
                           (Html.string "all packages"))))))
   in
 
-  let nb_packages, packages_top10 = match univ.name_popularity with
-    | None      -> OpamPackage.Set.cardinal latest_packages,
-                   Html.empty
-    | Some sset ->
+  let packages_top10 =
+    match ds.top10_pkgs with
+    | None -> Html.empty
+    | Some top10_pkgs ->
       let mk_top_li (pkg, pkg_count) =
         let name = OpamPackage.name pkg in
         let pkg_name = OpamPackage.Name.to_string name in
@@ -70,13 +87,7 @@ let to_html ~content_dir ~statistics ~news univ =
              (Html.a ~href:pkg_href (Html.string pkg_name))
            @ Html.tag "td" (Html.string(Int64.to_string pkg_count)))
       in
-      let popularity_fn pkg =
-        try OpamPackage.Name.Map.find pkg.name sset
-        with Not_found -> 0L in
-      let nb_packages = OpamPackage.Set.cardinal latest_packages in
-      let top10_pkgs = O2wStatistics.top_packages ~ntop: 10 popularity_fn latest_packages in
       let top10_items = List.map mk_top_li top10_pkgs in
-      nb_packages,
       Html.div ~cls:"span4"
         (Html.tag "table" ~cls:"table table-striped"
            (Html.tag "thead"
@@ -132,11 +143,12 @@ let to_html ~content_dir ~statistics ~news univ =
       (Html.h1 ~cls:"text-error" (Html.int nb @ Html.string " "
                                   @ Html.small (Html.string packages))) in
   let number_of_packages =
-    let packages = match nb_packages with
-      | 0
-      | 1 -> "package"
-      | _ -> "packages" in
-    number_of_packages nb_packages packages in
+    let packages =
+      match ds.nb_packages with
+      | 0 | 1 -> "package"
+      | _ -> "packages"
+    in
+    number_of_packages ds.nb_packages packages in
 
   let stats = Html.div ~cls:"span4"
                 (number_of_packages @ List.concat stats_html) in
@@ -153,3 +165,21 @@ let to_html ~content_dir ~statistics ~news univ =
     "updates_last10", serialize updates_last10;
     "packages_top10", serialize packages_top10;
   ])
+
+let generate_json ds =
+  let open O2wJson in
+  (* top 10 packages *)
+  (match ds.top10_pkgs with
+   | None -> OpamConsole.error "No top10 packages statistics"
+   | Some top ->
+     let top10 =
+       `List (List.map (fun (pkg,dl) ->
+           `Assoc [ json_package pkg; json_downloads dl ]) top)
+     in
+     write "top10" top10);
+  (* last 10 packages *)
+  let last10_updates =
+    `List (List.map (fun (pkg,tm) ->
+        `Assoc [ json_package pkg; json_timestamp tm ]) ds.last10_updates)
+  in
+  write "last10_updates" last10_updates

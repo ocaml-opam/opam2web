@@ -339,7 +339,7 @@ let to_html ~prefix univ pkg =
       Some ("Available", Html.string filter_str)
   in
 
-  let pkg_stats = match univ.version_popularity with
+  let pkg_stats = match univ.version_downloads with
     | None -> Html.empty
     | Some (stats, hashs) ->
       let checksum =

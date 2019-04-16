@@ -47,22 +47,24 @@ let include_files (path: string) _files_path : unit =
   (* Check if output directory exists, create it if it doesn't *)
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
-(* Generate a whole static website using the given repository stack *)
-let make_website user_options =
-  Printf.printf "++ Building the new stats from %s.\n%!"
-    (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
-  let statistics = O2wStatistics.statistics_set user_options.logfiles
+let make_datasets user_options =
+  let statistics =
+    O2wStatistics.statistics_set user_options.logfiles
       (List.map OpamFilename.Dir.of_string user_options.repositories)
   in
-  let content_dir = user_options.content_dir in
   let universe =
     O2wUniverse.load statistics
       (List.map OpamFilename.Dir.of_string user_options.repositories)
   in
+  universe, statistics
+
+(* Generate a whole static website using the given repository stack *)
+let make_website user_options universe statistics ds =
+  Printf.printf "++ Building the new stats from %s.\n%!"
+    (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
+  let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
-  let pages =
-    O2wUniverse.to_pages ~prefix:packages_prefix universe
-  in
+  let pages = O2wUniverse.to_pages ~prefix:packages_prefix universe in
   Printf.printf "++ Building the documentation pages.\n%!";
   let menu_of_doc () = O2wDocumentation.to_menu ~content_dir in
   Printf.printf "++ Building the blog.\n%!";
@@ -82,7 +84,8 @@ let make_website user_options =
   let blog_feed = O2wBlog.make_feed ~root:user_options.root_uri blog_entries in
   let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
-  let sortby_links = match statistics with
+  let sortby_links =
+    match statistics with
     | None   ->
       O2wUniverse.sortby_links ~links:criteria_nostats ~default:"name"
     | Some _ ->
@@ -131,7 +134,7 @@ let make_website user_options =
       OpamConsole.warning "%s is not available." filename;
       Html.empty in
   let doc_menu = menu_of_doc () in
-  let home_index = O2wHome.to_html ~content_dir ~statistics ~news universe in
+  let home_index = O2wHome.to_html ~content_dir ~news ?statistics ds in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum in
   let opam_title =
@@ -179,13 +182,7 @@ let make_website user_options =
     (Cow.Xml.to_string blog_feed);
   OpamFilename.write
     (OpamFilename.Op.(OpamFilename.Dir.of_string user_options.out_dir / "blog" // "index.html"))
-    (Cow.Xml.to_string (O2wBlog.make_redirect ~root:user_options.root_uri blog_entries));
-  match statistics with
-  | None   -> ()
-  | Some s ->
-    let popularity = s.month_stats.pkg_stats in
-    O2wStatistics.to_csv popularity "stats.csv";
-    O2wStatistics.to_json popularity "stats.json"
+    (Cow.Xml.to_string (O2wBlog.make_redirect ~root:user_options.root_uri blog_entries))
 
 let normalize d =
   let len = String.length d in
@@ -234,7 +231,11 @@ let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
     root_uri;
     blog_source_uri;
   } in
-  make_website user_options
+  let universe, statistics = make_datasets user_options in
+  let home_ds = O2wHome.make_datasets universe in
+  make_website user_options universe statistics home_ds;
+  O2wUniverse.generate_json ?statistics universe;
+  O2wHome.generate_json home_ds
 
 let default_cmd =
   let doc = "generate a web site from an opam universe" in
