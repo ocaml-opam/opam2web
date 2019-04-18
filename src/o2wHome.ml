@@ -169,14 +169,16 @@ let to_html ~content_dir ~news ?statistics ds =
 let generate_json ds =
   let open O2wJson in
   (* top 10 packages *)
-  (match ds.top10_pkgs with
-   | None -> OpamConsole.error "No top10 packages statistics"
-   | Some top ->
-     let top10 =
-       `List (List.map (fun (pkg,dl) ->
-           `Assoc [ json_package pkg; json_downloads dl ]) top)
-     in
-     write "top10" top10);
+  let top10 =
+    match ds.top10_pkgs with
+    | None ->
+      OpamConsole.error "No top10 packages statistics";
+      `Null
+    | Some top ->
+      `List (List.map (fun (pkg,dl) ->
+          `Assoc [ json_package pkg; json_downloads dl ]) top)
+  in
+  write "top10" top10;
   (* last 10 packages *)
   let last10_updates =
     `List (List.map (fun (pkg,tm) ->
