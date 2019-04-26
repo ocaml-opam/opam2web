@@ -228,7 +228,7 @@ let load statistics repo_roots =
   let rev_depopts = rev_depends depopts in
   Printf.printf "++ Getting package modification dates from git.\n%!";
   let dates = dates st in
-  let version_popularity, name_popularity =
+  let version_downloads, name_popularity =
     match statistics with
     | None -> None, None
     | Some s ->
@@ -243,7 +243,7 @@ let load statistics repo_roots =
   {
     st;
     dates;
-    version_popularity;
+    version_downloads;
     name_popularity;
     depends = deps;
     rev_depends = rdeps;
@@ -330,6 +330,47 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
     "pkgs",  serialize(Html.tag "tbody" (List.concat packages_html));
   ])
 
+let generate_json ?statistics universe =
+  let open O2wJson in
+  let open OpamPackage in
+  let global_map =
+    let dl_month =
+      match statistics with
+      | None -> fun _ -> None
+      | Some s -> fun pkg -> Map.find_opt pkg s.month_leaf_pkg_stats
+    in
+    let dl =
+      match universe.version_downloads with
+      | None -> fun _ -> None
+      | Some (vd,_) -> fun pkg -> Map.find_opt pkg vd
+    in
+    Set.fold (fun pkg map ->
+        let n = name pkg in
+        let v = version pkg in
+        let tm = Map.find_opt pkg universe.dates in
+        let upd_vmap = Version.Map.add v (tm, (dl pkg), (dl_month pkg)) in
+        Name.Map.update n upd_vmap (upd_vmap Version.Map.empty) map)
+      universe.st.packages Name.Map.empty
+  in
+  let json_gm =
+    let lst =
+      Name.Map.fold (fun name vmap lst ->
+          let versions =
+            Version.Map.fold (fun version (tm,dl,dl_month) lst ->
+                `Assoc [
+                  json_version version;
+                  json_timestamp_opt tm;
+                  json_downloads_opt dl;
+                  json_month_downloads_opt dl_month
+                ]::lst)
+              vmap []
+          in
+          `Assoc [ json_name name; "versions", `List (List.rev versions)]::lst)
+        global_map []
+    in
+    `List (List.rev lst)
+  in
+  write "stats" json_gm
 
 (* (\** Generate a universe from a list of repositories *\)
  * let of_repositories ?preds index repos =

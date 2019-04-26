@@ -617,6 +617,7 @@ let top_packages ?ntop ?(reverse = true) stats packages =
   | None      -> sorted_pkg
   | Some nmax -> O2wMisc.first_n nmax sorted_pkg
 
+(*
 let to_csv popularity file =
   let oc = open_out file in
   Printf.fprintf oc "Name, Version, Downloads\n";
@@ -629,18 +630,18 @@ let to_csv popularity file =
   close_out oc
 
 let to_json popularity file =
-  let oc = open_out file in
-  Printf.fprintf oc "[";
-  let first = ref true in
-  OpamPackage.Map.iter (fun pkg count ->
-    if !first then
-      first := false
-    else
-      Printf.fprintf oc ",";
-    Printf.fprintf oc "{\n  \"name\": %S,\n  \"version\": %S,  \n  \"downloads\": %Ld\n}"
-      (OpamPackage.Name.to_string (OpamPackage.name pkg))
-      (OpamPackage.Version.to_string (OpamPackage.version pkg))
-      count
-  ) popularity;
-  Printf.fprintf oc "\n]";
-  close_out oc
+  let popularity =
+    let map =
+      OpamPackage.Map.fold (fun pkg count acc ->
+          (`Assoc [
+              "name",
+              `String (OpamPackage.Name.to_string (OpamPackage.name pkg));
+              "version",
+              `String (OpamPackage.Version.to_string (OpamPackage.version pkg));
+              "downloads", `Int (Int64.to_int count);
+            ])::acc) popularity []
+    in
+    `List (List.rev map) (* rev for alphabetical order *)
+  in
+  Yojson.to_file file popularity
+*)

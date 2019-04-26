@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*    Copyright 2012-2013 OCamlPro                                        *)
+(*    Copyright 2012-2019 OCamlPro                                        *)
 (*    Copyright 2012 INRIA                                                *)
 (*                                                                        *)
 (*  All rights reserved.This file is distributed under the terms of the   *)
@@ -14,21 +14,23 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Statistics *)
-
 open O2wTypes
 
-(** Generate statistics on log entries *)
-val statistics_set: filename list -> dirname list -> statistics_set option
+(** Basic json functions : construct the association with the content. Fields
+    are named as follow: "package", "name", "version", "date", "downloads",
+    "month_downloads". *)
+val json_package: package -> string * Yojson.t
+val json_name: name -> string * Yojson.t
+val json_version: version -> string * Yojson.t
+val json_downloads: int64 -> string * Yojson.t
+val json_month_downloads: int64 -> string * Yojson.t
+val json_timestamp: float -> string * Yojson.t
 
-(** Return the top packages *)
-val top_packages: ?ntop:int -> ?reverse:bool -> (package -> 'a) ->
-  package_set -> (package * 'a) list
+(** Basic json function with option argument. If [None], the value of the
+    string * Yojson.tiation is `null` *)
+val json_downloads_opt: int64 option -> string * Yojson.t
+val json_month_downloads_opt: int64 option -> string * Yojson.t
+val json_timestamp_opt: float option -> string * Yojson.t
 
-(*
-(** Export the popularity list into CSV format *)
-val to_csv: int64 package_map -> string -> unit
-
-(** Export the popularity list into JSON format *)
-val to_json: int64 package_map -> string -> unit
-*)
+(** [write filename json] outputs json into json/[filename] file *)
+val write: string -> Yojson.t -> unit
