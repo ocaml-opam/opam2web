@@ -169,7 +169,10 @@ let to_html ~prefix univ pkg =
   in
   let {name; version} = pkg in
   let pkg = OpamPackage.create pkg.name pkg.version in
-  let pkg_opam = OpamSwitchState.opam univ.st pkg in
+  let pkg_opam =
+    OpamSwitchState.opam univ.st pkg
+    |> OpamFileTools.sort_opam
+  in
   let version_links =
     let version_set =
       OpamPackage.versions_of_name univ.st.packages pkg.name
