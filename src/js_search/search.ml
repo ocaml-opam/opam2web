@@ -14,6 +14,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Js_of_ocaml
+
 (* Code from ocp-jslib in TryOCaml *)
 let doc = Dom_html.document
 let win = Dom_html.window
