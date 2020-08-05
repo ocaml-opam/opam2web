@@ -2,7 +2,7 @@
  (name search)
  (libraries js_of_ocaml)
  (preprocess
-  (pps js_of_ocaml.ppx)))
+  (pps js_of_ocaml-ppx)))
 
 (alias
  (name js_search)
