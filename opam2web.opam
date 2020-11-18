@@ -19,6 +19,7 @@ depends: [
   "opam-client" {>= "2.0.0" & < "2.1.0~~"}
   "cohttp-lwt-unix"
   "yojson" {>= "1.6.0"}
+  "opam-file-format" {< "2.1.1"}
 ]
 build: [
 #  ["dune" "subst"] {pinned}
