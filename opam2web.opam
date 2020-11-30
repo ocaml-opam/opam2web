@@ -17,6 +17,7 @@ depends: [
   "opam-format" {>= "2.0.0" & < "2.1.0~"}
   "opam-state" {>= "2.0.0" & < "2.1.0~"}
   "opam-client" {>= "2.0.0" & < "2.1.0~"}
+  "opam-file-format" {>="2.1.0" & < "2.1.1"}
   "cohttp-lwt-unix"
   "yojson" {>= "1.6.0"}
 ]
