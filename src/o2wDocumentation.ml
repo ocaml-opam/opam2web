@@ -109,7 +109,7 @@ let doc_toc md_content =
 
 (* Generate the HTML corresponding to a documentation page in the <content>/doc
    directory *)
-let to_menu_aux ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl =
+let to_menu_aux ~subdir ?(header=Cow.Html.nil) ~menu_pages ~srcurl () =
 
   (* Convert a content page to html *)
   let to_html doc_menu kind filename: Cow.Html.t =
@@ -228,7 +228,7 @@ let to_menu ~content_dir =
       read_menu ~dir:(content_dir / subdir)
         (content_dir / subdir / "index.menu")
     in
-    let menu = to_menu_aux ~subdir ~menu_pages ~srcurl ?header in
+    let menu = to_menu_aux ~subdir ~menu_pages ~srcurl ?header () in
     menu, srcurl
   in
   (* Main (current) 1.2 help menu *)
