@@ -1,4 +1,5 @@
 (executable
+ (modes js)
  (name search)
  (libraries js_of_ocaml)
  (preprocess
@@ -10,4 +11,5 @@
 
 (install
  (section share)
- (files (search.bc.js as js/search.js)))
+ (files
+  (search.bc.js as js/search.js)))
