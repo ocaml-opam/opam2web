@@ -44,7 +44,7 @@ RUN apk add git curl rsync libstdc++
 COPY --from=build-opam2web /opt/opam2web /usr/local
 COPY --from=build-opam-doc /usr/bin/opam /usr/local/bin/opam
 COPY --from=build-opam-doc /opt/opam/doc /usr/local/share/opam2web/content/doc
-ADD scripts/opam-web.sh /usr/local/bin
+ADD bin/opam-web.sh /usr/local/bin
 VOLUME ["/www"]
 RUN addgroup -g 82 -S www-data && adduser -u 82 -D -S -G www-data www-data
 USER www-data
