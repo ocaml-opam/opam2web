@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM ocaml/opam:alpine-3.12-ocaml-4.10 as build-opam2web
+FROM ocaml/opam:alpine-3.13-ocaml-4.10 as build-opam2web
 RUN sudo apk add g++
 RUN git clone git://github.com/ocaml/opam2web --depth 1 /home/opam/opam2web
 WORKDIR /home/opam/opam2web
@@ -16,7 +16,7 @@ RUN git clone git://github.com/ocaml/opam.wiki.git --depth 1 -b old_wiki /opt/op
 RUN git clone git://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
-FROM ocaml/opam:alpine-3.12-ocaml-4.10 as build-opam-doc
+FROM ocaml/opam:alpine-3.13-ocaml-4.10 as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
     && echo -e '#!/bin/sh -e\n\
@@ -39,7 +39,7 @@ RUN sudo mkdir -p /opt/opam/doc && sudo chown -R opam:opam /opt/opam
 RUN cp -r doc/html /opt/opam/doc/api
 RUN cp -r doc/man-html /opt/opam/doc/man
 RUN cp -r doc/pages/* /opt/opam/doc/
-FROM alpine:3.12 as opam2web
+FROM alpine:3.13 as opam2web
 RUN apk add git curl rsync libstdc++
 COPY --from=build-opam2web /opt/opam2web /usr/local
 COPY --from=build-opam-doc /usr/bin/opam /usr/local/bin/opam
@@ -50,6 +50,6 @@ RUN addgroup -g 82 -S www-data && adduser -u 82 -D -S -G www-data www-data
 USER www-data
 WORKDIR /www
 RUN --mount=type=cache,target=/persist,uid=82,gid=82 opam-web.sh opam.ocaml.org
-FROM alpine:3.12 as opamwww
+FROM alpine:3.13 as opamwww
 COPY --from=opam2web /www /www
 
