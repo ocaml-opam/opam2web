@@ -50,6 +50,5 @@ RUN addgroup -g 82 -S www-data && adduser -u 82 -D -S -G www-data www-data
 USER www-data
 WORKDIR /www
 RUN --mount=type=cache,target=/persist,uid=82,gid=82 opam-web.sh opam.ocaml.org
-FROM alpine:3.12 as opamwww
-COPY --from=opam2web /www /www
-
+FROM nginx:alpine as opamwww
+COPY --from=opam2web /www /usr/share/nginx/html
