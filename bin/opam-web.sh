@@ -46,10 +46,11 @@ redirect: [
 ]
 EOF
 mkdir -p /persist/repo-cache/archives
-rm -rf archives; ln -s /persist/repo-cache/archives .
-opam admin cache --link=archives /persist/repo-cache/cache
-rsync -a /persist/repo-cache .
-rm -f archives; rsync -a /persist/repo-cache/archives .
+mkdir -p /persist/repo-cache/cache
+mkdir -p archives
+opam admin cache -n --link=archives /persist/repo-cache/cache
+rsync -a /persist/repo-cache/cache .
+echo 'archive-mirrors: "cache"' >> repo
 if [ -d /persist/legacy ]; then rsync -a /persist/legacy .; fi
 opam admin index --minimal-urls-txt
 

@@ -6,6 +6,7 @@ WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
 RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam
+RUN opam repo set-url default https://opam.ocaml.org/
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
@@ -45,11 +46,5 @@ COPY --from=build-opam2web /opt/opam2web /usr/local
 COPY --from=build-opam-doc /usr/bin/opam /usr/local/bin/opam
 COPY --from=build-opam-doc /opt/opam/doc /usr/local/share/opam2web/content/doc
 ADD scripts/opam-web.sh /usr/local/bin
+VOLUME ["/persist"]
 VOLUME ["/www"]
-RUN addgroup -g 82 -S www-data && adduser -u 82 -D -S -G www-data www-data
-USER www-data
-WORKDIR /www
-RUN --mount=type=cache,target=/persist,uid=82,gid=82 opam-web.sh opam.ocaml.org
-FROM alpine:3.12 as opamwww
-COPY --from=opam2web /www /www
-
