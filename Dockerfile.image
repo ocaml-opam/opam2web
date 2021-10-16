@@ -1,0 +1,5 @@
+# syntax = docker/dockerfile:1.0.2-experimental
+FROM opam-website-data
+FROM caddy:alpine
+WORKDIR /srv
+COPY --from=0 . /srv
