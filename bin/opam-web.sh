@@ -37,12 +37,12 @@ fi
 # Overwrite 'repo' file, and dispatch all non-standard versions
 cat <<EOF >repo
 opam-version: "2.0"
-browse: "https://opam.ocaml.org/pkg/"
+browse: "https://${BASEURL}/pkg/"
 upstream: "https://github.com/ocaml/opam-repository/tree/master/"
 redirect: [
-  "${URL}1.1" { opam-version < "1.2" }
-  "${URL}1.2.0" { opam-version < "1.2.2" }
-  "${URL}1.2.2" { opam-version < "2.0~" }
+  "https://${BASEURL}/1.1" { opam-version < "1.2" }
+  "https://${BASEURL}/1.2.0" { opam-version < "1.2.2" }
+  "https://${BASEURL}/1.2.2" { opam-version < "2.0~" }
 ]
 EOF
 mkdir -p /persist/repo-cache/archives
