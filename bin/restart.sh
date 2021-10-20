@@ -11,5 +11,5 @@ tar -C /var/lib/docker/volumes/opam-website/_data/ -cf - . | docker image import
 DOCKER_BUILDKIT=1 docker build -t opam-website-live -f Dockerfile.image .
 docker kill opam-website-live || true
 docker rm opam-website-live || true
-docker run -d -p 80:80 -p 443:443 --name opam-website-live opam-website-live caddy file-server -domain $1
+docker run -d -p 80:80 -p 443:443 -v caddy-data:/data --name opam-website-live opam-website-live caddy file-server -domain $1
 docker system prune -f
