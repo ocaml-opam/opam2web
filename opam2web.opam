@@ -36,3 +36,6 @@ This utility creates a static website from an OPAM universe, listing all
 available packages and their details. A homepage and OPAM documentation is 
 included as well.
 """
+conflicts: [
+  "base-domains"
+]
