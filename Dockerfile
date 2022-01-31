@@ -5,7 +5,7 @@ RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2we
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
-RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam
+RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
 RUN opam repo set-url default https://opam.ocaml.org/
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
