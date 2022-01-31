@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.2
+# syntax=docker/dockerfile:1.3
 FROM ocaml/opam:alpine-3.14-ocaml-4.12 as build-opam2web
 RUN sudo apk add g++
 RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2web
@@ -49,9 +49,11 @@ COPY --from=build-opam2web /opt/opam2web /usr/local
 COPY --from=build-opam-doc /usr/bin/opam /usr/local/bin/opam
 COPY --from=build-opam-doc /opt/opam/doc /usr/local/share/opam2web/content/doc
 RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /www/cache/
+COPY ext/key/opam-dev-team.pgp /www
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
 RUN /usr/local/bin/opam-web.sh ${DOMAIN}
 FROM caddy:alpine
 WORKDIR /srv
-COPY --from=opam2web /www /srv
+COPY --from=opam2web /www /usr/share/caddy
+ENTRYPOINT ["caddy", "file-server"]
