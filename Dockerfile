@@ -17,7 +17,7 @@ RUN git clone https://github.com/ocaml/opam.wiki.git --depth 1 -b old_wiki /opt/
 RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
-FROM ocaml/opam:alpine-3.14-ocaml-4.12 as build-opam-doc
+FROM ocaml/opam:alpine-3.14-ocaml-4.12@sha256:cd8848e4bda0fd77eb7290f1a3b7b080a445bc9c3eb342e59a3a21ffcdd3a49e as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
     && echo -e '#!/bin/sh -e\n\
