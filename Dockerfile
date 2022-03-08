@@ -33,6 +33,7 @@ RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
 RUN opam install odoc
 RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam
 WORKDIR /home/opam/opam
+RUN uname -a
 RUN opam exec -- ./configure --without-mccs && opam exec -- make lib-ext && opam exec -- make
 RUN echo '(vendored_dirs src_ext)' >> dune
 RUN opam exec -- make -C doc html man-html DUNE=dune
