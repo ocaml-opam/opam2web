@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.3
-FROM ocaml/opam:alpine-3.14-ocaml-4.12 as build-opam2web
+FROM ocaml/opam:alpine-3.14-ocaml-4.12@sha256:cd8848e4bda0fd77eb7290f1a3b7b080a445bc9c3eb342e59a3a21ffcdd3a49e as build-opam2web
 RUN sudo apk add g++
 RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2web
 WORKDIR /home/opam/opam2web
