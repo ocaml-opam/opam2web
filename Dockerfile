@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM ocaml/opam:alpine-3.14-ocaml-4.10 as build-opam2web
 RUN sudo apk add g++
-RUN git clone git://github.com/ocaml/opam2web --depth 1 /home/opam/opam2web
+RUN git clone https://github.com/ocaml/opam2web --depth 1 /home/opam/opam2web
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
@@ -12,9 +12,9 @@ RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
 RUN rm -rf /opt/opam2web/share/opam2web/doc
 # Add legacy docs (1.1, 1.2) statically
-RUN git clone git://github.com/ocaml/opam.wiki.git --depth 1 -b old_wiki /opt/opam2web/share/opam2web/content/doc/1.1 \
+RUN git clone https://github.com/ocaml/opam.wiki.git --depth 1 -b old_wiki /opt/opam2web/share/opam2web/content/doc/1.1 \
     && rm -rf /opt/opam2web/share/opam2web/content/doc/1.1/.git
-RUN git clone git://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
+RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
 FROM ocaml/opam:alpine-3.14-ocaml-4.10 as build-opam-doc
