@@ -5,8 +5,7 @@ RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2we
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
-RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
-RUN opam repo set-url default https://opam.ocaml.org/
+RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_GIT_SHA}
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
@@ -17,6 +16,7 @@ RUN git clone https://github.com/ocaml/opam.wiki.git --depth 1 -b old_wiki /opt/
 RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
+
 FROM ocaml/opam:alpine-3.14-ocaml-4.12@sha256:cd8848e4bda0fd77eb7290f1a3b7b080a445bc9c3eb342e59a3a21ffcdd3a49e as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
@@ -33,7 +33,6 @@ RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
 RUN opam install odoc
 RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam
 WORKDIR /home/opam/opam
-RUN uname -a
 RUN opam exec -- ./configure --without-mccs && opam exec -- make lib-ext && opam exec -- make
 RUN echo '(vendored_dirs src_ext)' >> dune
 RUN opam exec -- make -C doc html man-html DUNE=dune
@@ -41,6 +40,7 @@ RUN sudo mkdir -p /opt/opam/doc && sudo chown -R opam:opam /opt/opam
 RUN cp -r doc/html /opt/opam/doc/api
 RUN cp -r doc/man-html /opt/opam/doc/man
 RUN cp -r doc/pages/* /opt/opam/doc/
+
 FROM --platform=linux/amd64 ocaml/opam:archive as opam-archive
 FROM ocaml/opam.ocaml.org-legacy as opam-legacy
 FROM alpine:3.14 as opam2web
@@ -50,10 +50,12 @@ COPY --from=build-opam2web /opt/opam2web /usr/local
 COPY --from=build-opam-doc /usr/bin/opam /usr/local/bin/opam
 COPY --from=build-opam-doc /opt/opam/doc /usr/local/share/opam2web/content/doc
 RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /www/cache/
-COPY ext/key/opam-dev-team.pgp /www
+COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
-RUN /usr/local/bin/opam-web.sh ${DOMAIN}
+ARG OPAM_GIT_SHA
+RUN echo ${OPAM_GIT_SHA} >> /www/opam_git_sha
+RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA}
 FROM caddy:alpine
 WORKDIR /srv
 COPY --from=opam2web /www /usr/share/caddy

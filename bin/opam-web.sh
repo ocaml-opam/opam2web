@@ -2,10 +2,21 @@
 
 set -uex
 
-BASEURL=$1 && shift && [ $# -eq 0 ] || { echo "Usage: $0 BASEURL" && exit 2; }
+if [[ $# -eq 3 ]] ; then
+    echo 'Usage: $0 BASEURL OPAM_GIT_SHA'
+    exit 2
+fi
+
+BASEURL=$1
+OPAM_GIT_SHA=$2 
 
 cd /www
-git clone https://github.com/ocaml/opam-repository.git --single-branch --branch master opam-repository
+# Checkout a specific commit as supplied by ocurrent-deployer pipeline.
+git clone https://github.com/ocaml/opam-repository.git --single-branch --branch master opam-repository &&
+    cd opam-repository &&
+    git checkout ${OPAM_GIT_SHA} &&
+    cd ..
+
 mv opam-repository/* .
 mv opam-repository/.git .
 rm -rf opam-repository
