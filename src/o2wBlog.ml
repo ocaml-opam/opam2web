@@ -264,7 +264,7 @@ let make_redirect ~root entries =
   | [] -> Html.p (Html.string "No blog pages.")
   | first_entry::_ ->
       let blog_uri =
-        Uri.(resolve "http" root (of_string "blog/"))
+        Uri.(resolve "http" root (of_string "/blog/"))
       in
       let post_uri =
         Uri.(resolve "http" blog_uri (of_string (first_entry.blog_name^"/")))
