@@ -250,11 +250,9 @@ let default_cmd =
            ~docv:"REPOSITORY"
            ~doc:"Directories containing the repositories to consider")
   in
-  let info = Cmd.info "opam2web" ~version ~doc ~man in
-  let term = Term.(const build $ log_files $ out_dir $ content_dir
-                     $ repositories_arg $ root_uri $ blog_source_uri) in
-  Cmd.v info term
-  
+  Term.(pure build $ log_files $ out_dir $ content_dir
+          $ repositories_arg $ root_uri $ blog_source_uri),
+  Term.info "opam2web" ~version ~doc ~man
 
 let () =
   OpamFormatConfig.init ();
@@ -262,4 +260,6 @@ let () =
   OpamRepositoryConfig.init ();
   OpamSolverConfig.init ();
   OpamStateConfig.init ();
-  exit @@ Cmd.eval default_cmd
+  match Term.eval default_cmd with
+  | `Error _ -> exit 1
+  | _ -> exit 0
