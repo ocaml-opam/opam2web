@@ -4,7 +4,7 @@ opam2web
 A tool to generate a website from an OPAM universe
 
 This utility creates a static website from an OPAM universe, listing all
-available packages and their details. A homepage and OPAM documentation is
+available packages and their details. A homepage and OPAM documentation is 
 included as well.
 
 The latest release of opam2web is available via

@@ -1,0 +1,9 @@
+PKG cmdliner
+PKG cow
+PKG opam-lib
+PKG opamfu
+
+B src/_build
+B src/_build/apalog
+S src
+S src/apalog
