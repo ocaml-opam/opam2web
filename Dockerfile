@@ -54,8 +54,10 @@ COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
 ARG OPAM_GIT_SHA
+ARG BLOG_GIT_SHA
 RUN echo ${OPAM_GIT_SHA} >> /www/opam_git_sha
-RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA}
+RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
+RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA} ${BLOG_GIT_SHA}
 
 FROM caddy:alpine
 WORKDIR /srv

@@ -2,13 +2,14 @@
 
 set -uex
 
-if [[ $# -eq 3 ]] ; then
-    echo 'Usage: $0 BASEURL OPAM_GIT_SHA'
+if [[ $# -eq 4 ]] ; then
+    echo 'Usage: $0 BASEURL OPAM_GIT_SHA BLOG_GIT_SHA'
     exit 2
 fi
 
 BASEURL=$1
-OPAM_GIT_SHA=$2 
+OPAM_GIT_SHA=$2
+BLOG_GIT_SHA=$3
 
 cd /www
 # Checkout a specific commit as supplied by ocurrent-deployer pipeline.
@@ -36,7 +37,10 @@ opam admin cache --link=archives ./cache
 opam admin index --minimal-urls-txt
 
 cp -r /usr/local/share/opam2web/content /tmp/
-git clone https://github.com/ocaml/platform-blog --single-branch --branch master /tmp/content/blog
+git clone https://github.com/ocaml/platform-blog --single-branch --branch master /tmp/content/blog &&
+    cd /tmp/content/blog &&
+    git checkout ${BLOG_GIT_SHA} &&
+    cd -
 
 rm -rf /www/ext
 mkdir -p /www/ext
