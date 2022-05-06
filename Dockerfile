@@ -53,8 +53,8 @@ RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /w
 COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
-ARG OPAM_GIT_SHA
-ARG BLOG_GIT_SHA
+ARG OPAM_GIT_SHA=master
+ARG BLOG_GIT_SHA=master
 RUN echo ${OPAM_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA} ${BLOG_GIT_SHA}
