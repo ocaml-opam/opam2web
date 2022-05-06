@@ -19,8 +19,7 @@ opam install opam2web
 Optionally create a local switch for the project:
 
 ``` bash
-opam switch create 4.13.1-opam2web 4.13.1
-opam switch link 4.13.1-opam2web
+opam switch create . ocaml.4.14.0 --with-test
 ```
 
 - re [github.com/ocaml/ocaml-re](https://github.com/ocaml/ocaml-re)
@@ -31,21 +30,16 @@ opam switch link 4.13.1-opam2web
 - cmdliner [erratique.ch/software/cmdliner](http://erratique.ch/software/cmdliner)
 - js_of_ocaml [ocsigen.org/js_of_ocaml](http://ocsigen.org/js_of_ocaml/)
 
-If you have opam installed:
-
-```bash
-opam install . --deps-only --yes --with-test
-```
-
 ### Build
 
-To build the `opam2web` utility, enter:
+`dune exec -- opam2web` will compile and run the utility directly, alternatively you can run:
 
 ```bash
 dune build @all
 ```
 
-The binary will be located in _build/default/bin/opam2web.exe after compilation, or use `dune exec -- opam2web` to run the binary.
+and the binary will be located in `_build/install/default/bin/opam2web` after compilation.
+
 At this point you'll either want to try a `docker` build or running the `opam2web` cli locally.
 
 ### Docker
@@ -54,7 +48,7 @@ The website generation for opam.ocaml.org uses a combination of `docker` and `oc
 To replicate the docker image run:
 
 ``` bash
-docker build -t opam2web -f Dockerfile .
+DOCKER_BUILDKIT=1 docker build -t opam2web .
 ```
 
 which uses the local Dockerfile and creates an image called `opam2web`. Note this image is rather large at over 18Gb and takes a while to build.
@@ -124,14 +118,16 @@ Resulting files will be located in the `website` directory.
 
 ## Deployment
 
-The deployment uses [ocurrent-deployer]() to watch particular branches on this repository, plus the default branches of [opam-repository]() and [platform-blog](). 
-When any of them are changed it calculates if it needs to rebuild the docker image. Meaning any merge to opam-repository will trigger a rebuild of the site.
+The deployment uses [ocurrent-deployer][] to watch particular branches on this repository, plus the default branches of [opam-repository][] and [platform-blog][]. 
+When any of them change, it calculates if it needs to rebuild the docker image. A site rebuild is therefore triggered by any merge to opam-repository.
 
- * `live` branch is deployed on `opam.ocaml.org`
- * `staging` branch is deployed on `staging.opam.ocaml.org`
+ * `live` branch is deployed on [opam.ocaml.org][]
+ * `staging` branch is deployed on [staging.opam.ocaml.org][]
 
 The deployer service is available at https://deploy.ci.ocaml.org/?repo=ocaml-opam/opam2web and the code for the ocurrent pipeline is in [ocurrent-deployer]().
 
 [ocurrent-deployer]: https://github.com/ocurrent/ocurrent-deployer
-[opam-repository] : https://github.com/ocaml/opam-repository
+[opam-repository]: https://github.com/ocaml/opam-repository
 [platform-blog]: https://github.com/ocaml/platform-blog
+[opam.ocaml.org]: https://opam.ocaml.org
+[staging.opam.ocaml.org]: https://staging.opam.ocaml.org
