@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.3
-FROM ocaml/opam:alpine-3.14-ocaml-4.13 as build-opam2web
+FROM ocaml/opam:alpine-3.15-ocaml-4.14 as build-opam2web
 RUN sudo apk add g++ gmp-dev
 RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2web
 WORKDIR /home/opam/opam2web
@@ -17,7 +17,7 @@ RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
 
-FROM ocaml/opam:alpine-3.14-ocaml-4.13 as build-opam-doc
+FROM ocaml/opam:alpine-3.15-ocaml-4.14 as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
     && echo -e '#!/bin/sh -e\n\
@@ -43,7 +43,7 @@ RUN cp -r doc/pages/* /opt/opam/doc/
 
 FROM --platform=linux/amd64 ocaml/opam:archive as opam-archive
 FROM ocaml/opam.ocaml.org-legacy as opam-legacy
-FROM alpine:3.14 as opam2web
+FROM alpine:3.15 as opam2web
 RUN apk add --update git curl rsync libstdc++ rdfind
 COPY --from=opam-legacy . /www
 COPY --from=build-opam2web /opt/opam2web /usr/local
@@ -53,8 +53,8 @@ RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /w
 COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
-ARG OPAM_GIT_SHA
-ARG BLOG_GIT_SHA
+ARG OPAM_GIT_SHA=master
+ARG BLOG_GIT_SHA=master
 RUN echo ${OPAM_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA} ${BLOG_GIT_SHA}
