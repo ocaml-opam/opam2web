@@ -25,7 +25,7 @@ rm -rf opam-repository
 # Overwrite 'repo' file, and dispatch all non-standard versions
 cat <<EOF >repo
 opam-version: "2.0"
-browse: "https://${BASEURL}/pkg/"
+browse: "https://${BASEURL}/packages/"
 upstream: "https://github.com/ocaml/opam-repository/tree/master/"
 redirect: [
   "https://${BASEURL}/1.1" { opam-version < "1.2" }
