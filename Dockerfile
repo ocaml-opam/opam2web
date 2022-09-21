@@ -59,7 +59,7 @@ RUN echo ${OPAM_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA} ${BLOG_GIT_SHA}
 
-FROM caddy:alpine
+FROM caddy:2.5.2-alpine
 WORKDIR /srv
 COPY --from=opam2web /www /usr/share/caddy
 ENTRYPOINT ["caddy", "file-server"]
