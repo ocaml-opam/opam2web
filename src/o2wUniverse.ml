@@ -234,7 +234,7 @@ let load_opam_state repo_roots =
   OpamSwitchState.load_virtual ~repos_list:(fst (List.split repo_roots))
     gt rt
 
-let load statistics repo_roots =
+let load repo_roots =
   Printf.printf "++ Loading opam state.\n%!";
   let st = load_opam_state repo_roots in
   Printf.printf "++ Gathering dependencies.\n%!";
@@ -244,23 +244,9 @@ let load statistics repo_roots =
   let rev_depopts = rev_depends depopts in
   Printf.printf "++ Getting package modification dates from git.\n%!";
   let dates = dates st in
-  let version_downloads, name_popularity =
-    match statistics with
-    | None -> None, None
-    | Some s ->
-      let vp = s.month_stats.pkg_stats, s.hash_pkgs_map in
-      let np =
-        OpamPackage.Map.fold (fun nv x ->
-            OpamPackage.Name.Map.update nv.name (Int64.add x) 0L)
-          s.month_leaf_pkg_stats OpamPackage.Name.Map.empty
-      in
-      Some vp, Some np
-  in
   {
     st;
     dates;
-    version_downloads;
-    name_popularity;
     depends = deps;
     rev_depends = rdeps;
     depopts;
@@ -301,13 +287,6 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
         | None          -> acc
         | Some pkg_info ->
           let pkg_name = OpamPackage.name pkg in
-          let pkg_download =
-            match
-              OpamStd.Option.Op.(univ.name_popularity >>= OpamPackage.Name.Map.find_opt pkg_name)
-            with
-            | Some d -> [Printf.sprintf "Downloads: %Ld" d]
-            | None -> []
-          in
           let pkg_published = match OpamPackage.Map.find_opt pkg univ.dates with
             | Some timestamp -> [
               Printf.sprintf "Published: %s"
@@ -317,7 +296,7 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
           in
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
-          let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published @ pkg_tags) in
+          let pkg_tooltip = String.concat " | " (pkg_published @ pkg_tags) in
           let name = OpamPackage.Name.to_string pkg_name in
           let pkg_href = Uri.(resolve "http" (of_string "../packages/") (of_string name)) in
           let synopsis =
@@ -345,45 +324,3 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
     "repos", serialize repos_html;
     "pkgs",  serialize(Html.tag "tbody" (List.concat packages_html));
   ])
-
-let generate_json ?statistics universe =
-  let open O2wJson in
-  let open OpamPackage in
-  let global_map =
-    let dl_month =
-      match statistics with
-      | None -> fun _ -> None
-      | Some s -> fun pkg -> Map.find_opt pkg s.month_leaf_pkg_stats
-    in
-    let dl =
-      match universe.version_downloads with
-      | None -> fun _ -> None
-      | Some (vd,_) -> fun pkg -> Map.find_opt pkg vd
-    in
-    Set.fold (fun pkg map ->
-        let n = name pkg in
-        let v = version pkg in
-        let tm = Map.find_opt pkg universe.dates in
-        let upd_vmap = Version.Map.add v (tm, (dl pkg), (dl_month pkg)) in
-        Name.Map.update n upd_vmap (upd_vmap Version.Map.empty) map)
-      universe.st.packages Name.Map.empty
-  in
-  let json_gm =
-    let lst =
-      Name.Map.fold (fun name vmap lst ->
-          let versions =
-            Version.Map.fold (fun version (tm,dl,dl_month) lst ->
-                `Assoc [
-                  json_version version;
-                  json_timestamp_opt tm;
-                  json_downloads_opt dl;
-                  json_month_downloads_opt dl_month
-                ]::lst)
-              vmap []
-          in
-          `Assoc [ json_name name; "versions", `List (List.rev versions)]::lst)
-        global_map []
-    in
-    `List (List.rev lst)
-  in
-  write "stats" json_gm

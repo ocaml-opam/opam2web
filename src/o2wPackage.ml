@@ -41,18 +41,6 @@ let name_href ?href_base name =
   | None   -> base
   | Some p -> Uri.resolve "http" p base
 
-
-(* Comparison function using number of downloads for each package *)
-let compare_popularity ?(reverse = false) pkg_stats p1 p2 =
-  let pkg_count pkg =
-    try OpamPackage.Name.Map.find (OpamPackage.name pkg) pkg_stats
-    with Not_found -> Int64.zero in
-  match pkg_count p1, pkg_count p2 with
-  | c1, c2 when c1 <> c2 ->
-    let c1, c2 = if reverse then c2, c1 else c1, c2 in
-    Int64.compare c1 c2
-  | _ -> compare_alphanum p1 p2
-
 (* Comparison function using the publication time of packages *)
 let compare_date ?(reverse = false) pkg_dates p1 p2 =
   let pkg_date pkg =
@@ -341,48 +329,6 @@ let to_html ~prefix univ pkg =
       Some ("Available", Html.string filter_str)
   in
 
-  let pkg_stats = match univ.version_downloads with
-    | None -> Html.empty
-    | Some (stats, hashs) ->
-      let checksum =
-        OpamStd.Option.default []
-          (OpamFile.OPAM.url pkg_opam >>| OpamFile.URL.checksum)
-      in
-      if checksum = [] then Html.empty else
-      let pkg_count =
-        let rec pkg_same_hash = function
-          | h::r ->
-            (let hs = (String.concat "/" (OpamHash.to_path h)) in
-             match OpamStd.String.Map.find_opt hs hashs with
-             | Some (p,s) ->
-               if OpamPackage.Set.mem pkg s then Some p else pkg_same_hash r
-             | None -> pkg_same_hash r)
-          | [] -> None
-        in
-        try OpamPackage.Map.find pkg stats
-        with Not_found ->
-          (match pkg_same_hash checksum with
-           | Some p ->
-             (try OpamPackage.Map.find p stats
-              with Not_found -> Int64.zero)
-           | None -> Int64.zero)
-      in
-      let pkg_count_html = match pkg_count with
-        | c when c = Int64.zero ->
-           Html.string "Not installed in the last month."
-        | c when c = Int64.one ->
-           Html.string "Installed "
-           @ Html.strong (Html.string "once")
-           @ Html.string " last month."
-        | c ->
-           Html.string "Installed "
-           @ Html.strong (Html.string (Int64.to_string c))
-           @ Html.string " times last month."
-      in
-      Html.tag "tr"
-        (Html.tag "th" (Html.string "Statistics")
-         @ Html.tag "td" pkg_count_html)
-  in
   let mk_revdeps depends_f rdepends =
     OpamPackage.Name.Map.fold (fun name versions acc ->
         let vf =
@@ -507,7 +453,6 @@ let to_html ~prefix univ pkg =
                               @ mk_tr pkg_depopts
                               @ mk_tr pkg_conflicts
                               @ pkg_url
-                              @ pkg_stats
                               @ repo_edit)))
          @ div ~cls:"span3 revdeps-column"
              (if rev_deps = Html.empty && rev_depopts = Html.empty

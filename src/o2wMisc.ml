@@ -25,21 +25,6 @@ let first_n nmax l =
 
 (* Date related functions *)
 
-let month_of_string = function
-  | "Jan" -> 0
-  | "Feb" -> 1
-  | "Mar" -> 2
-  | "Apr" -> 3
-  | "May" -> 4
-  | "Jun" -> 5
-  | "Jul" -> 6
-  | "Aug" -> 7
-  | "Sep" -> 8
-  | "Oct" -> 9
-  | "Nov" -> 10
-  | "Dec" -> 11
-  | unknown -> failwith ("Unknown month: " ^ unknown)
-
 let string_of_month = function
   | 0  -> "Jan"
   | 1  -> "Feb"

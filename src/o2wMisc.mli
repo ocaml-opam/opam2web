@@ -19,12 +19,6 @@
 (** Return the [n] first elements of a list *)
 val first_n: int -> 'a list -> 'a list
 
-(** Return the month number (starting from 0) *)
-val month_of_string: string -> int
-
-(** Return the string representation of a month number *)
-val string_of_month: int -> string
-
 (** Return the string representation of a timestamp *)
 val string_of_timestamp: ?short:bool -> float -> string
 

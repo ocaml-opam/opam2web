@@ -25,10 +25,6 @@ val compare_alphanum: package -> package -> int
 val compare_date: ?reverse:bool -> float package_map ->
   package -> package -> int
 
-(** Compare packages by popularity *)
-val compare_popularity: ?reverse:bool -> int64 name_map ->
-  package -> package -> int
-
 (** An HTML fragment for the description of a package *)
 val html_descr : string * string -> Cow.Html.t
 
