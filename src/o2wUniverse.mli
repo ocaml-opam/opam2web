@@ -36,7 +36,6 @@ val to_html:
   compare_pkg:(package -> package -> int) ->
   univ -> Cow.Xml.signal list
 
-(* val dates: 'a OpamStateTypes.switch_state -> float OpamPackage.Map.t *)
 
 val latest_version_packages: 'a OpamStateTypes.switch_state -> package_set
 
@@ -60,10 +59,3 @@ val load: statistics_set option -> dirname list -> univ
 *)
 val generate_json : ?statistics:statistics_set -> univ -> unit
 
-(*
-(** Generate a universe from a list of repositories *)
-val pages_of_repositories:
-  string list ->   ?preds:OpamfUniverse.pred list list -> OpamfUniverse.index ->
-
-  Cow.Html.t OpamfUniverse.t
-*)

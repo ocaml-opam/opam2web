@@ -387,7 +387,3 @@ let generate_json ?statistics universe =
     `List (List.rev lst)
   in
   write "stats" json_gm
-
-(* (\** Generate a universe from a list of repositories *\)
- * let of_repositories ?preds index repos =
- *   map O2wPackage.html_descr (of_repositories ?preds index repos) *)
