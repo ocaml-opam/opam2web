@@ -257,8 +257,10 @@ let default_cmd =
   
 
 let () =
+  OpamArg.preinit_opam_env_variables ();
+  OpamArg.init_opam_env_variabes OpamCLIVersion.Sourced.current;
   OpamFormatConfig.init ();
-  OpamStd.Config.init ();
+  OpamCoreConfig.init ();
   OpamRepositoryConfig.init ();
   OpamSolverConfig.init ();
   OpamStateConfig.init ();

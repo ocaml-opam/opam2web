@@ -29,7 +29,9 @@ module FloM =
     let compare a b = int_of_float (a -. b)
     let to_string = string_of_float
     let to_json _ = `Null
+    let of_json _ = None
   end)
+module OpamPrinter = OpamPrinter.FullPos
 
 let empty_stats = {
   pkg_stats    = OPM.empty;

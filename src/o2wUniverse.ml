@@ -50,17 +50,17 @@ let dates universe =
   in
   let dates =
     List.fold_right (fun repo dates ->
-        let repo_def =
-          OpamRepositoryName.Map.find repo universe.switch_repos.repositories
-        in
         let command = [
           "git"; "log"; "--name-only"; "--diff-filter=ACR"; "--reverse";
           "--pretty=format:%ct"; "-m"; "--first-parent"; "--"; any_opam_path;
         ] in
         let repo_name = OpamRepositoryName.to_string repo in
         try
-          let times = OpamFilename.in_dir
-              (OpamFilename.dirname_dir (OpamRepositoryPath.packages_dir repo_def.repo_root))
+          let times =
+            OpamFilename.in_dir
+              (OpamFilename.dirname_dir
+                 (OpamRepositoryPath.packages_dir
+                    (OpamRepositoryState.get_root universe.switch_repos repo)))
               (fun () -> OpamSystem.read_command_output command)
           in
           parse_git_commit_times dates times
@@ -195,25 +195,39 @@ let load_opam_state repo_roots =
       repo_roots
   in
   let repositories =
-    List.fold_left (fun acc (repo_name, repo_root) ->
-        let repo = OpamRepositoryBackend.local repo_root in
-        OpamRepositoryName.Map.add repo_name { repo with repo_name } acc)
+    List.fold_left (fun map (repo_name, _) ->
+        let repo = {
+          OpamTypes.
+          repo_name; repo_url = OpamUrl.empty; repo_trust = None;
+        } in
+        OpamRepositoryName.Map.add repo_name repo map)
       OpamRepositoryName.Map.empty repo_roots
   in
   let repos_definitions =
-    OpamRepositoryName.Map.map (fun r ->
-        OpamFile.Repo.safe_read (OpamRepositoryPath.repo r.repo_root))
-      repositories
+    List.fold_left (fun map (repo_name, repo_root) ->
+        OpamRepositoryName.Map.add repo_name
+          (OpamFile.Repo.safe_read (OpamRepositoryPath.repo repo_root))
+          map)
+      OpamRepositoryName.Map.empty repo_roots
   in
   let repo_opams =
-    OpamRepositoryName.Map.map (fun r ->
-        OpamRepositoryState.load_repo_opams r)
-      repositories
+    List.fold_left (fun map (repo_name, repo_root) ->
+        OpamRepositoryName.Map.add repo_name
+          (OpamRepositoryState.load_opams_from_dir repo_name repo_root)
+          map)
+      OpamRepositoryName.Map.empty repo_roots
+  in
+  let repos_tmp =
+    let repos_tmp = Hashtbl.create 2 in
+    List.iter (fun (repo_name, repo_root) ->
+        Hashtbl.add repos_tmp repo_name (lazy repo_root))
+      repo_roots;
+    repos_tmp
   in
   let rt = {
     repos_global = gt;
     repos_lock = OpamSystem.lock_none;
-    repositories; repos_definitions; repo_opams;
+    repositories; repos_definitions; repo_opams; repos_tmp;
   } in
   OpamSwitchState.load_virtual ~repos_list:(fst (List.split repo_roots))
     gt rt
