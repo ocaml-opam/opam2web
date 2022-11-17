@@ -30,7 +30,7 @@ build: [
 dev-repo: "git+https://github.com/ocaml/opam2web.git"
 synopsis: "Tool to generate the opam.ocaml.org website"
 description: """
-This utility creates a static website from an OPAM universe, listing all
-available packages and their details. A homepage and OPAM documentation is 
+This utility creates a static website from an opam universe, listing all
+available packages and their details. A homepage and opam documentation is 
 included as well.
 """
