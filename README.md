@@ -1,10 +1,10 @@
 opam2web
 ========
 
-A tool to generate a website from an OPAM universe
+A tool to generate a website from an opam universe
 
-This utility creates a static website from an OPAM universe, listing all
-available packages and their details. A homepage and OPAM documentation is
+This utility creates a static website from an opam universe, listing all
+available packages and their details. A homepage and opam documentation is
 included as well.
 
 The latest release of opam2web is available via
@@ -112,7 +112,7 @@ opam2web --help
 opam2web -o website path:~/myrepo local:default
 ```
 will generate the HTML files corresponding to the repository located in 
-`~/myrepo` and the remote named `default` in the local OPAM installation.
+`~/myrepo` and the remote named `default` in the local opam installation.
 Resulting files will be located in the `website` directory.
 
 
