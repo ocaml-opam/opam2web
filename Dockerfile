@@ -18,6 +18,7 @@ RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && rm -rf /tmp/opam-1.2
 
 FROM ocaml/opam:alpine-3.15-ocaml-4.14 as build-opam-doc
+ARG OPAM_GIT_SHA=master
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
     && echo -e '#!/bin/sh -e\n\
@@ -31,7 +32,8 @@ RUN sudo mkdir -p /usr/local/bin \
     && sudo chmod a+x /usr/local/bin/man2html
 RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
 RUN opam install odoc
-RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam
+RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam \
+    && git -C /home/opam/opam checkout ${OPAM_GIT_SHA}
 WORKDIR /home/opam/opam
 RUN opam exec -- ./configure --with-vendored-deps --without-mccs && opam exec -- make lib-ext && opam exec -- make
 RUN echo '(vendored_dirs src_ext)' >> dune
