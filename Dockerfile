@@ -5,7 +5,7 @@ RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2we
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
-RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_GIT_SHA}
+RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_REPO_GIT_SHA}
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
@@ -53,11 +53,11 @@ RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /w
 COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
-ARG OPAM_GIT_SHA=master
+ARG OPAM_REPO_GIT_SHA=master
 ARG BLOG_GIT_SHA=master
-RUN echo ${OPAM_GIT_SHA} >> /www/opam_git_sha
+RUN echo ${OPAM_REPO_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
-RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_GIT_SHA} ${BLOG_GIT_SHA}
+RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_REPO_GIT_SHA} ${BLOG_GIT_SHA}
 
 FROM caddy:2.5.2-alpine
 WORKDIR /srv

@@ -3,19 +3,19 @@
 set -uex
 
 if [[ $# -eq 4 ]] ; then
-    echo 'Usage: $0 BASEURL OPAM_GIT_SHA BLOG_GIT_SHA'
+    echo 'Usage: $0 BASEURL OPAM_REPO_GIT_SHA BLOG_GIT_SHA'
     exit 2
 fi
 
 BASEURL=$1
-OPAM_GIT_SHA=$2
+OPAM_REPO_GIT_SHA=$2
 BLOG_GIT_SHA=$3
 
 cd /www
 # Checkout a specific commit as supplied by ocurrent-deployer pipeline.
 git clone https://github.com/ocaml/opam-repository.git --single-branch --branch master opam-repository &&
     cd opam-repository &&
-    git checkout ${OPAM_GIT_SHA} &&
+    git checkout ${OPAM_REPO_GIT_SHA} &&
     cd ..
 
 mv opam-repository/* .
