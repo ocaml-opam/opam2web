@@ -1,7 +1,0 @@
-# syntax = docker/dockerfile:1.0.2-experimental
-FROM opam-website-data
-FROM ocaml/opam.ocaml.org-legacy
-FROM caddy:2.5.2-alpine
-WORKDIR /srv
-COPY --from=0 . /srv
-COPY --from=1 . /srv
