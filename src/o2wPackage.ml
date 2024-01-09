@@ -308,26 +308,7 @@ let to_html ~prefix univ pkg =
     | f -> Some ("Optional dependencies", or_formula f)
   in
   let pkg_conflicts =
-    let conflicts =
-      OpamSwitchState.conflicts_with univ.st (OpamPackage.Set.singleton pkg)
-        univ.st.packages
-    in
-    let cf =
-      OpamPackage.Name.Map.fold
-        (fun name versions acc ->
-           let cstr =
-             OpamFormula.formula_of_version_set
-               (OpamPackage.versions_of_name univ.st.packages name)
-               versions |>
-             OpamFormula.map (fun (op,v) ->
-                 Atom (Constraint (op,
-                                   FString (OpamPackage.Version.to_string v))))
-           in
-           OpamFormula.ors [acc; Atom (name, cstr)])
-        (OpamPackage.to_map conflicts)
-        OpamFormula.Empty
-    in
-    match cf with
+    match OpamFile.OPAM.conflicts pkg_opam with
     | Empty -> None
     | f -> Some ("Conflicts", or_formula f)
   in
