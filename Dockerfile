@@ -47,7 +47,7 @@ FROM alpine:3.15 as opam2web
 RUN apk add --update git curl rsync libstdc++ rdfind
 COPY --from=opam-legacy . /www
 COPY --from=build-opam2web /opt/opam2web /usr/local
-COPY --from=build-opam-doc /usr/bin/opam /usr/local/bin/opam
+COPY --from=build-opam-doc /usr/bin/opam-dev /usr/local/bin/opam
 COPY --from=build-opam-doc /opt/opam/doc /usr/local/share/opam2web/content/doc
 RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /www/cache/
 COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
