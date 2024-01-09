@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.3
 FROM ocaml/opam:alpine-3.15-ocaml-4.14 as build-opam2web
 RUN sudo apk add g++ gmp-dev
-RUN git clone https://github.com/ocaml/opam2web.git --depth 1 /home/opam/opam2web
+COPY . /home/opam/opam2web
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
