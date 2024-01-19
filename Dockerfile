@@ -6,7 +6,6 @@ WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
 RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_REPO_GIT_SHA}
-ADD --chown=opam:opam --chmod=644 https://raw.githubusercontent.com/dra27/opam-source-archives/ocamlgraph-temp/ocamlgraph-1.8.8.tar.gz /home/opam/.opam/download-cache/md5/9d/9d71ca69271055bd22d0dfe4e939831a
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
