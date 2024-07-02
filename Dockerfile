@@ -5,8 +5,9 @@ COPY --chown=opam:opam . /home/opam/opam2web
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
-RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
+RUN sudo mv /usr/bin/opam-2.2 /usr/bin/opam && opam update
 RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_REPO_GIT_SHA}
+ENV OPAMSOLVERTIMEOUT 120
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
@@ -30,7 +31,7 @@ RUN sudo mkdir -p /usr/local/bin \
                 echo "</BODY></HTML>\n' \
        | sudo tee /usr/local/bin/man2html \
     && sudo chmod a+x /usr/local/bin/man2html
-RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
+RUN sudo mv /usr/bin/opam-2.2 /usr/bin/opam && opam update
 RUN opam install odoc
 RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam
 WORKDIR /home/opam/opam
