@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -112,7 +112,7 @@ type log_referrer =
   | Internal_ref of string
   | No_ref
 
-(** A high-level, OPAM-repository specific type for a apache log entry *)
+(** A high-level, opam-repository specific type for a apache log entry *)
 type log_entry = {
   log_timestamp: float;
   log_host: string;
