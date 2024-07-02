@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.3
-FROM ocaml/opam:alpine-3.15-ocaml-4.14 as build-opam2web
+FROM ocaml/opam:alpine-3.20-ocaml-4.14 as build-opam2web
 RUN sudo apk add g++ gmp-dev
-COPY . /home/opam/opam2web
+COPY --chown=opam:opam . /home/opam/opam2web
 WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
+RUN sudo mv /usr/bin/opam-2.1 /usr/bin/opam && opam update
 RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_REPO_GIT_SHA}
-ENV OPAMSOLVERTIMEOUT 120
 RUN opam install . --destdir /opt/opam2web
 RUN cp -r content /opt/opam2web/share/opam2web/
 RUN rm -rf /opt/opam2web/share/opam2web/lib
@@ -18,7 +18,7 @@ RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
 
-FROM ocaml/opam:alpine-3.15-ocaml-4.14 as build-opam-doc
+FROM ocaml/opam:alpine-3.20-ocaml-4.14 as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
     && echo -e '#!/bin/sh -e\n\
@@ -44,7 +44,7 @@ RUN cp -r doc/pages/* /opt/opam/doc/
 
 FROM --platform=linux/amd64 ocaml/opam:archive as opam-archive
 FROM ocaml/opam.ocaml.org-legacy as opam-legacy
-FROM alpine:3.15 as opam2web
+FROM alpine:3.20 as opam2web
 RUN apk add --update git curl rsync libstdc++ rdfind
 COPY --from=opam-legacy . /www
 COPY --from=build-opam2web /opt/opam2web /usr/local
@@ -60,7 +60,7 @@ RUN echo ${OPAM_REPO_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_REPO_GIT_SHA} ${BLOG_GIT_SHA}
 
-FROM caddy:2.5.2-alpine
+FROM caddy:2.8.4
 WORKDIR /srv
 COPY --from=opam2web /www /usr/share/caddy
 ENTRYPOINT ["caddy", "file-server"]
