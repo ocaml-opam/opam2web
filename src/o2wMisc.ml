@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -24,21 +24,6 @@ let first_n nmax l =
   List.rev (aux [] nmax l)
 
 (* Date related functions *)
-
-let month_of_string = function
-  | "Jan" -> 0
-  | "Feb" -> 1
-  | "Mar" -> 2
-  | "Apr" -> 3
-  | "May" -> 4
-  | "Jun" -> 5
-  | "Jul" -> 6
-  | "Aug" -> 7
-  | "Sep" -> 8
-  | "Oct" -> 9
-  | "Nov" -> 10
-  | "Dec" -> 11
-  | unknown -> failwith ("Unknown month: " ^ unknown)
 
 let string_of_month = function
   | 0  -> "Jan"
