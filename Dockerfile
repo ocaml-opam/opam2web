@@ -64,4 +64,5 @@ RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_REPO_GIT_SHA} ${BLOG_GIT_SHA}
 FROM caddy:2.8.4
 WORKDIR /srv
 COPY --from=opam2web /www /usr/share/caddy
-ENTRYPOINT ["caddy", "file-server"]
+COPY Caddyfile /etc/caddy/Caddyfile
+ENTRYPOINT ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
