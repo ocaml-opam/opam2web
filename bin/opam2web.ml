@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -257,8 +257,10 @@ let default_cmd =
   
 
 let () =
+  OpamArg.preinit_opam_env_variables ();
+  OpamArg.init_opam_env_variabes OpamCLIVersion.Sourced.current;
   OpamFormatConfig.init ();
-  OpamStd.Config.init ();
+  OpamCoreConfig.init ();
   OpamRepositoryConfig.init ();
   OpamSolverConfig.init ();
   OpamStateConfig.init ();
