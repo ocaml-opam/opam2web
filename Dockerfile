@@ -33,6 +33,7 @@ RUN sudo mkdir -p /usr/local/bin \
        | sudo tee /usr/local/bin/man2html \
     && sudo chmod a+x /usr/local/bin/man2html
 RUN sudo mv /usr/bin/opam-2.2 /usr/bin/opam && opam update
+RUN opam option --global 'archive-mirrors+="https://opam.ocaml.org/cache"'
 RUN opam install odoc
 RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam
 WORKDIR /home/opam/opam
