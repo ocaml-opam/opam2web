@@ -30,7 +30,7 @@ redirect: [
   "https://${BASEURL}/1.2.2" { opam-version < "2.0~" }
 ]
 EOF
-opam admin cache --link=archives ./cache
+opam admin cache --link=archives /cache
 opam admin index --minimal-urls-txt
 
 cp -r /usr/local/share/opam2web/content /tmp/
