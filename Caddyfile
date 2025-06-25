@@ -1,6 +1,20 @@
 :80 {
-	root * /usr/share/caddy
 	redir /install.sh https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
 	redir /install.ps1 https://raw.githubusercontent.com/ocaml/opam/master/shell/install.ps1
-	file_server
+
+	@version_paths path /1.1/* /1.2.0/* /1.2.2/*
+	handle @version_paths {
+		root * /legacy
+		file_server
+	}
+
+	handle /cache/* {
+		root * /
+		file_server
+	}
+
+	handle {
+		root * /www
+		file_server
+	}
 }

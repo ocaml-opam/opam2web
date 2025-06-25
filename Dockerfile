@@ -45,15 +45,11 @@ RUN cp -r doc/html /opt/opam/doc/api
 RUN cp -r doc/man-html /opt/opam/doc/man
 RUN cp -r doc/pages/* /opt/opam/doc/
 
-FROM --platform=linux/amd64 ocaml/opam:archive as opam-archive
-FROM ocaml/opam.ocaml.org-legacy as opam-legacy
-FROM alpine:3.20 as opam2web
-RUN apk add --update git curl rsync libstdc++ rdfind
-COPY --from=opam-legacy . /www
+FROM ocaml/opam:archive
+RUN apk add --update git curl rsync libstdc++ rdfind caddy
 COPY --from=build-opam2web /opt/opam2web /usr/local
 COPY --from=build-opam-doc /usr/bin/opam-dev /usr/local/bin/opam
 COPY --from=build-opam-doc /opt/opam/doc /usr/local/share/opam2web/content/doc
-RUN --mount=type=bind,target=/cache,from=opam-archive rsync -aH /cache/cache/ /www/cache/
 COPY ext/key/opam-dev-team.pgp /www/opam-dev-pubkey.pgp
 ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
@@ -62,9 +58,6 @@ ARG BLOG_GIT_SHA=master
 RUN echo ${OPAM_REPO_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_REPO_GIT_SHA} ${BLOG_GIT_SHA}
-
-FROM caddy:2.8.4
 WORKDIR /srv
-COPY --from=opam2web /www /usr/share/caddy
 COPY Caddyfile /etc/caddy/Caddyfile
 ENTRYPOINT ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
