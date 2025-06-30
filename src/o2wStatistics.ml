@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -29,7 +29,9 @@ module FloM =
     let compare a b = int_of_float (a -. b)
     let to_string = string_of_float
     let to_json _ = `Null
+    let of_json _ = None
   end)
+module OpamPrinter = OpamPrinter.FullPos
 
 let empty_stats = {
   pkg_stats    = OPM.empty;
