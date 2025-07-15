@@ -63,6 +63,9 @@ ARG OPAM_GIT_SHA=master
 RUN echo ${OPAM_REPO_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
 RUN echo ${OPAM_GIT_SHA} >> /www/doc_git_sha
+RUN mkdir -p /www/doc
+RUN cp -r /usr/local/share/opam2web/content/doc/api /www/doc/api
+RUN cp -r /usr/local/share/opam2web/content/doc/man /www/doc/man
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_REPO_GIT_SHA} ${BLOG_GIT_SHA}
 WORKDIR /srv
 COPY Caddyfile /etc/caddy/Caddyfile
