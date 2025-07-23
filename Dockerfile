@@ -6,6 +6,7 @@ WORKDIR /home/opam/opam2web
 ENV OCAMLRUNPARAM b
 RUN sudo mkdir -p /opt/opam2web && sudo chown opam:opam /opt/opam2web
 RUN sudo mv /usr/bin/opam-2.3 /usr/bin/opam && opam update
+ARG OPAM_REPO_GIT_SHA=master
 RUN opam repo set-url default git+https://github.com/ocaml/opam-repository.git#${OPAM_REPO_GIT_SHA}
 RUN opam option --global 'archive-mirrors+="https://opam.ocaml.org/cache"'
 ENV OPAMSOLVERTIMEOUT 120
