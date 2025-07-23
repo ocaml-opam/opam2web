@@ -35,7 +35,9 @@ RUN sudo mkdir -p /usr/local/bin \
 RUN sudo mv /usr/bin/opam-2.3 /usr/bin/opam && opam update
 RUN opam option --global 'archive-mirrors+="https://opam.ocaml.org/cache"'
 RUN opam install odoc
-RUN git clone https://github.com/ocaml/opam --single-branch --depth 1 --branch master /home/opam/opam
+ARG OPAM_GIT_SHA=master
+RUN git clone https://github.com/ocaml/opam /home/opam/opam \
+    && git -C /home/opam/opam checkout ${OPAM_GIT_SHA}
 WORKDIR /home/opam/opam
 RUN opam exec -- ./configure --with-vendored-deps --without-mccs && opam exec -- make lib-ext && opam exec -- make
 RUN echo '(vendored_dirs src_ext)' >> dune
@@ -55,8 +57,10 @@ ADD bin/opam-web.sh /usr/local/bin
 ARG DOMAIN=opam.ocaml.org
 ARG OPAM_REPO_GIT_SHA=master
 ARG BLOG_GIT_SHA=master
+ARG OPAM_GIT_SHA=master
 RUN echo ${OPAM_REPO_GIT_SHA} >> /www/opam_git_sha
 RUN echo ${BLOG_GIT_SHA} >> /www/blog_git_sha
+RUN echo ${OPAM_GIT_SHA} >> /www/doc_git_sha
 RUN /usr/local/bin/opam-web.sh ${DOMAIN} ${OPAM_REPO_GIT_SHA} ${BLOG_GIT_SHA}
 WORKDIR /srv
 COPY Caddyfile /etc/caddy/Caddyfile
