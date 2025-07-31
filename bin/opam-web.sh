@@ -19,7 +19,6 @@ git clone https://github.com/ocaml/opam-repository.git --single-branch --branch 
     cd ..
 
 mv opam-repository/* .
-mv opam-repository/.git .
 rm -rf opam-repository
 
 # Append to the 'repo' file, and dispatch all non-standard versions
