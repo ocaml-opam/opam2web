@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -17,7 +17,6 @@
 open Cmdliner
 open Cow
 open O2wTypes
-open OpamTypes
 
 let ( ++ ) = Html.( ++ )
 
@@ -26,7 +25,6 @@ type options = {
   out_dir: string;
   files_dir: string;
   content_dir: string;
-  logfiles: filename list;
   repositories: string list;
   root_uri: Uri.t;
   blog_source_uri: string;
@@ -48,20 +46,14 @@ let include_files (path: string) _files_path : unit =
   List.iter (fun dir -> OpamFilename.mkdir (OpamFilename.Dir.of_string dir)) pathes
 
 let make_datasets user_options =
-  let statistics =
-    O2wStatistics.statistics_set user_options.logfiles
-      (List.map OpamFilename.Dir.of_string user_options.repositories)
-  in
   let universe =
-    O2wUniverse.load statistics
+    O2wUniverse.load
       (List.map OpamFilename.Dir.of_string user_options.repositories)
   in
-  universe, statistics
+  universe
 
 (* Generate a whole static website using the given repository stack *)
-let make_website user_options universe statistics ds =
-  Printf.printf "++ Building the new stats from %s.\n%!"
-    (OpamStd.List.to_string OpamFilename.prettify user_options.logfiles);
+let make_website user_options universe ds =
   let content_dir = user_options.content_dir in
   Printf.printf "++ Building the package pages.\n%!";
   let pages = O2wUniverse.to_pages ~prefix:packages_prefix universe in
@@ -77,19 +69,15 @@ let make_website user_options universe statistics ds =
       files
   in
   let blog_entries = O2wBlog.get_entries ~content_dir ~pages:blog_pages in
-  let news = (O2wBlog.make_news blog_entries) in
+  let news = O2wBlog.make_news blog_entries in
   let blog_latest, blog_links =
     O2wBlog.make_menu ~srcurl:user_options.blog_source_uri blog_entries
   in
   let blog_feed = O2wBlog.make_feed ~root:user_options.root_uri blog_entries in
-  let criteria = ["name"; "popularity"; "date"] in
   let criteria_nostats = ["name"; "date"] in
   let sortby_links =
-    match statistics with
-    | None   ->
-      O2wUniverse.sortby_links ~links:criteria_nostats ~default:"name"
-    | Some _ ->
-      O2wUniverse.sortby_links ~links:criteria ~default:"name" in
+    O2wUniverse.sortby_links ~links:criteria_nostats ~default:"name"
+  in
   let to_html =
     O2wUniverse.to_html ~content_dir ~sortby_links universe
   in
@@ -98,29 +86,14 @@ let make_website user_options universe statistics ds =
     let compare_pkg =
       O2wPackage.compare_date ~reverse:true universe.dates
     in
-    let date = {
+    [{
       menu_source = content_dir;
       menu_link = Uri.make ~path:(packages_prefix^"/index-date.html") ();
       menu_link_text = "Packages";
       menu_link_html = Html.string "Packages";
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg);
       menu_srcurl = None;
-    } in
-    match universe.name_popularity with
-    | None -> [ date ]
-    | Some s ->
-      let compare_pkg =
-        O2wPackage.compare_popularity ~reverse:true s
-      in
-      let popularity = {
-        menu_source = content_dir;
-        menu_link = Uri.make ~path:(packages_prefix ^ "/index-popularity.html") ();
-        menu_link_text = "Packages";
-        menu_link_html = Html.string "Packages";
-        menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg);
-        menu_srcurl = None;
-      } in
-      [ popularity; date ]
+    }]
   in
   include_files user_options.out_dir user_options.files_dir;
   let about_page =
@@ -134,7 +107,7 @@ let make_website user_options universe statistics ds =
       OpamConsole.warning "%s is not available." filename;
       Html.empty in
   let doc_menu = menu_of_doc () in
-  let home_index = O2wHome.to_html ~content_dir ~news ?statistics ds in
+  let home_index = O2wHome.to_html ~content_dir ~news ds in
   let package_index =
     to_html ~active:"name" ~compare_pkg:O2wPackage.compare_alphanum in
   let opam_title =
@@ -191,11 +164,6 @@ let normalize d =
   else
     d
 
-let log_files = Arg.(
-  value & opt_all string [] & info ["s"; "statistics"]
-    ~docv:"LOG_FILE"
-    ~doc:"An Apache server log file containing download statistics of packages")
-
 let out_dir = Arg.(
   value & opt string (Sys.getcwd ()) & info ["o"; "output"]
     ~docv:"OUT_DIR"
@@ -216,25 +184,22 @@ let blog_source_uri = Arg.(
       ~docv:"URI"
       ~doc:"The base address to point to blog source files")
 
-let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
+let build out_dir content_dir repositories root_uri blog_source_uri =
   let () =
     List.iter (Printf.printf "=== Repository: %s ===\n%!") repositories in
   let out_dir = normalize out_dir in
-  let logfiles = List.map OpamFilename.of_string logfiles in
   let root_uri = Uri.of_string root_uri in
   let user_options = {
     out_dir;
     files_dir = "";
     content_dir;
-    logfiles;
     repositories;
     root_uri;
     blog_source_uri;
   } in
-  let universe, statistics = make_datasets user_options in
+  let universe = make_datasets user_options in
   let home_ds = O2wHome.make_datasets universe in
-  make_website user_options universe statistics home_ds;
-  O2wUniverse.generate_json ?statistics universe;
+  make_website user_options universe home_ds;
   O2wHome.generate_json home_ds
 
 let default_cmd =
@@ -251,14 +216,15 @@ let default_cmd =
            ~doc:"Directories containing the repositories to consider")
   in
   let info = Cmd.info "opam2web" ~version ~doc ~man in
-  let term = Term.(const build $ log_files $ out_dir $ content_dir
+  let term = Term.(const build $ out_dir $ content_dir
                      $ repositories_arg $ root_uri $ blog_source_uri) in
   Cmd.v info term
-  
 
 let () =
+  OpamArg.preinit_opam_env_variables ();
+  OpamArg.init_opam_env_variabes OpamCLIVersion.Sourced.current;
   OpamFormatConfig.init ();
-  OpamStd.Config.init ();
+  OpamCoreConfig.init ();
   OpamRepositoryConfig.init ();
   OpamSolverConfig.init ();
   OpamStateConfig.init ();
