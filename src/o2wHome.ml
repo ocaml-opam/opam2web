@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -43,7 +43,7 @@ let make_datasets universe =
   let nb_packages = OpamPackage.Set.cardinal latest_packages in
   { nb_packages; last10_updates; top10_pkgs }
 
-(* OPAM website homepage *)
+(* Opam website homepage *)
 let to_html ~content_dir ~news ?statistics ds =
   let updates_last10 =
     let mk_update_li (pkg, update_tm) =

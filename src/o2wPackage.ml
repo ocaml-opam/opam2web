@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -19,6 +19,8 @@ open Cow
 open O2wTypes
 open OpamStateTypes
 open OpamStd.Option.Op
+
+module OpamPrinter = OpamPrinter.FullPos
 
 let ( ++ ) = Html.( ++ )
 
@@ -136,10 +138,10 @@ let html_atom ~prefix st pkg (name, f) =
       Some
         (html_of_formula (function
              | Constraint (op, FString s) ->
-               Html.string (OpamPrinter.relop op) ++
+               Html.string (OpamPrinter.relop_kind op) ++
                Html.span ~cls:"package-version" (Html.string s)
              | Constraint (op, v) ->
-               Html.string (OpamPrinter.relop op) ++
+               Html.string (OpamPrinter.relop_kind op) ++
                Html.span ~cls:"label" (Html.string (OpamFilter.to_string v))
              | Filter f ->
                Html.span ~cls:"label" (Html.string (OpamFilter.to_string f)))
@@ -167,7 +169,10 @@ let to_html ~prefix univ pkg =
   in
   let {name; version} = pkg in
   let pkg = OpamPackage.create pkg.name pkg.version in
-  let pkg_opam = OpamSwitchState.opam univ.st pkg in
+  let pkg_opam =
+    OpamSwitchState.opam univ.st pkg
+    |> OpamFileTools.sort_opam
+  in
   let version_links =
     let version_set =
       OpamPackage.versions_of_name univ.st.packages pkg.name
@@ -452,14 +457,15 @@ let to_html ~prefix univ pkg =
         OpamPackage.Map.mem pkg
           (OpamRepositoryName.Map.find r univ.st.switch_repos.repo_opams))) >>|
     OpamRepositoryState.get_repo univ.st.switch_repos >>= fun r ->
-    OpamFile.Repo.read_opt (OpamRepositoryPath.repo r.repo_root) >>=
+    OpamFile.Repo.read_opt
+      (OpamRepositoryPath.repo
+         (OpamRepositoryState.get_repo_root univ.st.switch_repos r)) >>=
     OpamFile.Repo.upstream >>= fun upstream ->
-    OpamFile.OPAM.metadata_dir pkg_opam >>| fun pkgdir ->
+    OpamFile.OPAM.metadata_dir pkg_opam >>= (function
+        | Some _repo_name, rel -> Some rel
+        | _, _ -> None) >>| fun pkg_rel ->
     let base = Uri.of_string upstream in
-    let rel =
-      OpamFilename.remove_prefix r.repo_root OpamFilename.Op.(pkgdir // "opam")
-    in
-    let url = Uri.(resolve "" base (of_string rel)) in
+    let url = Uri.(resolve "" base (of_string pkg_rel)) in
     let loc = Uri.to_string url in
     mk_tr (Some ("Edit", Html.a ~title:"Edit this package description"
                    ~href:url
