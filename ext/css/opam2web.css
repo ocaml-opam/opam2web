@@ -73,6 +73,12 @@ span.versions {
   vertical-align: text-top;
 }
 
+span.doc_button {
+  margin-left: 2ex;
+  vertical-align: middle;
+  font-size: 0.5em;
+}
+
 span.package-version {
   font-weight: bold;
   margin-left: 0.2em;
