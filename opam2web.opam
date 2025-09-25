@@ -4,7 +4,7 @@ authors: "The opam team"
 homepage: "https://github.com/ocaml/opam2web"
 bug-reports: "https://github.com/ocaml/opam2web/issues"
 depends: [
-  "ocaml" {>= "4.08.0"}
+  "ocaml" {>= "4.13.0"}
   "dune" {>="2.0.0"}
   "opam-lib" {>= "1.3.0"}
   "opamfu" {>= "0.1.2"}
@@ -13,10 +13,10 @@ depends: [
   "cow" {>= "2.3.0"}
   "js_of_ocaml" {>= "3.3.0"}
   "js_of_ocaml-ppx"
-  "opam-core" {>= "2.1.0" & < "2.2.0~"}
-  "opam-format" {>= "2.1.0" & < "2.2.0~"}
-  "opam-state" {>= "2.1.0" & < "2.2.0~"}
-  "opam-client" {>= "2.1.0" & < "2.2.0~"}
+  "opam-core" {>= "2.2.0" & < "2.4.0~"}
+  "opam-format" {>= "2.2.0" & < "2.4.0~"}
+  "opam-state" {>= "2.2.0" & < "2.4.0~"}
+  "opam-client" {>= "2.2.0" & < "2.4.0~"}
   "cohttp-lwt-unix"
   "yojson" {>= "1.6.0"}
   "cmdliner" {>= "1.0.4"}
@@ -31,6 +31,6 @@ dev-repo: "git+https://github.com/ocaml/opam2web.git"
 synopsis: "Tool to generate the opam.ocaml.org website"
 description: """
 This utility creates a static website from an opam universe, listing all
-available packages and their details. A homepage and opam documentation is 
+available packages and their details. A homepage and opam documentation is
 included as well.
 """

@@ -187,6 +187,7 @@ let load_opam_state repo_roots =
     config = OpamStd.Option.Op.(OpamStateConfig.(load !r.root_dir) +!
                                 OpamFile.Config.empty);
     global_variables = OpamVariable.Map.empty;
+    global_state_to_upgrade = {gtc_repo = false; gtc_switch = false};
   } in
   let repo_roots =
     List.map (fun r ->

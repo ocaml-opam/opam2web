@@ -180,7 +180,7 @@ let extract_links ~out_dir page =
     | [] -> acc
     | `El_start (_,attrs)::rest ->
       let acc =
-        OpamStd.List.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
+        List.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
           attrs
         @ acc
       in

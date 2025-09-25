@@ -14,7 +14,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open OpamTypesBase
 open Cow
 open O2wTypes
 open OpamStateTypes

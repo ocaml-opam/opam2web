@@ -151,7 +151,7 @@ let to_entry ~content_dir filename =
 let get_entries ~content_dir ~pages =
 
   let entries = List.map (to_entry ~content_dir:OpamFilename.Op.(OpamFilename.Dir.of_string content_dir / "blog")) pages in
-  let entries = OpamStd.List.filter_map (fun x -> x) entries in
+  let entries = List.filter_map (fun x -> x) entries in
   let entries =
     List.sort (fun a b -> compare b.blog_date a.blog_date) entries in
 
