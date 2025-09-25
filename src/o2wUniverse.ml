@@ -184,7 +184,7 @@ let load_opam_state repo_roots =
   let gt = {
     global_lock = OpamSystem.lock_none;
     root = OpamStateConfig.(!r.root_dir);
-    config = OpamStd.Option.Op.(OpamStateConfig.(load !r.root_dir) +!
+    config = OpamStd.Option.Op.(OpamStateConfig.(load ~lock_kind:`Lock_none !r.root_dir) +!
                                 OpamFile.Config.empty);
     global_variables = OpamVariable.Map.empty;
     global_state_to_upgrade = {gtc_repo = false; gtc_switch = false};
