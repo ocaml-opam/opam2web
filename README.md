@@ -25,7 +25,6 @@ opam switch create . ocaml.4.14.0 --with-test
 - re [github.com/ocaml/ocaml-re](https://github.com/ocaml/ocaml-re)
 - uri [github.com/avsm/ocaml-uri](https://github.com/avsm/ocaml-uri)
 - opam [github.com/ocaml/opam](https://github.com/ocaml/opam)
-- opamfu [github.com/ocamllabs/opamfu](https://github.com/ocamllabs/opamfu)
 - cow [github.com/mirage/ocaml-cow](https://github.com/mirage/ocaml-cow)
 - cmdliner [erratique.ch/software/cmdliner](http://erratique.ch/software/cmdliner)
 - js_of_ocaml [ocsigen.org/js_of_ocaml](http://ocsigen.org/js_of_ocaml/)

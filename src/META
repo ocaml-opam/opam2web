@@ -1,6 +1,0 @@
-version = "1.3.1"
-description = "Conversion from opam universes to web pages"
-archive(byte) = "opam2web.cma"
-archive(native) = "opam2web.cmxa"
-exists_if = "opam2web.cma"
-requires = "cow opam-lib.client opamfu"
