@@ -480,7 +480,7 @@ let to_html ~prefix univ pkg =
   let repo_edit = repo_edit +! Html.empty in
   Html.(
     h2 (string (OpamPackage.Name.to_string name) ++
-        small (span ~cls:"versions" (string "version " ++ version_links)) ++
+        span ~cls:"versions" (string "version " ++ version_links) ++
         span ~cls:"doc_button" doc_button)
     @ div ~cls:"row"
         (div ~cls:"span9"

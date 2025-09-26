@@ -70,13 +70,16 @@ table.package-info > tbody > tr:first-child > td {
 
 span.versions {
   margin-left: 2ex;
-  vertical-align: text-top;
+  vertical-align: middle;
+  font-size: 0.5em;
+  font-weight: normal;
 }
 
 span.doc_button {
   margin-left: 2ex;
   vertical-align: middle;
   font-size: 0.5em;
+  font-weight: normal;
 }
 
 span.package-version {
