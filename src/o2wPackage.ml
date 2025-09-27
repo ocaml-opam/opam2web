@@ -209,7 +209,7 @@ let to_html ~prefix univ pkg =
       Uri.of_string @@
       "https://ocaml.org/p/" ^ name ^ "/" ^ version ^ "/doc/index.html"
     in
-    Html.(a ~href (string "Documentation on ocaml.org"))
+    Html.(a ~cls:"btn" ~href (string "Documentation on ocaml.org"))
   in
   let pkg_descr =
     let to_html = function
@@ -480,8 +480,8 @@ let to_html ~prefix univ pkg =
   let repo_edit = repo_edit +! Html.empty in
   Html.(
     h2 (string (OpamPackage.Name.to_string name) ++
-        span ~cls:"versions" (string "version " ++ version_links) ++
-        span ~cls:"doc_button" doc_button)
+        span ~cls:"title-group" (
+          string "version " ++ version_links ++ doc_button))
     @ div ~cls:"row"
         (div ~cls:"span9"
            (div ~cls:"well" pkg_descr

@@ -68,18 +68,15 @@ table.package-info > tbody > tr:first-child > td {
   border-top: 0;
 }
 
-span.versions {
+span.title-group {
   margin-left: 2ex;
-  vertical-align: middle;
+  vertical-align: top;
   font-size: 0.5em;
   font-weight: normal;
 }
 
-span.doc_button {
+span.title-group > .btn {
   margin-left: 2ex;
-  vertical-align: middle;
-  font-size: 0.5em;
-  font-weight: normal;
 }
 
 span.package-version {
