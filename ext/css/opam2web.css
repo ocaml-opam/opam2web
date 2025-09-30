@@ -71,8 +71,9 @@ table.package-info > tbody > tr:first-child > td {
 span.title-group {
   margin-left: 2ex;
   vertical-align: top;
-  font-size: 0.5em;
+  font-size: 0.55em;
   font-weight: normal;
+  color: #999999;
 }
 
 span.title-group > .btn {
