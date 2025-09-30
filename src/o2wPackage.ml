@@ -168,18 +168,18 @@ let to_html ~prefix univ pkg =
   let {name; version} = pkg in
   let pkg = OpamPackage.create pkg.name pkg.version in
   let pkg_opam = OpamSwitchState.opam univ.st pkg in
+  let pkg_latest_version =
+    let version_set = OpamPackage.versions_of_name univ.st.packages pkg.name in
+    OpamPackage.Version.Set.max_elt version_set
+  in
   let version_links =
-    let version_set =
-      OpamPackage.versions_of_name univ.st.packages pkg.name
-    in
-    let latest = OpamPackage.Version.Set.max_elt version_set in
     let versions =
         (OpamPackage.versions_of_name univ.st.packages pkg.name)
     in
     let print_v v =
       Html.span ~cls:"package-version"
         (Html.string (OpamPackage.Version.to_string v)) ++
-      if v = latest then Html.string " (latest)"
+      if v = pkg_latest_version then Html.string " (latest)"
       else Html.empty
     in
     Html.div ~cls:"btn-group" @@
@@ -198,6 +198,18 @@ let to_html ~prefix univ pkg =
           else
             Html.li (Html.a ~href (print_v version)))
        (OpamPackage.Version.Set.elements versions))
+  in
+  let doc_button =
+    let name = OpamPackage.Name.to_string name in
+    let version =
+      if pkg.version = pkg_latest_version then "latest"
+      else OpamPackage.Version.to_string pkg.version
+    in
+    let href =
+      Uri.of_string @@
+      "https://ocaml.org/p/" ^ name ^ "/" ^ version ^ "/doc/index.html"
+    in
+    Html.(a ~cls:"btn" ~href (string "Documentation on ocaml.org"))
   in
   let pkg_descr =
     let to_html = function
@@ -468,7 +480,8 @@ let to_html ~prefix univ pkg =
   let repo_edit = repo_edit +! Html.empty in
   Html.(
     h2 (string (OpamPackage.Name.to_string name) ++
-        small (span ~cls:"versions" (string "version " ++ version_links)))
+        span ~cls:"title-group" (
+          string "version " ++ version_links ++ doc_button))
     @ div ~cls:"row"
         (div ~cls:"span9"
            (div ~cls:"well" pkg_descr
