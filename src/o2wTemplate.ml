@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -180,7 +180,7 @@ let extract_links ~out_dir page =
     | [] -> acc
     | `El_start (_,attrs)::rest ->
       let acc =
-        OpamStd.List.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
+        List.filter_map (function (("","href")|("","src")),url -> Some url | _ -> None)
           attrs
         @ acc
       in

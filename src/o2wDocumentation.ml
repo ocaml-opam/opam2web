@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -36,7 +36,7 @@ let read_menu ~dir f =
   let srcurl =
     let prefix = "#source:" in
     try
-      let s = List.find (OpamStd.String.starts_with ~prefix) lines in
+      let s = List.find (String.starts_with ~prefix) lines in
       Some (String.trim (OpamStd.String.remove_prefix ~prefix s))
     with Not_found -> None
   in
@@ -241,7 +241,7 @@ let to_menu ~content_dir =
       ~header:(get_header (content_dir / "doc" / "1.1" / "opam11_note.md"))
   in
   let menu_11 =
-    OpamStd.List.filter_map (function
+    List.filter_map (function
       | {menu_item = Internal (_, html) | No_menu (_, html); _} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
@@ -252,7 +252,7 @@ let to_menu ~content_dir =
     mk_menu ("doc" / "1.2")
   in
   let menu_12 =
-    OpamStd.List.filter_map (function
+    List.filter_map (function
         | {menu_item = Internal (_, html) | No_menu (_, html); _} as m ->
             Some {m with menu_item = No_menu (2, html)}
         | _ -> None)
