@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -23,10 +23,6 @@ val compare_alphanum: package -> package -> int
 
 (** Compare packages by modification date *)
 val compare_date: ?reverse:bool -> float package_map ->
-  package -> package -> int
-
-(** Compare packages by popularity *)
-val compare_popularity: ?reverse:bool -> int64 name_map ->
   package -> package -> int
 
 (** An HTML fragment for the description of a package *)

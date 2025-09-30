@@ -7,7 +7,7 @@
 (*  GNU Lesser General Public License version 3.0 with linking            *)
 (*  exception.                                                            *)
 (*                                                                        *)
-(*  OPAM is distributed in the hope that it will be useful, but WITHOUT   *)
+(*  Opam is distributed in the hope that it will be useful, but WITHOUT   *)
 (*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY    *)
 (*  or FITNESS FOR A PARTICULAR PURPOSE.See the GNU General Public        *)
 (*  License for more details.                                             *)
@@ -50,7 +50,7 @@ let dates universe =
   in
   let dates =
     List.fold_right (fun repo dates ->
-        let repo_def =
+        let _repo_def =
           OpamRepositoryName.Map.find repo universe.switch_repos.repositories
         in
         let command = [
@@ -59,8 +59,11 @@ let dates universe =
         ] in
         let repo_name = OpamRepositoryName.to_string repo in
         try
-          let times = OpamFilename.in_dir
-              (OpamFilename.dirname_dir (OpamRepositoryPath.packages_dir repo_def.repo_root))
+          let times =
+            OpamFilename.in_dir
+              (OpamFilename.dirname_dir
+                 (OpamRepositoryPath.packages_dir
+                    (OpamRepositoryState.get_root universe.switch_repos repo)))
               (fun () -> OpamSystem.read_command_output command)
           in
           parse_git_commit_times dates times
@@ -195,30 +198,43 @@ let load_opam_state repo_roots =
       repo_roots
   in
   let repositories =
-    List.fold_left (fun acc (repo_name, repo_root) ->
-        let repo = OpamRepositoryBackend.local repo_root in
-        OpamRepositoryName.Map.add repo_name { repo with repo_name } acc)
+    List.fold_left (fun map (repo_name, _) ->
+        let repo = OpamTypes.{
+            repo_name; repo_url = OpamUrl.empty; repo_trust = None
+          } in
+        OpamRepositoryName.Map.add repo_name repo map)
       OpamRepositoryName.Map.empty repo_roots
   in
   let repos_definitions =
-    OpamRepositoryName.Map.map (fun r ->
-        OpamFile.Repo.safe_read (OpamRepositoryPath.repo r.repo_root))
-      repositories
+    List.fold_left (fun map (repo_name, repo_root) ->
+        OpamRepositoryName.Map.add repo_name
+          (OpamFile.Repo.safe_read (OpamRepositoryPath.repo repo_root))
+          map)
+      OpamRepositoryName.Map.empty repo_roots
   in
   let repo_opams =
-    OpamRepositoryName.Map.map (fun r ->
-        OpamRepositoryState.load_repo_opams r)
-      repositories
+    List.fold_left (fun map (repo_name, repo_root) ->
+        OpamRepositoryName.Map.add repo_name
+          (OpamRepositoryState.load_opams_from_dir repo_name repo_root)
+          map)
+      OpamRepositoryName.Map.empty repo_roots
+  in
+  let repos_tmp =
+    let repos_tmp = Hashtbl.create 2 in
+    List.iter (fun (repo_name, repo_root) ->
+        Hashtbl.add repos_tmp repo_name (lazy repo_root))
+      repo_roots;
+    repos_tmp
   in
   let rt = {
     repos_global = gt;
     repos_lock = OpamSystem.lock_none;
-    repositories; repos_definitions; repo_opams;
+    repositories; repos_definitions; repo_opams; repos_tmp;
   } in
   OpamSwitchState.load_virtual ~repos_list:(fst (List.split repo_roots))
     gt rt
 
-let load statistics repo_roots =
+let load repo_roots =
   Printf.printf "++ Loading opam state.\n%!";
   let st = load_opam_state repo_roots in
   Printf.printf "++ Gathering dependencies.\n%!";
@@ -228,23 +244,9 @@ let load statistics repo_roots =
   let rev_depopts = rev_depends depopts in
   Printf.printf "++ Getting package modification dates from git.\n%!";
   let dates = dates st in
-  let version_downloads, name_popularity =
-    match statistics with
-    | None -> None, None
-    | Some s ->
-      let vp = s.month_stats.pkg_stats, s.hash_pkgs_map in
-      let np =
-        OpamPackage.Map.fold (fun nv x ->
-            OpamPackage.Name.Map.update nv.name (Int64.add x) 0L)
-          s.month_leaf_pkg_stats OpamPackage.Name.Map.empty
-      in
-      Some vp, Some np
-  in
   {
     st;
     dates;
-    version_downloads;
-    name_popularity;
     depends = deps;
     rev_depends = rdeps;
     depopts;
@@ -285,13 +287,6 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
         | None          -> acc
         | Some pkg_info ->
           let pkg_name = OpamPackage.name pkg in
-          let pkg_download =
-            match
-              OpamStd.Option.Op.(univ.name_popularity >>= OpamPackage.Name.Map.find_opt pkg_name)
-            with
-            | Some d -> [Printf.sprintf "Downloads: %Ld" d]
-            | None -> []
-          in
           let pkg_published = match OpamPackage.Map.find_opt pkg univ.dates with
             | Some timestamp -> [
               Printf.sprintf "Published: %s"
@@ -301,7 +296,7 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
           in
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
-          let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published @ pkg_tags) in
+          let pkg_tooltip = String.concat " | " (pkg_published @ pkg_tags) in
           let name = OpamPackage.Name.to_string pkg_name in
           let pkg_href = Uri.(resolve "http" (of_string "../packages/") (of_string name)) in
           let synopsis =
@@ -329,49 +324,3 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
     "repos", serialize repos_html;
     "pkgs",  serialize(Html.tag "tbody" (List.concat packages_html));
   ])
-
-let generate_json ?statistics universe =
-  let open O2wJson in
-  let open OpamPackage in
-  let global_map =
-    let dl_month =
-      match statistics with
-      | None -> fun _ -> None
-      | Some s -> fun pkg -> Map.find_opt pkg s.month_leaf_pkg_stats
-    in
-    let dl =
-      match universe.version_downloads with
-      | None -> fun _ -> None
-      | Some (vd,_) -> fun pkg -> Map.find_opt pkg vd
-    in
-    Set.fold (fun pkg map ->
-        let n = name pkg in
-        let v = version pkg in
-        let tm = Map.find_opt pkg universe.dates in
-        let upd_vmap = Version.Map.add v (tm, (dl pkg), (dl_month pkg)) in
-        Name.Map.update n upd_vmap (upd_vmap Version.Map.empty) map)
-      universe.st.packages Name.Map.empty
-  in
-  let json_gm =
-    let lst =
-      Name.Map.fold (fun name vmap lst ->
-          let versions =
-            Version.Map.fold (fun version (tm,dl,dl_month) lst ->
-                `Assoc [
-                  json_version version;
-                  json_timestamp_opt tm;
-                  json_downloads_opt dl;
-                  json_month_downloads_opt dl_month
-                ]::lst)
-              vmap []
-          in
-          `Assoc [ json_name name; "versions", `List (List.rev versions)]::lst)
-        global_map []
-    in
-    `List (List.rev lst)
-  in
-  write "stats" json_gm
-
-(* (\** Generate a universe from a list of repositories *\)
- * let of_repositories ?preds index repos =
- *   map O2wPackage.html_descr (of_repositories ?preds index repos) *)
