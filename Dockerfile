@@ -24,13 +24,14 @@ RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
 FROM ocaml/opam:alpine-3.20-ocaml-4.14 as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
-    && echo -e '#!/bin/sh -e\n\
+    && echo -e '#!/bin/sh\n\
+                set -euo pipefail\n\
                 echo\n\
                 echo\n\
                 echo "<!DOCTYPE html>"\n\
                 echo "<HTML><HEAD><TITLE>$(basename $2 .1) manpage</TITLE></HEAD><BODY>"\n\
                 /usr/lib/cgit/filters/html-converters/man2html <$2\n\
-                echo "</BODY></HTML>\n' \
+                echo "</BODY></HTML>"\n' \
        | sudo tee /usr/local/bin/man2html \
     && sudo chmod a+x /usr/local/bin/man2html
 RUN sudo mv /usr/bin/opam-2.3 /usr/bin/opam && opam update
