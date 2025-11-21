@@ -282,4 +282,20 @@ let to_menu ~content_dir =
       match srcurl_12 with
       | None -> None
       | Some u -> Some (u ^ "/index.menu");
+  };
+  {
+    menu_source = "api";
+    menu_link = Uri.make ~path:"doc/api/" ();
+    menu_link_text = "API";
+    menu_link_html = Html.string "API";
+    menu_item = External;
+    menu_srcurl = None;
+  };
+  {
+    menu_source = "man";
+    menu_link = Uri.make ~path:"doc/man/" ();
+    menu_link_text = "Man pages";
+    menu_link_html = Html.string "Man pages";
+    menu_item = External;
+    menu_srcurl = None;
   }]
