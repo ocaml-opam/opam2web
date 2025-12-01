@@ -14,7 +14,7 @@ The latest release of opam2web is available via
 opam install opam2web
 ```
 
-### Prerequisties
+### Prerequisites
 
 Optionally create a local switch for the project:
 
@@ -81,7 +81,7 @@ If no repository is given, the current local opam universe is used.
 Some available options are:
 - `--output / -o [directory]`
     The directory where to write the generated HTML files.
-- `--content / -c [direcory]`
+- `--content / -c [directory]`
     The directory where to find documentation and templates to use.
     Defaults to 'content'.
 - `--where [comma-separated predicate list]`
