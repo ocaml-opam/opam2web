@@ -264,8 +264,8 @@ let to_menu ~content_dir =
   [{
     menu_source = "1.1";
     menu_link = Uri.make ~path:("doc/1.1/") ();
-    menu_link_text = "Archives (OPAM 1.1)";
-    menu_link_html = Html.string "Archives (OPAM 1.1)";
+    menu_link_text = "Archives (opam 1.1)";
+    menu_link_html = Html.string "Archives (opam 1.1)";
     menu_item = External;
     menu_srcurl =
       match srcurl_11 with
@@ -275,8 +275,8 @@ let to_menu ~content_dir =
   {
     menu_source = "1.2";
     menu_link = Uri.make ~path:("doc/1.2/") ();
-    menu_link_text = "Archives (OPAM 1.2)";
-    menu_link_html = Html.string "Archives (OPAM 1.2)";
+    menu_link_text = "Archives (opam 1.2)";
+    menu_link_html = Html.string "Archives (opam 1.2)";
     menu_item = External;
     menu_srcurl =
       match srcurl_12 with
