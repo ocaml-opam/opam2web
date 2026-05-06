@@ -264,6 +264,7 @@ let to_html ~prefix univ pkg =
   let pkg_license = list "License" (OpamFile.OPAM.license pkg_opam) in
   let pkg_homepage = links "Homepage" (OpamFile.OPAM.homepage pkg_opam) in
   let pkg_issues = links "Issue Tracker" (OpamFile.OPAM.bug_reports pkg_opam) in
+  let pkg_doc = links "Documentation" (OpamFile.OPAM.doc pkg_opam) in
   let pkg_tags = match OpamFile.OPAM.tags pkg_opam with
     | [] -> None
     | tags ->
@@ -495,6 +496,7 @@ let to_html ~prefix univ pkg =
                               @ mk_tr pkg_published
                               @ mk_tr pkg_homepage
                               @ mk_tr pkg_issues
+                              @ mk_tr pkg_doc
                               @ mk_tr pkg_maintainer
                               @ mk_tr pkg_available
                               @ mk_tr pkg_depends
