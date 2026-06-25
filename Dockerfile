@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.3
-FROM ocaml/opam:alpine-3.20-ocaml-4.14 as build-opam2web
+FROM ocaml/opam:alpine-3.23-ocaml-4.14 as build-opam2web
 RUN sudo apk add g++ gmp-dev
 COPY --chown=opam:opam . /home/opam/opam2web
 WORKDIR /home/opam/opam2web
@@ -21,7 +21,7 @@ RUN git clone https://github.com/ocaml/opam --depth 1 -b 1.2 /tmp/opam-1.2 \
     && mv /tmp/opam-1.2/doc/pages /opt/opam2web/share/opam2web/content/doc/1.2 \
     && rm -rf /tmp/opam-1.2
 
-FROM ocaml/opam:alpine-3.20-ocaml-4.14 as build-opam-doc
+FROM ocaml/opam:alpine-3.23-ocaml-4.14 as build-opam-doc
 RUN sudo apk add cgit groff
 RUN sudo mkdir -p /usr/local/bin \
     && echo -e '#!/bin/sh\n\
