@@ -30,7 +30,12 @@ redirect: [
   "https://${BASEURL}/1.2.2" { opam-version < "2.0~" }
 ]
 EOF
+# Remove the archive-mirrors field to avoid duplication when 'opam admin cache' below will add archive-mirrors: "cache"
+sed '/^archive-mirrors: /d' repo > repo.tmp
+mv repo.tmp repo
+# Adds archive-mirrors: "cache" to the repo file
 opam admin cache --link=archives /cache
+# Adds the 'stamp' fields to the repo file
 opam admin index --minimal-urls-txt
 
 cp -r /usr/local/share/opam2web/content /tmp/
