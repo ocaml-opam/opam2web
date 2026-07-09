@@ -144,13 +144,13 @@ let make_footer srcurl depth =
     (Html.div ~cls:"icons"
        (Html.div ~cls:"icon"
           (Html.a ~href:(Uri.of_string "https://github.com/ocaml/opam2web")
-             (Html.img (icon "github.png"))) (* FIXME: icon : Uri.t *)
+             (Html.img (icon "github.png") ~alt:"Find us on GitHub")) (* FIXME: icon : Uri.t *)
         @ Html.div ~cls:"icon"
             (Html.a ~href:(Uri.of_string "http://www.ocamlpro.com/")
-               (Html.img (icon "ocamlpro.png")))
+               (Html.img (icon "ocamlpro.png") ~alt:"Go to OCamlPro.com"))
         @ Html.div ~cls:"icon"
             (Html.a ~href:(Uri.of_string "http://www.ocaml.org/")
-               (Html.img (icon "ocaml.png"))))
+               (Html.img (icon "ocaml.png") ~alt:"Go to OCaml.org")))
      @ Html.div ~cls:"copyright"
          (Html.small
             (Html.string "Generated " @ srcurl
