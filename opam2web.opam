@@ -11,10 +11,10 @@ depends: [
   "cow" {>= "2.3.0"}
   "js_of_ocaml" {>= "3.3.0"}
   "js_of_ocaml-ppx"
-  "opam-core" {>= "2.2.0" & < "2.5.0~"}
-  "opam-format" {>= "2.2.0" & < "2.5.0~"}
-  "opam-state" {>= "2.2.0" & < "2.5.0~"}
-  "opam-client" {>= "2.2.0" & < "2.5.0~"}
+  "opam-core" {>= "2.6" & < "2.7"}
+  "opam-format" {>= "2.6" & < "2.7"}
+  "opam-state" {>= "2.6" & < "2.7"}
+  "opam-client" {>= "2.6" & < "2.7"}
   "micro_httpd" {with-test}
   "yojson" {>= "1.6.0"}
   "cmdliner" {>= "1.0.4"}
