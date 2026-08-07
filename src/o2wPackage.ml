@@ -467,8 +467,10 @@ let to_html ~prefix univ pkg =
           (OpamRepositoryName.Map.find r univ.st.switch_repos.repo_opams))) >>|
     OpamRepositoryState.get_repo univ.st.switch_repos >>= fun r ->
     OpamFile.Repo.read_opt
-      (OpamRepositoryPath.repo
-         (OpamRepositoryState.get_repo_root univ.st.switch_repos r)) >>=
+      (OpamRepositoryRoot.Dir.Path.repo
+         (match OpamRepositoryState.get_repo_root univ.st.switch_repos r with
+          | Dir dir -> dir
+          | Tgz _ -> assert false)) >>=
     OpamFile.Repo.upstream >>= fun upstream ->
     OpamFile.OPAM.metadata_dir pkg_opam >>= (function
         | Some _repo_name, rel -> Some rel
