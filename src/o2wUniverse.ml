@@ -314,6 +314,27 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
             ]
             | None -> []
           in
+          (* Number of direct dependencies.
+             Note: this counts the maximal number of items in the [depends:] field rather than using [univ.depends].
+             [univ.depends] excludes dependencies that are not available in the current opam repo (for example,
+             a package with a version constraint that is not in the repo).
+             We say 'maximal' because of 'any of' dependencies. For exmaple, given ("extlib" | "extlib-compat"),
+             we count 2 dependencies, even if only one of them is needed to build the package.
+             *)
+          let pkg_nb_depends =
+            OpamPackage.Name.Set.cardinal @@
+            OpamFormula.fold_left (fun acc (name, _) ->
+                OpamPackage.Name.Set.add name acc)
+              OpamPackage.Name.Set.empty
+              (OpamFile.OPAM.depends pkg_info)
+          in
+          (* Number of reverse dependencies *)
+          let pkg_nb_rev_depends =
+            match OpamPackage.Map.find_opt pkg univ.rev_depends with
+            | None -> 0
+            | Some rdeps ->
+              OpamPackage.Name.Set.cardinal (OpamPackage.names_of_packages rdeps)
+          in
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
           let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published @ pkg_tags) in
@@ -329,7 +350,9 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
                 (Html.a ~href:pkg_href
                    (Html.string (OpamPackage.name_to_string pkg)))
               @ Html.tag "td" (Html.string (OpamPackage.version_to_string pkg))
-              @ Html.tag "td" synopsis))
+              @ Html.tag "td" synopsis
+              @ Html.tag "td" (Html.int pkg_nb_depends)
+              @ Html.tag "td" (Html.int pkg_nb_rev_depends)))
           :: acc)
       []
       (List.rev sorted_packages)
