@@ -113,6 +113,66 @@ let rev_depends deps =
             (OpamPackage.Set.add pkg) OpamPackage.Set.empty))
     deps OpamPackage.Map.empty
 
+
+(* Dependencies used for the dependency cone. They differ from [depends] above.
+   They are an over-approximation of what [opam list --required-by] would show because we don't
+   filter out based on the platform (os, arch, ...).
+   We use the same params as OpamListCommand.default_dependency_toggles:
+   build dependencies are kept; [post], [with-test], [with-doc] and [with-dev-setup] are dropped;
+   optional dependencies are dropped.
+   [filter_default] is true to match OpamSwitchState.dependencies, which keeps a dependency whose
+   filter it cannot decide.
+
+   Variables we can answer without a real switch, notably [opam-version], are resolved; the ones
+   needing a switch (os, arch, ...) stay undefined and so we keep all dependencies that mention them.
+   As a result, we include dependencies of every platform, not just the platform opam2web was run on. *)
+let cone_depends st =
+  OpamPackage.Map.fold (fun pkg opam ->
+    let { build; post; test; doc; dev_setup; depopts; _} : OpamListCommand.dependency_toggles =
+      OpamListCommand.default_dependency_toggles in
+    let deps =
+      OpamFormula.packages st.packages @@
+      OpamPackageVar.all_depends ~build ~post ~test
+        ~doc ~dev_setup ~depopts ~filter_default:true
+        st opam
+    in
+    OpamPackage.Map.add pkg deps)
+  st.opams OpamPackage.Map.empty
+
+(* A graph where nodes are packages and there is an edge a->b if package a depends on package b. *)
+module PkgGraph = struct
+  type t = package_set package_map
+  module V = OpamPackage
+  let iter_vertex f deps = OpamPackage.Map.iter (fun pkg _ -> f pkg) deps
+  let iter_succ f deps pkg =
+    match OpamPackage.Map.find_opt pkg deps with
+    | None -> ()
+    | Some pkgs -> OpamPackage.Set.iter f pkgs
+end
+
+module PkgTopo = Graph.Topological.Make (PkgGraph)
+
+let dependency_cone_sizes depends =
+  (* packages in reverse topological order *)
+  let pkgs = PkgTopo.fold (fun pkg acc -> pkg :: acc) depends [] in
+  let cones =
+    List.fold_left (fun acc pkg ->
+        let deps =
+          OpamStd.Option.default OpamPackage.Set.empty
+            (OpamPackage.Map.find_opt pkg depends)
+        in
+        let cone =
+          OpamPackage.Set.fold (fun dep cone ->
+              match OpamPackage.Map.find_opt dep acc with
+              | Some dep_cone -> OpamPackage.Name.Set.union dep_cone cone
+              | None -> cone)
+            deps (OpamPackage.Name.Set.singleton pkg.name)
+        in
+        OpamPackage.Map.add pkg cone acc)
+      OpamPackage.Map.empty pkgs
+  in
+  OpamPackage.Map.map OpamPackage.Name.Set.cardinal cones
+
 let to_page ~prefix universe pkg acc =
   try
     if Unix.isatty Unix.stdout then
@@ -241,6 +301,8 @@ let load statistics repo_roots =
   let rdeps = rev_depends deps in
   let depopts = depends st OpamFile.OPAM.depopts in
   let rev_depopts = rev_depends depopts in
+  Printf.printf "++ Computing dependency cones.\n%!";
+  let dependency_cone_sizes = dependency_cone_sizes (cone_depends st) in
   Printf.printf "++ Getting package modification dates from git.\n%!";
   let dates = dates st in
   let version_downloads, name_popularity =
@@ -262,6 +324,7 @@ let load statistics repo_roots =
     name_popularity;
     depends = deps;
     rev_depends = rdeps;
+    dependency_cone_sizes;
     depopts;
     rev_depopts;
   }
@@ -314,26 +377,18 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
             ]
             | None -> []
           in
-          (* Number of direct dependencies.
-             Note: this counts the maximal number of items in the [depends:] field rather than using [univ.depends].
-             [univ.depends] excludes dependencies that are not available in the current opam repo (for example,
-             a package with a version constraint that is not in the repo).
-             We say 'maximal' because of 'any of' dependencies. For exmaple, given ("extlib" | "extlib-compat"),
-             we count 2 dependencies, even if only one of them is needed to build the package.
-             *)
-          let pkg_nb_depends =
-            OpamPackage.Name.Set.cardinal @@
-            OpamFormula.fold_left (fun acc (name, _) ->
-                OpamPackage.Name.Set.add name acc)
-              OpamPackage.Name.Set.empty
-              (OpamFile.OPAM.depends pkg_info)
-          in
           (* Number of reverse dependencies *)
           let pkg_nb_rev_depends =
             match OpamPackage.Map.find_opt pkg univ.rev_depends with
             | None -> 0
             | Some rdeps ->
               OpamPackage.Name.Set.cardinal (OpamPackage.names_of_packages rdeps)
+          in
+          (* Size of the dependency cone: everything an installation of this
+             package pulls in, itself included. *)
+          let pkg_dependency_cone_size =
+            OpamStd.Option.default 0
+              (OpamPackage.Map.find_opt pkg univ.dependency_cone_sizes)
           in
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
@@ -351,8 +406,8 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
                    (Html.string (OpamPackage.name_to_string pkg)))
               @ Html.tag "td" (Html.string (OpamPackage.version_to_string pkg))
               @ Html.tag "td" synopsis
-              @ Html.tag "td" (Html.int pkg_nb_depends)
-              @ Html.tag "td" (Html.int pkg_nb_rev_depends)))
+              @ Html.tag "td" (Html.int pkg_nb_rev_depends)
+              @ Html.tag "td" (Html.int pkg_dependency_cone_size)))
           :: acc)
       []
       (List.rev sorted_packages)
