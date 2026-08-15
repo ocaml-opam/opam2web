@@ -23,6 +23,10 @@ type univ = {
   version_downloads: (int64 package_map * (package * package_set) OpamStd.String.Map.t) option;
   depends: package_set package_map;
   rev_depends: package_set package_map;
+  (** Number of distinct package names in each package's dependency cone, itself included.
+      An over-approximation of the output of [opam list --rec --required-by], because we
+      include packages of every platform (os, arch, ...). *)
+  dependency_cone_sizes: int package_map;
   depopts: package_set package_map;
   rev_depopts: package_set package_map;
 }

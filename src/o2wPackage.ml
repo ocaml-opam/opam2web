@@ -52,6 +52,18 @@ let compare_popularity ?(reverse = false) pkg_stats p1 p2 =
     Int64.compare c1 c2
   | _ -> compare_alphanum p1 p2
 
+(* Comparison function using the number of reverse dependencies for each package *)
+let compare_revdeps rev_depends p1 p2 =
+  let pkg_count pkg =
+    match OpamPackage.Map.find_opt pkg rev_depends with
+    | None -> 0
+    | Some rdeps ->
+      OpamPackage.Name.Set.cardinal (OpamPackage.names_of_packages rdeps)
+  in
+  match pkg_count p1, pkg_count p2 with
+  | c1, c2 when c1 <> c2 -> compare c2 c1
+  | _ -> compare_alphanum p1 p2
+
 (* Comparison function using the publication time of packages *)
 let compare_date ?(reverse = false) pkg_dates p1 p2 =
   let pkg_date pkg =

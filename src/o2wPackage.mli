@@ -25,6 +25,10 @@ val compare_alphanum: package -> package -> int
 val compare_date: ?reverse:bool -> float package_map ->
   package -> package -> int
 
+(** Compare packages by number of reverse dependencies, most first *)
+val compare_revdeps: package_set package_map ->
+  package -> package -> int
+
 (** Compare packages by popularity *)
 val compare_popularity: ?reverse:bool -> int64 name_map ->
   package -> package -> int
