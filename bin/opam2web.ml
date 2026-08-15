@@ -82,8 +82,8 @@ let make_website user_options universe statistics ds =
     O2wBlog.make_menu ~srcurl:user_options.blog_source_uri blog_entries
   in
   let blog_feed = O2wBlog.make_feed ~root:user_options.root_uri blog_entries in
-  let criteria = ["name"; "popularity"; "date"] in
-  let criteria_nostats = ["name"; "date"] in
+  let criteria = ["name"; "popularity"; "date"; "rev-deps"] in
+  let criteria_nostats = ["name"; "date"; "rev-deps"] in
   let sortby_links =
     match statistics with
     | None   ->
@@ -106,8 +106,21 @@ let make_website user_options universe statistics ds =
       menu_item = No_menu (1, to_html ~active:"date" ~compare_pkg);
       menu_srcurl = None;
     } in
+    let revdeps =
+      let compare_pkg =
+        O2wPackage.compare_revdeps universe.rev_depends
+      in
+      {
+        menu_source = content_dir;
+        menu_link = Uri.make ~path:(packages_prefix^"/index-rev-deps.html") ();
+        menu_link_text = "Packages";
+        menu_link_html = Html.string "Packages";
+        menu_item = No_menu (1, to_html ~active:"rev-deps" ~compare_pkg);
+        menu_srcurl = None;
+      }
+    in
     match universe.name_popularity with
-    | None -> [ date ]
+    | None -> [ revdeps; date ]
     | Some s ->
       let compare_pkg =
         O2wPackage.compare_popularity ~reverse:true s
@@ -120,7 +133,7 @@ let make_website user_options universe statistics ds =
         menu_item = No_menu (1, to_html ~active:"popularity" ~compare_pkg);
         menu_srcurl = None;
       } in
-      [ popularity; date ]
+      [ popularity; revdeps; date ]
   in
   include_files user_options.out_dir user_options.files_dir;
   let about_page =
