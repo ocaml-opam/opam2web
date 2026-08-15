@@ -115,29 +115,31 @@ let rev_depends deps =
 
 
 (* Dependencies used for the dependency cone. They differ from [depends] above.
-   They are an over-approximation of what [opam list --required-by] would show because we don't
-   filter out based on the platform (os, arch, ...).
-   We use the same params as OpamListCommand.default_dependency_toggles:
-   build dependencies are kept; [post], [with-test], [with-doc] and [with-dev-setup] are dropped;
-   optional dependencies are dropped.
+   They are an approximation of what [opam list --required-by] would show because we cannot
+   resolve variables that need a switch (os, arch, ...). To avoid including dependencies of multiple platforms
+   (say both linux and macos), we remove disjunctions (by picking a single branch).
+
    [filter_default] is true to match OpamSwitchState.dependencies, which keeps a dependency whose
    filter it cannot decide.
+ *)
+let rec remove_disjunction = function
+ | (OpamFormula.Empty as x) | (Atom _ as x) -> x
+ | Block x -> remove_disjunction x
+ | And (a, b) -> And (remove_disjunction a, remove_disjunction b)
+ | Or (a, _) -> remove_disjunction a
 
-   Variables we can answer without a real switch, notably [opam-version], are resolved; the ones
-   needing a switch (os, arch, ...) stay undefined and so we keep all dependencies that mention them.
-   As a result, we include dependencies of every platform, not just the platform opam2web was run on. *)
 let cone_depends st =
-  OpamPackage.Map.fold (fun pkg opam ->
-    let { build; post; test; doc; dev_setup; depopts; _} : OpamListCommand.dependency_toggles =
-      OpamListCommand.default_dependency_toggles in
-    let deps =
-      OpamFormula.packages st.packages @@
-      OpamPackageVar.all_depends ~build ~post ~test
-        ~doc ~dev_setup ~depopts ~filter_default:true
-        st opam
-    in
-    OpamPackage.Map.add pkg deps)
-  st.opams OpamPackage.Map.empty
+ OpamPackage.Map.fold (fun pkg opam ->
+   let deps =
+     OpamFormula.packages st.OpamStateTypes.packages @@
+     remove_disjunction @@
+     OpamPackageVar.all_depends ~build:true ~post:false ~test:false
+       ~doc:false ~dev_setup:false ~depopts:false ~filter_default:true
+       st opam
+     in
+     OpamPackage.Map.add pkg deps)
+   st.opams OpamPackage.Map.empty
+
 
 (* A graph where nodes are packages and there is an edge a->b if package a depends on package b. *)
 module PkgGraph = struct
@@ -160,6 +162,13 @@ let dependency_cone_sizes depends =
         let deps =
           OpamStd.Option.default OpamPackage.Set.empty
             (OpamPackage.Map.find_opt pkg depends)
+        in
+        (* Some packages include [ocaml] as a dependency. We remove [ocaml] from their cone to avoid including
+           also ocaml-base-compiler, ocaml-option-bytecode-only, ...
+           Except for [ocaml] itself, for which we want to see the full cone. *)
+        let deps = match OpamPackage.Name.to_string (OpamPackage.name pkg) with
+          | "ocaml" -> deps
+          | _ -> OpamPackage.Set.filter (fun p -> OpamPackage.Name.to_string p.name <> "ocaml") deps
         in
         let cone =
           OpamPackage.Set.fold (fun dep cone ->
