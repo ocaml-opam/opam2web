@@ -316,6 +316,14 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
           in
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
+          (* Dependency names, for the search box to filter on *)
+          let deps =
+            OpamFormula.fold_left (fun acc (dep_name, _) ->
+                OpamPackage.Name.to_string dep_name :: acc)
+              [] (OpamFile.OPAM.depends pkg_info)
+            |> List.rev
+            |> String.concat " "
+          in
           let pkg_tooltip = String.concat " | " (pkg_download @ pkg_published @ pkg_tags) in
           let name = OpamPackage.Name.to_string pkg_name in
           let pkg_href = Uri.(resolve "http" (of_string "../packages/") (of_string name)) in
@@ -324,7 +332,8 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
                                +! Html.empty)
             ++ Html.span ~cls:"invisible" (Html.string tags)
           in
-          (Html.tag "tr" ~attrs:["title", pkg_tooltip]
+          (Html.tag "tr" ~attrs:["title", pkg_tooltip;
+                                 "data-deps", deps]
              (Html.tag "td"
                 (Html.a ~href:pkg_href
                    (Html.string (OpamPackage.name_to_string pkg)))
