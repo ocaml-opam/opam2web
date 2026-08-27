@@ -38,6 +38,27 @@ input#search {
 button#search-button {
   height: 35px;
   border-radius: 0 20px 20px 0;
+  padding-right: 14px;
+}
+
+button#search-button #search-scope-label {
+  margin-left: 0.3em;
+}
+
+button#search-button .caret {
+  margin-left: 0.4em;
+  vertical-align: middle;
+}
+
+/* The scope menu is anchored to the right edge of the search box */
+#search-scope-menu {
+  text-align: left;
+}
+
+#search-scope-menu .active > a,
+#search-scope-menu .active > a:hover {
+  color: #ffffff;
+  background-color: #b40404;
 }
 
 code {

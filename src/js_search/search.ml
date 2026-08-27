@@ -33,6 +33,15 @@ let from_option opt =
 let by_name = 0
 let by_descr = 2
 
+(* Where to search  *)
+type scope =
+  | In_package (* name, synopsis, and tags *)
+  | Deps       (* the "depends" field only *)
+
+let scope_of_string = function
+  | "deps" -> Deps
+  | _ -> In_package
+
 (* Hide the row [tr] of a table element *)
 let hide tr =
   tr##.style##.display := _s "none"
@@ -41,26 +50,67 @@ let hide tr =
 let show tr =
   tr##.style##.display := _s ""
 
-(* Filter the string [str] from the table [tbl] by looking in the column
-   name (position 0) and the description (position 2) *)
-let filter str tbl =
+let attribute elt name =
+  Js.Opt.case (elt##getAttribute (_s name)) (fun () -> "") Js.to_string
+
+let cell tr i =
+  Js.Opt.case (tr##.cells##item (i)) (fun () -> "")
+    (fun td -> Js.to_string td##.innerHTML)
+
+(* The scope currently selected in the search box is the active entry of the
+   dropdown menu: no need to keep a copy of it on our side *)
+let current_scope () =
+  Js.Opt.case
+    (doc##querySelector (_s "#search-scope-menu li.active > a[data-scope]"))
+    (fun () -> In_package)
+    (fun item -> scope_of_string (attribute item "data-scope"))
+
+(* Filter the string [str] from the table [tbl], looking at the fields
+   selected by [scope] *)
+let filter ~scope str tbl =
+  let re = Regexp.regexp_string_case_fold (Js.to_string str) in
+  let matches s = None <> Regexp.search re s 0 in
   for i = 1 to tbl##.rows##.length do
     Js.Opt.iter (tbl##.rows##item (i)) @@ fun tr ->
-    (* Get the [td] corresponding to the name column *)
-    let name = tr##.cells##item (by_name) in
-    (* Get the [td] corresponding to the description column *)
-    let descr = tr##.cells##item (by_descr) in
-    let matches str elt =
-      Js.Opt.case elt (fun () -> false) @@ fun e ->
-      None <>
-      Regexp.search (Regexp.regexp_string_case_fold (Js.to_string str))
-        (Js.to_string e##.innerHTML) 0
+    let searched = match scope with
+      (* The dependencies are not displayed in the table: they are carried by
+         the [data-deps] attribute of the row *)
+      | Deps       -> [attribute tr "data-deps"]
+      (* Name column (position 0) and description column (position 2) *)
+      | In_package -> [cell tr by_name; cell tr by_descr]
     in
-    (* Filter name or column column of the table *)
-    if matches str name || matches str descr
+    if List.exists matches searched
     then show tr
     else hide tr
   done
+
+(* The entries of the dropdown menu used to select the scope *)
+let scope_items () =
+  match get_element_by_id "search-scope-menu" with
+  | None -> []
+  | Some menu ->
+    let nodes = menu##querySelectorAll (_s "a[data-scope]") in
+    let rec aux acc i =
+      if i < 0 then acc else
+        aux
+          (Js.Opt.case (nodes##item (i)) (fun () -> acc) @@ fun node ->
+           Js.Opt.case (Dom_html.CoerceTo.element node) (fun () -> acc)
+             (fun e -> e :: acc))
+          (i - 1)
+    in
+    aux [] (nodes##.length - 1)
+
+(* Select [item] in the dropdown menu: mark it as the active entry and update
+   the label of the search button *)
+let select_scope items item =
+  List.iter (fun i ->
+      Js.Opt.iter (i##.parentNode) @@ fun parent ->
+      Js.Opt.iter (Dom_html.CoerceTo.element parent) @@ fun li ->
+      li##.className := _s (if i == item then "active" else ""))
+    items;
+  match get_element_by_id "search-scope-label" with
+  | None -> ()
+  | Some label -> label##.innerHTML := _s (attribute item "data-label")
 
 let ( >>= ) = Js.Opt.bind
 
@@ -69,11 +119,15 @@ let _ =
   >>= fun search ->
   doc##getElementById (Js.string "packages") >>= Dom_html.CoerceTo.table
   >>= fun tbl ->
-  let handler =
-    Dom_html.handler (fun _ -> filter search##.value tbl; Js._false)
-  in
+  let refresh () = filter ~scope:(current_scope ()) search##.value tbl in
+  let handler = Dom_html.handler (fun _ -> refresh (); Js._false) in
   search##.onkeyup := handler;
+  let items = scope_items () in
+  List.iter (fun item ->
+      item##.onclick :=
+        Dom_html.handler (fun _ -> select_scope items item; refresh (); Js._false))
+    items;
   let hash = win##.location##.hash##substring_toEnd 1 in
   if hash##.length > 0 then search##.value := hash;
-  if search##.value##.length > 0 then filter search##.value tbl;
+  if search##.value##.length > 0 then refresh ();
   Js.some handler
