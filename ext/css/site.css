@@ -61,6 +61,29 @@ button#search-button .caret {
   background-color: #b40404;
 }
 
+details#tags-list,
+p#tag-count {
+  font-size: medium;
+}
+
+details#tags-list {
+  margin-bottom: 1em;
+}
+
+details#tags-list summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+details#tags-list p {
+  margin-top: 0.5em;
+  line-height: 2;
+}
+
+details#tags-list a:focus:not(:focus-visible) {
+  outline: none;
+}
+
 code {
   color: black;
 }

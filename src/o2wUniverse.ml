@@ -291,6 +291,32 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
     | None -> Html.empty
     | Some repos -> Html.Create.table repos ~row
   in
+  let tags_html =
+    let tags =
+      List.fold_left (fun acc pkg ->
+          match OpamPackage.Map.find_opt pkg univ.st.opams with
+          | None -> acc
+          | Some opam ->
+            List.fold_left (fun acc tag -> OpamStd.String.Set.add tag acc)
+              acc (OpamFile.OPAM.tags opam))
+        OpamStd.String.Set.empty sorted_packages
+    in
+    let tag_link tag =
+      (* The "#<tag>" fragment is read by the search script on page load, to
+         apply the tag filter. When generating the pages,
+         O2wTemplate.extract_links checks that every same-page "#..." link
+         targets an element with that id, and reports a broken self-reference
+         otherwise: give each link its own tag as id to pass that check *)
+      Html.tag "a" ~attrs:["id", tag; "href", "#" ^ tag; "data-tag", tag]
+        (Html.string tag)
+    in
+    match OpamStd.String.Set.elements tags with
+    | [] -> Html.empty
+    | first :: rest ->
+      List.fold_left
+        (fun acc tag -> acc ++ Html.string ", " ++ tag_link tag)
+        (tag_link first) rest
+  in
   let packages_html =
     List.fold_left (fun acc pkg ->
         let info =
@@ -315,6 +341,26 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
             | None -> []
           in
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
+          (* Alongside the visible comma-separated tag list, each table row
+             carries its own tags in an invisible [data-tags] attribute, which
+             the search script reads to filter the table by tag. There, the
+             tags are space-separated; since a tag can itself contain spaces
+             ("binary code analysis"), percent-encode each tag so that the
+             list is unambiguous. Decoded in the search script with
+             decodeURIComponent, so "%" must be encoded too *)
+          let encode_tag tag =
+            let buf = Buffer.create (String.length tag) in
+            String.iter (function
+                | '%' -> Buffer.add_string buf "%25"
+                | ' ' -> Buffer.add_string buf "%20"
+                | c   -> Buffer.add_char buf c)
+              tag;
+            Buffer.contents buf
+          in
+          let tags_attr =
+            String.concat " "
+              (List.map encode_tag (OpamFile.OPAM.tags pkg_info))
+          in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
           (* Dependency names, for the search box to filter on *)
           let deps =
@@ -333,7 +379,7 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
             ++ Html.span ~cls:"invisible" (Html.string tags)
           in
           (Html.tag "tr" ~attrs:["title", pkg_tooltip;
-                                 "data-deps", deps]
+                                 "data-deps", deps; "data-tags", tags_attr]
              (Html.tag "td"
                 (Html.a ~href:pkg_href
                    (Html.string (OpamPackage.name_to_string pkg)))
@@ -346,11 +392,13 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
   let template = Template.({ path="universe.xhtml"; fields=[
     "nav",   (default Html.empty, Optional);
     "repos", (mandatory (),       Optional);
+    "tags",  (mandatory (),       Required);
     "pkgs",  (mandatory (),       Required);
   ]}) in
   Template.(generate content_dir template [
     "nav",   serialize (List.concat sortby_links_html);
     "repos", serialize repos_html;
+    "tags",  serialize tags_html;
     "pkgs",  serialize(Html.tag "tbody" (List.concat packages_html));
   ])
 

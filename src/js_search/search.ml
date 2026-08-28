@@ -112,6 +112,66 @@ let select_scope items item =
   | None -> ()
   | Some label -> label##.innerHTML := _s (attribute item "data-label")
 
+let filter_tag tag tbl =
+  let count = ref 0 in
+  for i = 1 to tbl##.rows##.length do
+    Js.Opt.iter (tbl##.rows##item (i)) @@ fun tr ->
+    (* [data-tags] is a space-separated list of percent-encoded tags, as a
+       tag can itself contain spaces *)
+    let tags =
+      Js.Opt.case (tr##getAttribute (_s "data-tags"))
+        (fun () -> [])
+        (fun s ->
+           List.map
+             (fun t -> Js.to_string (Js.decodeURIComponent (_s t)))
+             (String.split_on_char ' ' (Js.to_string s)))
+    in
+    if List.mem (Js.to_string tag) tags
+    then (show tr; incr count)
+    else hide tr
+  done;
+  !count
+
+(* Line above the table with the number of packages. Hidden while no tag filter is active *)
+let show_tag_count tag n =
+  match get_element_by_id "tag-count" with
+  | None -> ()
+  | Some p ->
+    let count =
+      if n = 1 then "1 package has tag "
+      else string_of_int n ^ " packages have tag "
+    in
+    let b = doc##createElement (_s "b") in
+    b##.textContent := Js.some tag;
+    (* Assigning [textContent] also drops the previous children *)
+    p##.textContent := Js.some (_s count);
+    Dom.appendChild p b;
+    Dom.appendChild p (doc##createTextNode (_s "."));
+    p##.style##.display := _s ""
+
+let hide_tag_count () =
+  match get_element_by_id "tag-count" with
+  | None -> ()
+  | Some p -> p##.style##.display := _s "none"
+
+let close_tags_list () =
+  match get_element_by_id "tags-list" with
+  | None -> ()
+  | Some details -> details##removeAttribute (_s "open")
+
+(* Clickable list of tags above the table *)
+let tag_links () =
+  let nodes = doc##querySelectorAll (_s "#tags-list a[data-tag]") in
+  let rec aux acc i =
+    if i < 0 then acc else
+      aux
+        (Js.Opt.case (nodes##item (i)) (fun () -> acc) @@ fun node ->
+         Js.Opt.case (Dom_html.CoerceTo.element node) (fun () -> acc)
+           (fun e -> e :: acc))
+        (i - 1)
+  in
+  aux [] (nodes##.length - 1)
+
 let ( >>= ) = Js.Opt.bind
 
 let _ =
@@ -120,14 +180,38 @@ let _ =
   doc##getElementById (Js.string "packages") >>= Dom_html.CoerceTo.table
   >>= fun tbl ->
   let refresh () = filter ~scope:(current_scope ()) search##.value tbl in
-  let handler = Dom_html.handler (fun _ -> refresh (); Js._false) in
+  let handler = Dom_html.handler (fun _ ->
+        hide_tag_count (); refresh (); Js._false) in
   search##.onkeyup := handler;
   let items = scope_items () in
   List.iter (fun item ->
       item##.onclick :=
         Dom_html.handler (fun _ -> select_scope items item; refresh (); Js._false))
     items;
+  List.iter (fun link ->
+      link##.onclick :=
+        Dom_html.handler (fun _ ->
+            Js.Opt.iter (link##getAttribute (_s "data-tag")) (fun tag ->
+                (* The tag filter replaces whatever search was in progress *)
+                search##.value := _s "";
+                show_tag_count tag (filter_tag tag tbl);
+                close_tags_list ();
+                (* Record the tag in the URL for bookmarking. Not done by
+                   following the "#<tag>" href: navigating to an anchor
+                   inside the <details> would fold it back open. Best-effort:
+                   some environments forbid replaceState on file:// pages *)
+                try
+                  win##.history##replaceState Js.null (_s "")
+                    (Js.some ((_s "#")##concat (Js.encodeURIComponent tag)))
+                with _ -> ());
+            Js._false))
+    (tag_links ());
+  (* Arriving with a "#<tag>" fragment (a bookmark, or a tag link on a
+     package page): filter by that exact tag *)
   let hash = win##.location##.hash##substring_toEnd 1 in
-  if hash##.length > 0 then search##.value := hash;
-  if search##.value##.length > 0 then refresh ();
+  if hash##.length > 0 then begin
+    let tag = Js.decodeURIComponent hash in
+    show_tag_count tag (filter_tag tag tbl)
+  end
+  else if search##.value##.length > 0 then refresh ();
   Js.some handler
