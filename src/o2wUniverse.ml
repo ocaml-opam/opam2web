@@ -343,23 +343,12 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
           let tags = String.concat " " (OpamFile.OPAM.tags pkg_info) in
           (* Alongside the visible comma-separated tag list, each table row
              carries its own tags in an invisible [data-tags] attribute, which
-             the search script reads to filter the table by tag. There, the
-             tags are space-separated; since a tag can itself contain spaces
-             ("binary code analysis"), percent-encode each tag so that the
-             list is unambiguous. Decoded in the search script with
-             decodeURIComponent, so "%" must be encoded too *)
-          let encode_tag tag =
-            let buf = Buffer.create (String.length tag) in
-            String.iter (function
-                | '%' -> Buffer.add_string buf "%25"
-                | ' ' -> Buffer.add_string buf "%20"
-                | c   -> Buffer.add_char buf c)
-              tag;
-            Buffer.contents buf
-          in
+             we read in js_search/search.ml to filter the table by tag. There, the
+             tags are space-separated; since a tag can itself contain spaces,
+             percent-encode each tag so that the list is unambiguous. *)
           let tags_attr =
             String.concat " "
-              (List.map encode_tag (OpamFile.OPAM.tags pkg_info))
+              (List.map Uri.pct_encode (OpamFile.OPAM.tags pkg_info))
           in
           let pkg_tags = if tags = "" then [] else ["Tags: "^tags] in
           (* Dependency names, for the search box to filter on *)
