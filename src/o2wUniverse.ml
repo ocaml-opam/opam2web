@@ -292,16 +292,18 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
     | Some repos -> Html.Create.table repos ~row
   in
   let tags_html =
+    (* Map each tag to the number of packages that have it *)
     let tags =
       List.fold_left (fun acc pkg ->
           match OpamPackage.Map.find_opt pkg univ.st.opams with
           | None -> acc
           | Some opam ->
-            List.fold_left (fun acc tag -> OpamStd.String.Set.add tag acc)
+            List.fold_left (fun acc tag ->
+                OpamStd.String.Map.update tag succ 0 acc)
               acc (OpamFile.OPAM.tags opam))
-        OpamStd.String.Set.empty sorted_packages
+        OpamStd.String.Map.empty sorted_packages
     in
-    let tag_link tag =
+    let tag_link (tag, count) =
       (* The "#<tag>" fragment is read by the search script on page load, to
          apply the tag filter. When generating the pages,
          O2wTemplate.extract_links checks that every same-page "#..." link
@@ -309,8 +311,9 @@ let to_html ~content_dir ~sortby_links ~active ~compare_pkg univ =
          otherwise: give each link its own tag as id to pass that check *)
       Html.tag "a" ~attrs:["id", tag; "href", "#" ^ tag; "data-tag", tag]
         (Html.string tag)
+      ++ Html.string (Printf.sprintf " (%d)" count)
     in
-    match OpamStd.String.Set.elements tags with
+    match OpamStd.String.Map.bindings tags with
     | [] -> Html.empty
     | first :: rest ->
       List.fold_left
