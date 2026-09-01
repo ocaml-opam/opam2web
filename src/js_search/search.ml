@@ -211,7 +211,13 @@ let _ =
   let hash = win##.location##.hash##substring_toEnd 1 in
   if hash##.length > 0 then begin
     let tag = Js.decodeURIComponent hash in
-    show_tag_count tag (filter_tag tag tbl)
+    show_tag_count tag (filter_tag tag tbl);
+    (* fold the tags list back, now and after the load-time fragment scroll *)
+    close_tags_list ();
+    ignore
+      (Dom.addEventListener win Dom_html.Event.load
+          (Dom_html.handler (fun _ -> close_tags_list (); Js._true))
+          Js._false)
   end
   else if search##.value##.length > 0 then refresh ();
   Js.some handler
