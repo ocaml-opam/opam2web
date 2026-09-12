@@ -19,7 +19,7 @@ opam install opam2web
 Optionally create a local switch for the project:
 
 ``` bash
-opam switch create . ocaml.4.14.0 --with-test
+opam switch create . ocaml.4.14.4 --with-test
 ```
 
 - re [github.com/ocaml/ocaml-re](https://github.com/ocaml/ocaml-re)
