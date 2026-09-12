@@ -1,21 +1,105 @@
-#!/bin/bash -uex
+#!/bin/bash -ue
 
-rm -rf www
-mkdir -p www
+usage() {
+  cat <<USAGE
+Build the opam website locally, for testing.
 
-cd www
-git clone ~/ocamlpro/opam-repository .
+usage: $0 --input-dir INPUT_DIR --output-dir OUTPUT_DIR
+  --input-dir INPUT_DIR    existing directory with subdirs opam-repository, opam.wiki, opam.old_wiki and doc_html_files
+  --output-dir OUTPUT_DIR  existing directory
+  -h, --help               show full description
+USAGE
+}
 
-cp -r ../content .
-mkdir -p content/doc/{1.1,1.2,2.0}
-cp -r ../../opam.wiki/* content/doc/1.1
-cp -r ../../opam/doc/pages/* content/doc
-cp -r ../../opam/doc/html content/doc/2.0/api
-cp -r ../../opam/doc/man-html content/doc/2.0/man
+help() {
+  usage
+  cat <<HELP
 
-../_build/default/src/opam2web.exe --content content . -r 'http://127.0.0.1:8080'
-cp -r -L ../ext .
-cohttp-server-lwt -s 127.0.0.1 # &
-# xdg-open 'http://127.0.0.1:8080/index.html'
-# trap 'kill %%' EXIT
-# wait %%
+The generated website is written to OUTPUT_DIR/opamweb; open OUTPUT_DIR/opamweb/index.html to browse it. OUTPUT_DIR is also used as scratch space: some directories are (re)created there on every run.
+
+The contents of INPUT_DIR are not fetched by this script; fetch them yourself, once, before running this script:
+
+  git clone git@github.com:ocaml/opam-repository.git INPUT_DIR/opam-repository
+  git clone https://github.com/ocaml/opam.wiki.git INPUT_DIR/opam.wiki
+  git clone https://github.com/ocaml/opam.wiki.git --depth 1 -b old_wiki INPUT_DIR/opam.ol
+  mkdir INPUT_DIR/doc_html_files && touch INPUT_DIR/doc_html_files/{Manual,Packaging,Install,Usage}.html
+
+These inputs rarely change, while this script is meant to be run multiple times while developing opam2web, so re-fetching on every run is wasteful.
+
+The static documentation pages will be empty if we use empty files as inputs (Manual.html, ...), and that's fine if we are mainly interested in testing the Packages part of the website. The full website can be generated with a docker script as described in the README file.
+
+The run ends with '[ERROR] No top10 packages statistics'. This is expected: the package download counts come from the server logs of opam.ocaml.org, which are not given as input to opam2web in this script.
+HELP
+}
+
+INPUT_DIR=
+OUTPUT_DIR=
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --input-dir)
+      [ $# -ge 2 ] || { echo "$0: $1 requires an argument" >&2; exit 1; }
+      INPUT_DIR=$2; shift 2 ;;
+    --input-dir=*)
+      INPUT_DIR=${1#*=}; shift ;;
+    --output-dir)
+      [ $# -ge 2 ] || { echo "$0: $1 requires an argument" >&2; exit 1; }
+      OUTPUT_DIR=$2; shift 2 ;;
+    --output-dir=*)
+      OUTPUT_DIR=${1#*=}; shift ;;
+    -h|--help)
+      help; exit 0 ;;
+    *)
+      echo "$0: unknown argument '$1'" >&2
+      usage >&2
+      exit 1 ;;
+  esac
+done
+
+if [ -z "$INPUT_DIR" ] || [ -z "$OUTPUT_DIR" ]; then
+  echo "$0: --input-dir and --output-dir are both required" >&2
+  usage >&2
+  exit 1
+fi
+
+if [ ! -d "$INPUT_DIR" ]; then
+  echo "$0: --input-dir '$INPUT_DIR' is not a directory" >&2
+  exit 1
+fi
+
+if [ ! -d "$OUTPUT_DIR" ]; then
+  echo "$0: --output-dir '$OUTPUT_DIR' is not a directory" >&2
+  exit 1
+fi
+
+INPUT_DIR=$(cd "$INPUT_DIR" && pwd)
+OUTPUT_DIR=$(cd "$OUTPUT_DIR" && pwd)
+SRC_DIR=$(cd "$(dirname "$0")" && pwd)
+
+missing=()
+for d in opam-repository opam.wiki opam.old_wiki doc_html_files; do
+  [ -d "$INPUT_DIR/$d" ] || missing+=("$INPUT_DIR/$d")
+done
+if [ ${#missing[@]} -ne 0 ]; then
+  echo "$0: missing required directories:" >&2
+  printf '  %s\n' "${missing[@]}" >&2
+  exit 1
+fi
+
+cd "$OUTPUT_DIR"
+rm -rf opam-repository content opamweb ext json
+
+echo "preparing inputs"
+git clone "$INPUT_DIR/opam-repository" ./opam-repository
+cp -r "$SRC_DIR/content" .
+mkdir -p content/doc/{1.1,1.2,2.0,api,man}
+cp -r "$INPUT_DIR"/opam.wiki/* content/doc/1.1
+cp "$INPUT_DIR"/opam.old_wiki/opam11_note.md content/doc/1.1
+cp -r "$INPUT_DIR"/doc_html_files/* content/doc
+
+cp -r -L "$SRC_DIR/ext" .
+mkdir -p opamweb
+cp -r -L "$SRC_DIR/ext" ./opamweb
+
+echo "running opam2web"
+"$SRC_DIR/_build/default/bin/opam2web.exe" --content content --output ./opamweb -r 'http://127.0.0.1:8080' ./opam-repository
