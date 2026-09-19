@@ -28,7 +28,7 @@ type options = {
   content_dir: string;
   logfiles: filename list;
   repositories: string list;
-  root_uri: Uri.t;
+  root_uri: Uri.Absolute_http.t;
   blog_source_uri: string;
 }
 
@@ -207,7 +207,7 @@ let content_dir = Arg.(
     ~doc:"The directory where to find documentation to include")
 
 let root_uri = Arg.(
-    value & opt string (Sys.getcwd () ^ "/") & info ["r"; "root"]
+    value & opt string "http://127.0.0.1/" & info ["r"; "root"]
       ~docv:"URI"
       ~doc:"The root URI from which we'll be serving pages (e.g. 'http://opam.ocaml.org/')")
 
@@ -221,7 +221,7 @@ let build logfiles out_dir content_dir repositories root_uri blog_source_uri =
     List.iter (Printf.printf "=== Repository: %s ===\n%!") repositories in
   let out_dir = normalize out_dir in
   let logfiles = List.map OpamFilename.of_string logfiles in
-  let root_uri = Uri.of_string root_uri in
+  let root_uri = Uri.Absolute_http.of_string root_uri in
   let user_options = {
     out_dir;
     files_dir = "";
@@ -254,7 +254,7 @@ let default_cmd =
   let term = Term.(const build $ log_files $ out_dir $ content_dir
                      $ repositories_arg $ root_uri $ blog_source_uri) in
   Cmd.v info term
-  
+
 
 let () =
   OpamArg.preinit_opam_env_variables ();
