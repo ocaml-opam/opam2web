@@ -50,19 +50,21 @@ let dates universe =
   in
   let dates =
     List.fold_right (fun repo dates ->
-        let command = [
-          "git"; "log"; "--name-only"; "--diff-filter=ACR"; "--reverse";
-          "--pretty=format:%ct"; "-m"; "--first-parent"; "--"; any_opam_path;
-        ] in
+        let command =
+          let dir =
+            match OpamRepositoryState.get_root universe.switch_repos repo with
+            | Dir dir -> OpamRepositoryRoot.Dir.to_dir dir
+            | Tgz _ -> assert false
+          in
+          [
+            "git"; "-C"; OpamFilename.Dir.to_string dir;
+            "log"; "--name-only"; "--diff-filter=ACR"; "--reverse";
+            "--pretty=format:%ct"; "-m"; "--first-parent"; "--"; any_opam_path;
+          ]
+        in
         let repo_name = OpamRepositoryName.to_string repo in
         try
-          let times =
-            OpamFilename.in_dir
-              (OpamFilename.dirname_dir
-                 (OpamRepositoryPath.packages_dir
-                    (OpamRepositoryState.get_root universe.switch_repos repo)))
-              (fun () -> OpamSystem.read_command_output command)
-          in
+          let times = OpamSystem.read_command_output command in
           parse_git_commit_times dates times
         with (OpamSystem.Process_error _ | Failure _ as e) ->
           OpamConsole.warning "Date retrieval for %s using" repo_name;
@@ -252,6 +254,7 @@ let latest_version_packages universe =
 let load_opam_state repo_roots =
   let gt = {
     global_lock = OpamSystem.lock_none;
+    lock = OpamSystem.lock_none;
     root = OpamStateConfig.(!r.root_dir);
     config = OpamStd.Option.Op.(OpamStateConfig.(load ~lock_kind:`Lock_none !r.root_dir) +!
                                 OpamFile.Config.empty);
@@ -261,7 +264,7 @@ let load_opam_state repo_roots =
   let repo_roots =
     List.map (fun r ->
         OpamRepositoryName.of_string (OpamFilename.Dir.to_string r),
-        r)
+        OpamRepositoryRoot.Dir.of_dir r)
       repo_roots
   in
   let repositories =
@@ -276,7 +279,7 @@ let load_opam_state repo_roots =
   let repos_definitions =
     List.fold_left (fun map (repo_name, repo_root) ->
         OpamRepositoryName.Map.add repo_name
-          (OpamFile.Repo.safe_read (OpamRepositoryPath.repo repo_root))
+          (OpamFile.Repo.safe_read (OpamRepositoryRoot.Dir.Path.repo repo_root))
           map)
       OpamRepositoryName.Map.empty repo_roots
   in
@@ -287,17 +290,11 @@ let load_opam_state repo_roots =
           map)
       OpamRepositoryName.Map.empty repo_roots
   in
-  let repos_tmp =
-    let repos_tmp = Hashtbl.create 2 in
-    List.iter (fun (repo_name, repo_root) ->
-        Hashtbl.add repos_tmp repo_name (lazy repo_root))
-      repo_roots;
-    repos_tmp
-  in
   let rt = {
     repos_global = gt;
     repos_lock = OpamSystem.lock_none;
-    repositories; repos_definitions; repo_opams; repos_tmp;
+    repositories; repos_definitions; repo_opams;
+    repos_syspkgs_available = None;
   } in
   OpamSwitchState.load_virtual ~repos_list:(fst (List.split repo_roots))
     gt rt
