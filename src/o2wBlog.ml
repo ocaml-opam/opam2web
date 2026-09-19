@@ -308,7 +308,7 @@ let make_feed ~root entries =
   let feed_uri = Uri.resolve "http" blog_uri (Uri.of_string "feed.xml") in
   let to_atom_entry entry =
     let entry_path = Uri.of_string (entry.blog_name ^ "/") in
-    let entry_abs = Uri.resolve "http" root entry_path in
+    let entry_abs = Uri.resolve "http" blog_uri entry_path in
     let id = Uri.to_string entry_abs in
     {
       entry = {
