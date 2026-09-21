@@ -55,9 +55,8 @@ opam2web \
   --content=/tmp/content \
   --blog=https://github.com/ocaml/platform-blog/blob/master \
   $STATS_ARG \
-  --root=$BASEURL \
+  --root=https://$BASEURL \
   --output=/www
 
 # Add some redirects
 ln -sf . /www/doc/2.0
-

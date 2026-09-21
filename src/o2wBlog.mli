@@ -33,7 +33,7 @@ val make_menu: ?srcurl:string -> post list -> menu list * menu list
 val make_news: post list -> Cow.Xml.t
 
 (** Atom feed *)
-val make_feed: root:Uri.t -> post list -> Cow.Xml.t
+val make_feed: root:Uri.Absolute_http.t -> post list -> Cow.Xml.t
 
 (** Generate an html redirect to the latest post *)
-val make_redirect: root:Uri.t -> post list -> Cow.Xml.t
+val make_redirect: root:Uri.Absolute_http.t -> post list -> Cow.Xml.t
