@@ -1,19 +1,37 @@
 <t:seq xmlns:t="http://ocaml.org/xmlns/template#">
     <div class="row">
-      <div class="span9">
+      <div class="span8">
         <ul class="nav nav-pills">
           <t:insert name="nav" />
         </ul>
       </div>
-      <form class="span3 form-search" style="display:none;">
+      <form class="span4 form-search" style="display:none;">
         <div class="input-append">
           <input id="search" class="search-query" type="text" placeholder="Search packages" />
-          <button id="search-button" class="btn add-on">
-            <i class="icon-search"> </i>
-          </button>
+          <div class="btn-group">
+            <button id="search-button" type="button" class="btn dropdown-toggle"
+                    data-toggle="dropdown" title="Choose where to search">
+              <i class="icon-search"> </i>
+              <span id="search-scope-label">In package</span>
+              <span class="caret"> </span>
+            </button>
+            <ul id="search-scope-menu" class="dropdown-menu pull-right">
+              <li class="active">
+                <a href="#" data-scope="all" data-label="In package">In package</a>
+              </li>
+              <li>
+                <a href="#" data-scope="deps" data-label="Dependencies">Dependencies</a>
+              </li>
+            </ul>
+          </div>
         </div>
       </form>
     </div>
+    <details id="tags-list">
+      <summary>Show / hide all tags</summary>
+      <p><t:insert name="tags" /></p>
+    </details>
+    <p id="tag-count" style="display:none;"> </p>
     <table class="table table-hover"  id="packages">
       <thead>
         <tr>
